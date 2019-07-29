@@ -1,0 +1,16 @@
+{
+  "run_info": {
+    "id": "name",
+    "model": "2D",
+    "train": false,
+    "test": false
+  },
+  "datasets": {
+    "training": "datasets/kaggle/train",
+    "test": "datasets/kaggle/test"
+  },
+  "ratios": {
+    "training": 0.6,
+    "validation": 0.3
+  }
+}

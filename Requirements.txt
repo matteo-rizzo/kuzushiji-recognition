@@ -1,0 +1,8 @@
+pandas
+h5py
+Pillow
+matplotlib
+tensorflow
+numpy==1.16.2
+tabulate
+tqdm
