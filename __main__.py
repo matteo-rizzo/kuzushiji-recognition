@@ -49,22 +49,20 @@ def main():
     # --- DATASET ---
 
     # Import the dataset for training
-    logging.info('Importing the dataset for training...')
+    log.info('Importing the dataset for training...')
     training_dataset = Dataset(dataset_paths['training'])
+    log.info('Training dataset size is: {}'.format(training_dataset.get_size()))
 
     log.info('Shuffling the dataset...')
     training_dataset.shuffle(3)
 
     # Import the dataset for testing
-    logging.info('Importing the dataset for testing...')
+    log.info('Importing the dataset for testing...')
     testing_dataset = Dataset(dataset_paths['test'])
+    log.info('Testing dataset size is: {}'.format(testing_dataset.get_size()))
 
     log.info('Shuffling the dataset...')
     testing_dataset.shuffle(3)
-
-    # Split the dataset
-    log.info('Splitting the dataset with training size: ' + str(ratios['training']) + '\n')
-    training_set, validation_set, test_set = training_dataset.split(ratios['training'], ratios['validation'])
 
     # --- MODEL ---
 
@@ -79,9 +77,12 @@ def main():
     }
 
     # Build the model
+    training_set, validation_set, test_set = training_dataset.split()
     model = models[model_name](training_set,
                                validation_set,
                                test_set,
+                               run_id,
+                               ratios,
                                model_params)
 
     # --- TRAINING ---
