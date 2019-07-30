@@ -3,7 +3,6 @@ import random
 from pathlib import Path
 import pandas as pd
 import os
-
 import tensorflow as tf
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -24,25 +23,17 @@ class Dataset:
         all_image_paths = [str(path) for path in all_image_paths]
 
         # Get all the labels of the images in the dataset
-        all_image_labels = pd.read_csv('datasets/kaggle/train.csv', usecols=['labels'])
-
-        # TODO: remove
-        print(len(all_image_paths))
-        print(all_image_paths[:10])
-        print(all_image_labels.head())
+        all_image_labels = pd.read_csv('datasets/kaggle/train.csv', usecols=['labels']).fillna('')
+        all_image_labels = all_image_labels.values.tolist()
 
         path_dataset = tf.data.Dataset.from_tensor_slices(all_image_paths)
         image_dataset = path_dataset.map(self.__load_and_preprocess_image, num_parallel_calls=AUTOTUNE)
-        label_dataset = tf.data.Dataset.from_tensor_slices(tf.cast(all_image_labels, tf.int64))
+        label_dataset = tf.data.Dataset.from_tensor_slices(all_image_labels)
         image_label_dataset = tf.data.Dataset.zip((image_dataset, label_dataset))
-
-        # TODO: remove
-        print(image_label_dataset)
 
         return image_label_dataset
 
     def __load_and_preprocess_image(self, path):
-
         image = tf.read_file(path)
         return self.__preprocess_image(image)
 
