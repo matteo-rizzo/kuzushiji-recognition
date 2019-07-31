@@ -11,12 +11,15 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 class Dataset:
     def __init__(self, path: str, image_size: int = 150, ratios: {} = None):
         """
-        Initialize the dataset.
+        Initializes the dataset.
         :param path: the path to the dataset
+        :param image_size: the size which the images in the dataset must be resized to
         :param ratios: the ratios of examples belonging to training, validation and test sets
         """
         self.path = Path(path)
         self.image_size = image_size
+
+        # Set default values for ratios if no value has been provided
         self.ratios = ratios if ratios is not None else {
             'training': 0.6,
             'validation': 0.3
@@ -25,12 +28,17 @@ class Dataset:
         self.dataset, self.size = self.__build_dataset()
 
     def __build_dataset(self) -> (tf.data.Dataset, int):
+        """
+        Creates the actual dataset.
+        :return: a dataset of images and its size
+        """
         # Get all the paths to the images of the dataset
         all_image_paths = [os.path.join(self.path, image_name) for image_name in list(os.listdir(self.path))]
         dataset_size = len(all_image_paths)
 
         # Get all the labels of the images in the dataset
-        all_image_labels = pd.read_csv('datasets/kaggle/train.csv', usecols=['labels']).fillna('')
+        pardir = os.path.join(self.path, os.pardir)
+        all_image_labels = pd.read_csv(os.path.join(pardir, 'image_labels_mapping.csv'), usecols=['labels']).fillna('')
         all_image_labels = all_image_labels.values.tolist()
 
         # Create the dataset of all paths
