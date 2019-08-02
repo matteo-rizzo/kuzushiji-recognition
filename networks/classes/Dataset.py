@@ -38,7 +38,9 @@ class Dataset:
 
         # Get all the labels of the images in the dataset
         pardir = os.path.join(self.path, os.pardir)
-        all_image_labels = pd.read_csv(os.path.join(pardir, 'image_labels_mapping.csv'), usecols=['labels']).fillna('')
+        all_image_labels = pd.read_csv(os.path.join(pardir, 'image_labels_mapping.csv'),
+                                       header=0,
+                                       usecols=['labels']).fillna('')
         all_image_labels = all_image_labels.values.tolist()
 
         # Create the dataset of all paths
@@ -92,15 +94,26 @@ class Dataset:
 
     def get_training_set(self) -> tf.data.Dataset:
         # Take only the first training_ratio percent of the data
-        return self.dataset.take(tf.cast(self.size * self.ratios['training'], tf.int64))
+        # TODO: rimuovere l'hardcoding!
+        return (self.dataset.take(tf.cast(self.size * self.ratios['training'], tf.int64))
+                .batch(150)
+                .repeat()
+                .prefetch(AUTOTUNE))
 
     def get_validation_set(self) -> tf.data.Dataset:
         # Take all but the first training_ratio percent of the data
-        return self.dataset.skip(tf.cast(self.size * self.ratios['training'], tf.int64))
+        # TODO: riguardare MATTEO SEI UN ASINO
+        return (self.dataset.skip(tf.cast(self.size * self.ratios['training'], tf.int64))
+                .batch(150)
+                .repeat()
+                .prefetch(AUTOTUNE))
 
     def get_test_set(self) -> tf.data.Dataset:
         # Take all but the first training_ratio + validation_ratio percent of the data
-        return self.dataset.skip(tf.cast(self.size * (self.ratios['training'] + self.ratios['validation']), tf.int64))
+        return (self.dataset.skip(tf.cast(self.size * (self.ratios['training'] + self.ratios['validation']), tf.int64))
+                .batch(150)
+                .repeat()
+                .prefetch(AUTOTUNE))
 
     def split(self) -> (tf.data.Dataset, tf.data.Dataset, tf.data.Dataset):
         return self.get_training_set(), self.get_validation_set(), self.get_test_set()

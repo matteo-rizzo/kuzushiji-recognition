@@ -103,9 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# Datasets
-datasets/
-
 ### PyCharm ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
@@ -293,4 +290,9 @@ modules.xml
 ### pydev ###
 .pydevproject
 
-# End of https://www.gitignore.io/api/pydev,pycharm,pycharm+iml,pycharm+all
+# Datasets
+datasets/
+
+# Experiments
+networks/experiments/
+

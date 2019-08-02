@@ -120,6 +120,7 @@ class Model:
             patience=2,
             mode='min',
         )
+
         return [early_stopping, tensorboard, checkpointer]
 
     def train(self):
@@ -163,7 +164,7 @@ class Model:
         log.info('* Total number of epochs:   ' + str(self._epochs_params['number']))
         log.info('* Initial epoch:            ' + str(self._epochs_params['initial']) + '\n')
         self._model.fit(self._training_set,
-                        epochs=epochs,
+                        epochs=int(epochs),
                         steps_per_epoch=int(self._ratios['training'] // self._network_params['batch_size']) + 1,
                         validation_data=self._validation_set,
                         validation_steps=int(self._ratios['validation'] // self._network_params['batch_size']) + 1,
