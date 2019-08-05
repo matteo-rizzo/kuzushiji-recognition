@@ -1,32 +1,51 @@
-# Uso di GCP
+# Uso di Google Cloud Platform (GCP)
 
 ## Base
 
+```bash
 gcloud auth login		# autenticati nel browser
+```
 
+```bash
 gcloud project list 	# lista progetti
+```
 
-gcloud config set project cognitive-services-248116
+```bash
+gcloud config set project cognitive-services-248116		# seleziona un progetto
+```
 
 ## Trasferire file a VM con SCP
 
-gcloud compute scp [file.txt][istanza:percorso-in-cui-mettere-il-file]
+```bash
+gcloud compute scp file.txt instance_name:path_for_file
+```
 
-Esempi:
+### Esempi
 
+```bash
 gcloud compute scp file.txt instance-4cpu-1gpu-p4:~ # Mette nella home della VM
+```
+
+```bash
 gcloud compute scp --recurse Folder/ instance-4cpu-1gpu-p4:~ # Copia la cartella Folder nella home della VM
+```
 
 ## Connettersi in SSH
 
-gcloud compute ssh [nome-istanza]
+```bash
+gcloud compute ssh instance_name
+```
 
-La prima volta chiede una passphrase. Se ti riconnetti ti chiede di reinserirla quindi ricordatela.
+Nota: la prima volta chiede una passphrase. Se ti riconnetti ti chiede di reinserirla quindi ricordatela.
 
-Esempio:
+### Esempi
 
+```bash
 gcloud compute ssh instance-4cpu-1gpu-p4
+```
 
-## Trasferire file da VM a locale (utile per i log file)
+## Trasferire file da VM a locale
 
-gcloud compute scp [istanza:percorso-in-cui-si-trova-il-file-remoto][percordo-file-dove-vuoi-metterlo]
+```bash
+gcloud compute scp instance_name:path_to_remote_file local_path_for_file
+```
