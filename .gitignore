@@ -296,5 +296,9 @@ datasets/
 # Experiments
 networks/experiments/
 
-# Darkflow
-darkflow
+# Libraries
+libs/
+
+# Network weights and config
+bin/
+cfg/

@@ -1,0 +1,13 @@
+{
+  "epochs": {
+    "number": 15,
+    "initial": 0,
+    "restore_weights": false
+  },
+  "network": {
+    "model": "cfg/yolo.cfg",
+    "load": "bin/yolo.weights",
+    "threshold": 0.1,
+    "gpu": 0.0
+  }
+}

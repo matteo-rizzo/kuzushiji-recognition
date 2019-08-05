@@ -1,7 +1,7 @@
 {
   "run_info": {
     "id": "test_run",
-    "model": "2D",
+    "model": "YOLO",
     "train": true,
     "test": false
   },

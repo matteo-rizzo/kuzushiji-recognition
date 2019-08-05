@@ -1,20 +1,35 @@
+import os
 import logging
-
+import absl.logging
 import tensorflow as tf
 
+from networks.classes.Logger import Logger
+from networks.classes.Params import Params
 from networks.classes.Dataset import Dataset
-from networks.classes.Model2D import Model2D
-from utility_functions.utils import init_loggers, load_parameters, log_configuration, log_metrics
-
-tf.enable_eager_execution()
-tf.logging.set_verbosity(tf.logging.ERROR)
+from networks.classes.ModelYOLO import ModelYOLO
+from networks.classes.ModelCustom import ModelCustom
 
 
 def main():
-    # --- GENERAL PARAMETERS AND LOG ---
+    # -- TENSORFLOW BASIC CONFIG ---
+
+    # Enable eager execution
+    tf.compat.v1.enable_eager_execution()
+
+    # Set up the log for tensorflow
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
+    # Remove absl logs
+    logging.root.removeHandler(absl.logging._absl_handler)
+    absl.logging._warn_preinit_stderr = False
+
+    # --- GENERAL PARAMETERS ---
+
+    # Set the path to the configuration folder
+    config_path = os.path.join(os.getcwd(), 'networks', 'configuration')
 
     # Load the general parameters from json file
-    general_params = load_parameters('general_params.json')
+    general_params = Params(os.path.join(config_path, 'general_params.json'))
 
     # Get the info for the current run
     run_info = general_params.run_info
@@ -29,9 +44,10 @@ def main():
     # Get the ratios of the training, validation and test set
     ratios = general_params.ratios
 
-    # Initialize the logger
-    init_loggers(run_id)
-    log = logging.getLogger('execution')
+    # --- LOGGER ---
+
+    log_handler = Logger(run_id)
+    log = log_handler.get_logger('execution')
 
     # Log configuration
     log.info('Software versions:')
@@ -44,7 +60,7 @@ def main():
     log.info('* Test dataset:       ' + dataset_paths['test'] + '\n')
 
     # Log general and training parameters
-    log_configuration(run_id, model_name)
+    log_handler.log_configuration(run_id, model_name, implementation=False)
 
     # --- DATASET ---
 
@@ -69,21 +85,23 @@ def main():
     log.info('Building the model...')
 
     # Load the training parameters from json file
-    model_params = load_parameters('params_model' + model_name + '.json')
+    model_params = Params(os.path.join(config_path, 'params_model_' + model_name + '.json'))
 
-    # Setting the model
+    # Set the model
     models = {
-        '2D': Model2D
+        'Custom': ModelCustom,
+        'YOLO': ModelYOLO
     }
 
     # Build the model
     training_set, validation_set, test_set = training_dataset.split()
-    model = models[model_name](training_set,
+    model = models[model_name](run_id,
+                               model_params,
+                               ratios,
+                               training_set,
                                validation_set,
                                test_set,
-                               run_id,
-                               ratios,
-                               model_params)
+                               log_handler)
 
     # --- TRAINING ---
 
@@ -98,7 +116,7 @@ def main():
     if test:
         log.info('Evaluating the model...')
         metrics = model.evaluate()
-        log_metrics(metrics, general_params, 'testing')
+        log_handler.log_metrics(metrics, general_params)
 
 
 if __name__ == '__main__':

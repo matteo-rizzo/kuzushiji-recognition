@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
-import random
 from pathlib import Path
+
+import random
 import pandas as pd
 import os
 import tensorflow as tf
@@ -94,7 +95,6 @@ class Dataset:
 
     def get_training_set(self) -> tf.data.Dataset:
         # Take only the first training_ratio percent of the data
-        # TODO: rimuovere l'hardcoding!
         return (self.dataset.take(tf.cast(self.size * self.ratios['training'], tf.int64))
                 .batch(150)
                 .repeat()
@@ -102,8 +102,9 @@ class Dataset:
 
     def get_validation_set(self) -> tf.data.Dataset:
         # Take all but the first training_ratio percent of the data
-        # TODO: riguardare MATTEO SEI UN ASINO
-        return (self.dataset.skip(tf.cast(self.size * self.ratios['training'], tf.int64))
+        return (self.dataset
+                .skip(tf.cast(self.size * self.ratios['training'], tf.int64))
+                .take(tf.cast(self.size * self.ratios['validation'], tf.int64))
                 .batch(150)
                 .repeat()
                 .prefetch(AUTOTUNE))

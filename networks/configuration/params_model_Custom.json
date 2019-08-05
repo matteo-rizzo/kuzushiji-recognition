@@ -1,0 +1,22 @@
+{
+  "epochs": {
+    "number": 15,
+    "initial": 0,
+    "restore_weights": false
+  },
+  "network": {
+    "n_images": 3881,
+    "n_labels": 2,
+    "learning_rate": 1e-5,
+    "lr_decay": 0.97,
+    "in_channels": 1,
+    "out_channels": 32,
+    "use_batch_norm": true,
+    "bn_momentum": 0.9,
+    "dropout_rate": 0.4,
+    "image_size": 150,
+    "batch_size": 150,
+    "use_random_flip": false,
+    "use_central_crop": false
+  }
+}
