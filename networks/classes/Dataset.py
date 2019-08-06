@@ -17,6 +17,7 @@ class Dataset:
         :param image_size: the size which the images in the dataset must be resized to
         :param ratios: the ratios of examples belonging to training, validation and test sets
         """
+
         self.path = Path(path)
         self.image_size = image_size
 
@@ -33,13 +34,14 @@ class Dataset:
         Creates the actual dataset.
         :return: a dataset of images and its size
         """
+
         # Get all the paths to the images of the dataset
         all_image_paths = [os.path.join(self.path, image_name) for image_name in list(os.listdir(self.path))]
         dataset_size = len(all_image_paths)
 
         # Get all the labels of the images in the dataset
         pardir = os.path.join(self.path, os.pardir)
-        all_image_labels = pd.read_csv(os.path.join(pardir, 'annotations.csv'),
+        all_image_labels = pd.read_csv(os.path.join(pardir, 'image_labels_map.csv'),
                                        header=0,
                                        usecols=['labels']).fillna('')
         all_image_labels = all_image_labels.values.tolist()
@@ -81,6 +83,7 @@ class Dataset:
         :param buffer_size: the size of the buffer for the shuffling
         :param seed: the seed of the shuffling
         """
+
         self.dataset.shuffle(
             buffer_size=tf.cast(buffer_size, tf.int64),
             seed=tf.cast(seed, tf.int64),
