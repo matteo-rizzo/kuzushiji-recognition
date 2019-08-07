@@ -65,9 +65,10 @@ def get_font():
     return font_manager.FontProperties(fname=path)
 
 
-def display_image(path_to_image: str):
+def display_image(path_to_image: str, show: bool = True):
     """
     Displays an image.
+    :param show: a boolean flag to indicate if the image must be displayed on stdout
     :param path_to_image: the path to the image to be displayed
     :return a plot
     """
@@ -75,7 +76,9 @@ def display_image(path_to_image: str):
     plt.figure(figsize=(15, 15))
     this_img = Image.open(path_to_image)
     plt.imshow(this_img)
-    plt.show()
+
+    if show:
+        plt.show()
 
     return plt
 

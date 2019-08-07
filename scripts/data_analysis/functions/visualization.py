@@ -74,11 +74,13 @@ def visualize_training_data(path_to_train_images: str, image_id: str, mapping: p
     labels = mapping.loc[image_id, 'labels']
     labels = np.array(labels.split(" ")).reshape(-1, 5)
 
-    plt = display_image(os.path.join(path_to_train_images, to_file_name(image_id)))
+    plt = display_image(os.path.join(path_to_train_images, to_file_name(image_id)), show=False)
     ax = plt.gca()
 
     for label in labels:
         ax = draw_box_and_text(ax, label)
+
+    plt.show()
 
 
 def visualize_images(path_to_dataset: str, path_to_train_images: str):

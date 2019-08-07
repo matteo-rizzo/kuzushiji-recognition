@@ -19,23 +19,29 @@ def main(labels: bool = False, annotations: bool = True):
     :param annotations: boolean flag to state if annotations must be generated
     """
 
+    print('---------------------------------------------------------------')
+    print('                   DATA FORMAT CONVERSION                      ')
+    print('---------------------------------------------------------------\n')
+
     # Set the base path to the dataset
     path_to_dataset = os.path.join('datasets', 'kaggle')
 
     # Set the path to the training set
     path_to_training_set = os.path.join(path_to_dataset, 'training')
 
+    # Set the path where the classes are stored (in string format)
+    path_to_classes = os.path.join(path_to_dataset, 'classes.csv')
+
     # --- GENERATE LABELS ---
 
     if labels:
-        # Set the path where the classes are stored (in string format)
-        path_to_classes = os.path.join(path_to_dataset, 'classes.csv')
-
         # Set the path where the mapping of the labels must be stored
         path_to_labels = os.path.join(path_to_dataset, 'labels.txt')
 
         # Generate the mapping between labels (integers) and classes (strings)
         generate_labels(path_to_classes, path_to_labels)
+
+        print('---------------------------------------------------------------\n')
 
     # --- GENERATE ANNOTATIONS ---
 
@@ -51,7 +57,12 @@ def main(labels: bool = False, annotations: bool = True):
         path_to_map = os.path.join(path_to_dataset, 'image_labels_map.csv')
 
         # Generate a file of annotation for each image
-        generate_annotations(path_to_annotations, path_to_images, path_to_map)
+        generate_annotations(path_to_annotations,
+                             path_to_images,
+                             path_to_map,
+                             path_to_classes)
+
+        print('---------------------------------------------------------------\n')
 
 
 if __name__ == '__main__':
