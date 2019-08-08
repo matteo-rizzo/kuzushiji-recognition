@@ -6,3 +6,6 @@ tensorflow
 numpy==1.16.2
 tabulate
 tqdm
+PIL
+regex
+pascal_voc_writer
