@@ -1,8 +1,8 @@
 import os
-import pandas as pd
-import matplotlib.pyplot as plt
-import regex as re
 
+import matplotlib.pyplot as plt
+import pandas as pd
+import regex as re
 from PIL import Image
 from matplotlib import font_manager
 from matplotlib.patches import Rectangle
@@ -61,7 +61,7 @@ def get_font():
     """
     Sets up a font capable of rendering the characters
     """
-    path = os.path.join('fonts', 'NotoSansCJKjp-Regular.otf')
+    path = os.path.join(os.getcwd(), 'scripts', 'assets', 'fonts', 'NotoSansCJKjp-Regular.otf')
     return font_manager.FontProperties(fname=path)
 
 

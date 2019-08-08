@@ -1,9 +1,9 @@
 import os
-import pandas as pd
 import random
-import numpy as np
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from PIL import Image
 
 from scripts.utils.utils import to_file_name, draw_box_and_text, display_image

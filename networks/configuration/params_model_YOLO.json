@@ -5,8 +5,8 @@
     "restore_weights": false
   },
   "network": {
-    "model": "cfg/yolo_custom.cfg",
-    "load": "bin/yolo.weights",
+    "model": "libs/darkflow/cfg/yolo_custom.cfg",
+    "load": "libs/darkflow/bin/yolo.weights",
     "batch": 8,
     "epoch": 10,
     "gpu": 0.0,

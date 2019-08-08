@@ -4,7 +4,7 @@ from scripts.data_analysis.functions.inspection import inspect_data
 from scripts.data_analysis.functions.visualization import visualize_images
 
 
-def main(inspection: bool = True, visualization: bool = False):
+def main(inspection: bool = True, visualization: bool = True):
     """
     Runs an analysis on the data based on the given parameters.
     :param inspection: a boolean flag to run the inspection of the data
@@ -16,19 +16,19 @@ def main(inspection: bool = True, visualization: bool = False):
     path_to_train_images = os.path.join(path_to_dataset, 'training', 'images')
     path_to_test_images = os.path.join(path_to_dataset, 'testing', 'images')
 
-    print('---------------------------------------------------------------')
+    print('\n---------------------------------------------------------------')
     print('                         DATA ANALYSIS                         ')
     print('---------------------------------------------------------------\n')
 
     # Inspect folders and files relative to the data
     if inspection:
         inspect_data(path_to_dataset, path_to_train_images, path_to_test_images)
-        print('---------------------------------------------------------------\n')
+        print('---------------------------------------------------------------')
 
     # Visualize some images from the dataset
     if visualization:
         visualize_images(path_to_dataset, path_to_train_images)
-        print('---------------------------------------------------------------\n')
+        print('---------------------------------------------------------------')
 
 
 if __name__ == '__main__':

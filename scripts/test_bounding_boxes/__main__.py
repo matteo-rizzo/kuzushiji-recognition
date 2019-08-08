@@ -15,7 +15,7 @@ def main(image_id: str = 'hnsd006-033'):
     path_to_dataset = os.path.join('datasets', 'kaggle')
     path_to_train_images = os.path.join(path_to_dataset, 'training', 'images')
 
-    print('---------------------------------------------------------------')
+    print('\n---------------------------------------------------------------')
     print('                   TEST OF BOUNDING BOXES                      ')
     print('---------------------------------------------------------------\n')
 

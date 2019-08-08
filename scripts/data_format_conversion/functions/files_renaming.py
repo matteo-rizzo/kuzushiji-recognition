@@ -7,8 +7,6 @@ def normalize_files(path: str):
     :param path: the path to the files to be normalized
     """
 
-    print('\nRenaming files...')
-
     for filename in os.listdir(path):
         # Set a new name for the file
         dst = filename.replace('-', '_')
@@ -31,8 +29,14 @@ def rename_dataset_files(path_to_train_images: str, path_to_test_images: str, pa
     :param path_to_train_annotations: the path to the training annotations
     """
 
+    print('Renaming files at {}...'.format(path_to_train_images))
     normalize_files(path_to_train_images)
+
+    print('\nRenaming files at {}...'.format(path_to_test_images))
     normalize_files(path_to_test_images)
 
     if os.listdir(path_to_train_annotations):
+        print('\nRenaming files at {}...'.format(path_to_train_annotations))
         normalize_files(path_to_train_annotations)
+
+    print('\nAll files have been renamed successfully!')

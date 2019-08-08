@@ -5,9 +5,9 @@ from scripts.data_format_conversion.functions.annotations import generate_annota
 from scripts.data_format_conversion.functions.files_renaming import rename_dataset_files
 
 
-def main(renaming: bool = False,
+def main(renaming: bool = True,
          labels: bool = False,
-         annotations: bool = True,
+         annotations: bool = False,
          annotation_format: str = 'darkflow'):
     """
     YOLO requires annotations in the format:
@@ -27,7 +27,7 @@ def main(renaming: bool = False,
     :param annotation_format: defines the format of the annotations (YOLOv2 or Darkflow)
     """
 
-    print('---------------------------------------------------------------')
+    print('\n---------------------------------------------------------------')
     print('                   DATA FORMAT CONVERSION                      ')
     print('---------------------------------------------------------------\n')
 
