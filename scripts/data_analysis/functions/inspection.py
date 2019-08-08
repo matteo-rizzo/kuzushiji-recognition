@@ -1,6 +1,7 @@
 import os
 import pandas as pd
-from scripts.data_analysis.functions.utils import get_unicodes
+
+from scripts.utils.utils import get_unicodes
 
 
 def inspect_data(path_to_dataset, path_to_train_images, path_to_test_images):

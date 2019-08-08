@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from PIL import Image
 
-from scripts.data_analysis.functions.utils import to_file_name, draw_box_and_text, display_image
+from scripts.utils.utils import to_file_name, draw_box_and_text, display_image
 
 
 def visualize_random_image(path_to_train_images: str):

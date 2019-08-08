@@ -1,6 +1,6 @@
 # Cognitive services 2018/19 - Project proposal
 
-Componenti del gruppo:
+Members of the team:
 
 - Matteo Rizzo - xxxxxxxx
 - Alessandro Zangari - 1207247

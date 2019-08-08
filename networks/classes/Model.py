@@ -66,7 +66,7 @@ class Model:
 
     def train(self):
         """
-        Compiles and train the model for the specified number of epochs.
+        Compiles and trains the model for the specified number of epochs.
         """
         pass
 

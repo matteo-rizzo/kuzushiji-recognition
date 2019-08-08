@@ -4,7 +4,7 @@ from scripts.data_analysis.functions.inspection import inspect_data
 from scripts.data_analysis.functions.visualization import visualize_images
 
 
-def main(inspection: bool = True, visualization: bool = True):
+def main(inspection: bool = True, visualization: bool = False):
     """
     Runs an analysis on the data based on the given parameters.
     :param inspection: a boolean flag to run the inspection of the data

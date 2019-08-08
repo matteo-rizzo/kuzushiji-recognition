@@ -19,6 +19,17 @@ class ModelYOLO(Model):
                  validation_set: tf.data.Dataset,
                  test_set: tf.data.Dataset,
                  log_handler: Logger):
+        """
+        Initializes a YOLO network v2.
+        :param run_id: the identification name of the current run
+        :param model_params: the parameters of the network
+        :param ratios: the ratio of elements to be used for training, validation and test
+        :param training_set: the training images
+        :param validation_set: the validation images
+        :param test_set: the test images
+        :param log_handler: a logger
+        """
+
         # Construct the super class
         super().__init__(run_id,
                          model_params,
@@ -35,10 +46,23 @@ class ModelYOLO(Model):
         """
         Builds the YOLO network.
         """
+
         # Build the network with the given parameters
         self._model = TFNet(self._network_params)
 
+    def train(self):
+        """
+        Trains the model for the specified number of epochs.
+        """
+        self._model.train()
+
+    def predict(self):
+        """
+        Performs a prediction using the model.
+        """
+
         img_path = os.path.join(os.getcwd(), 'datasets', 'sample_img', 'sample_multiple_objects.jpg')
+
         original_img = cv2.imread(img_path)
         original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
 

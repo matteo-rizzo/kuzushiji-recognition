@@ -41,7 +41,7 @@ class Dataset:
 
         # Get all the labels of the images in the dataset
         pardir = os.path.join(self.path, os.pardir)
-        all_image_labels = pd.read_csv(os.path.join(pardir, 'image_labels_map.csv'),
+        all_image_labels = pd.read_csv(os.path.join(pardir, '..', 'image_labels_map.csv'),
                                        header=0,
                                        usecols=['labels']).fillna('')
         all_image_labels = all_image_labels.values.tolist()

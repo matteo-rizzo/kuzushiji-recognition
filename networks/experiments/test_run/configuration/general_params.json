@@ -6,8 +6,8 @@
     "test": false
   },
   "datasets": {
-    "training": "datasets/kaggle/train",
-    "test": "datasets/kaggle/test"
+    "training": "datasets/kaggle/training/images",
+    "test": "datasets/kaggle/testing/images"
   },
   "ratios": {
     "training": 0.6,

@@ -1,23 +1,23 @@
 import os
-import regex as re
 import pandas as pd
 import matplotlib.pyplot as plt
+import regex as re
 
 from PIL import Image
-
 from matplotlib import font_manager
 from matplotlib.patches import Rectangle
 
 
-def to_file_name(image_name):
+def to_file_name(image_name: str, extension: str = 'jpg'):
     """
     Converts the name of an image to the corresponding file name.
     Example: image -> image.jpg
+    :param extension: the file extension
     :param image_name: the name of an image
     :return: the file name of the given image
     """
     if ".jpg" not in image_name:
-        image_name = image_name + ".jpg"
+        image_name = image_name + '.' + extension
     return image_name
 
 
