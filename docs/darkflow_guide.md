@@ -202,15 +202,15 @@ flow --train --model cfg/tiny-yolo.cfg --load bin/tiny-yolo.weights
     
     [convolutional]
     size=1
-   stride=1
+    stride=1
     pad=1
     filters=40
     activation=linear
     
     [region]
-   anchors = 1.08,1.19,  3.42,4.41,  6.63,11.38,  9.42,5.11,  16.62,10.52
+    anchors = 1.08,1.19,  3.42,4.41,  6.63,11.38,  9.42,5.11,  16.62,10.52
    
-   ...
+    ...
     ```
 
 4. Change `labels.txt` to include the label(s) you want to train on (number of labels should be the same as the number of classes you set in `tiny-yolo-voc-3c.cfg` file). In our case, `labels.txt` will contain 3 labels.
