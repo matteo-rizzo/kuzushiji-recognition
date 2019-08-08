@@ -1,12 +1,12 @@
 import os
 
-from scripts.data_format_conversion.functions.labels import generate_labels
 from scripts.data_format_conversion.functions.annotations import generate_annotations
 from scripts.data_format_conversion.functions.files_renaming import rename_dataset_files
+from scripts.data_format_conversion.functions.labels import generate_labels
 
 
-def main(renaming: bool = True,
-         labels: bool = False,
+def main(renaming: bool = False,
+         labels: bool = True,
          annotations: bool = False,
          annotation_format: str = 'darkflow'):
     """
@@ -47,11 +47,8 @@ def main(renaming: bool = True,
 
     # Generate the class name to class number mapping
     if labels:
-        # Set the path where the mapping of the labels must be stored
-        path_to_labels = os.path.join(path_to_dataset, 'labels.txt')
-
         # Generate the mapping between labels (integers) and classes (strings)
-        generate_labels(path_to_classes, path_to_labels)
+        generate_labels(path_to_classes, path_to_dataset)
 
         print('---------------------------------------------------------------\n')
 
