@@ -25,8 +25,7 @@ def write_annotation(annotation: pd.DataFrame,
 
     # Create the txt annotation file for the image
     if ann_format == 'YOLOv2':
-        annotation.to_csv(os.path.join(path_to_annotations,
-                                       to_file_name(image_id, 'txt')),
+        annotation.to_csv(os.path.join(path_to_annotations, to_file_name(image_id, 'txt')),
                           header=None,
                           index=None,
                           sep=' ',
@@ -35,22 +34,25 @@ def write_annotation(annotation: pd.DataFrame,
     # Create the xml annotation file for the image
     if ann_format == 'darkflow':
 
-        # Create a writer object for the image
-        writer = Writer(os.path.join(path_to_annotations,
-                                     to_file_name(image_id, 'jpg')),
-                        width=800,
-                        height=400)
+        if annotation.empty:
+            annotation.to_csv(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))
+        else:
+            # Create a writer object for the image
+            writer = Writer(os.path.join(path_to_annotations, to_file_name(image_id, 'jpg')),
+                            width=annotation['img_width'][0],
+                            height=annotation['img_height'][0],
+                            database='training')
 
-        # Add the data related to each row (label) of the dataframe
-        for _, row in annotation.iterrows():
-            writer.addObject(name=row['name'],
-                             xmin=row['xmin'],
-                             ymin=row['ymin'],
-                             xmax=row['xmax'],
-                             ymax=row['ymax'])
+            # Add the data related to each row (label) of the dataframe
+            for _, row in annotation.iterrows():
+                writer.addObject(name=row['class'],
+                                 xmin=row['xmin'],
+                                 ymin=row['ymin'],
+                                 xmax=row['xmax'],
+                                 ymax=row['ymax'])
 
-        # Write the data to an XML file
-        writer.save(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))
+            # Write the data to an XML file
+            writer.save(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))
 
 
 def delete_annotations(path_to_annotations):
@@ -177,6 +179,9 @@ def convert_to_darkflow(label: [],
     # Get the label data in the dataset format
     unicode, xmin, ymin, abs_bb_width, abs_bb_height = label.split()
 
+    # Make sure the class is a string
+    class_name = str(unicode)
+
     # Cast each data to int
     xmin = int(xmin)
     ymin = int(ymin)
@@ -187,7 +192,7 @@ def convert_to_darkflow(label: [],
     xmax = xmin + abs_bb_width
     ymax = ymin + abs_bb_height
 
-    return [unicode,
+    return [class_name,
             image_width,
             image_height,
             xmin,
@@ -221,21 +226,21 @@ def get_annotation_data(image_base_name: str,
     # Get the width and height of the image
     img_width, img_height = Image.open(os.path.join(path_to_images, to_file_name(image_base_name))).size
 
-    conversion = {
+    convert_to = {
         'YOLOv2': convert_to_yolov2,
         'darkflow': convert_to_darkflow
     }
 
     # Create a list of lists to store the annotation data
-    annotation_data = [conversion[ann_format](label, class_mapping, img_width, img_height) for label in labels]
+    annotation_data = [convert_to[ann_format](label, class_mapping, img_width, img_height) for label in labels]
+
+    data_format = {
+        'YOLOv2': ['class', 'x_c', 'y_c', 'bb_width', 'bb_height'],
+        'darkflow': ['class', 'xmin', 'ymin', 'xmax', 'ymax', 'img_width', 'img_height']
+    }
 
     # Create a dataframe to store the whole annotation
-    annotation = pd.DataFrame(annotation_data,
-                              columns=['class',
-                                       'x_c',
-                                       'y_c',
-                                       'bb_width',
-                                       'bb_height'])
+    annotation = pd.DataFrame(annotation_data, columns=data_format[ann_format])
 
     return annotation
 
@@ -257,8 +262,8 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
 
     print('Images are stored at {}.'.format(path_to_images))
 
-    print('\nGenerating the {format} annotations at {path}...\n'.format(format=ann_format,
-                                                                        path=path_to_annotations))
+    print('\nGenerating the {format} annotations at {path}...'.format(format=ann_format,
+                                                                      path=path_to_annotations))
 
     # If no annotations folder exists
     if not os.path.isdir(path_to_annotations):
@@ -274,11 +279,14 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
     # Get the class number to character mapping
     class_numbers = pd.read_csv(path_to_classes)
 
+    print('\nStarting the generation of the annotations...')
+    print('\n.............................................')
+
     # Iterate over the names of the images
     for image_name in list(os.listdir(path_to_images)):
         image_id = to_id(image_name)
 
-        print('Generating annotations for image {}...'.format(image_id))
+        print('\nGenerating annotations for image {}...'.format(image_id))
 
         # Get the data for the annotation of the image
         annotation = get_annotation_data(image_base_name=image_id,
@@ -295,4 +303,4 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
 
     print('\n {n_ann}/{n_img} annotations have been generated successfully.'
           .format(n_ann=len(list(os.listdir(path_to_annotations))),
-                  n_img=list(os.listdir(path_to_images))))
+                  n_img=len(list(os.listdir(path_to_images)))))

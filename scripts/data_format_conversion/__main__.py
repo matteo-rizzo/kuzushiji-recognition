@@ -38,20 +38,12 @@ def main(renaming: bool = False,
     path_to_training_set = os.path.join(path_to_dataset, 'training')
     path_to_testing_set = os.path.join(path_to_dataset, 'testing')
 
+    # Set the path to the images folders
+    path_to_train_images = os.path.join(path_to_training_set, 'images')
+    path_to_test_images = os.path.join(path_to_testing_set, 'images')
+
     # Set the path where the classes are stored (in string format)
     path_to_classes = os.path.join(path_to_dataset, 'classes.csv')
-
-    # Dataset files renaming in order to avoid training errors
-    if renaming:
-        # Set the path to the images folders
-        path_to_train_images = os.path.join(path_to_training_set, 'images')
-        path_to_test_images = os.path.join(path_to_testing_set, 'images')
-
-        # Set the path to the annotations folder
-        path_to_train_annotations = os.path.join(path_to_dataset, 'training', 'annotations')
-
-        rename_dataset_files(path_to_train_images, path_to_test_images, path_to_train_annotations)
-        print('---------------------------------------------------------------\n')
 
     # Generate the class name to class number mapping
     if labels:
@@ -65,9 +57,6 @@ def main(renaming: bool = False,
 
     # Generate the annotations
     if annotations:
-        # Set the path to the images folder
-        path_to_images = os.path.join(path_to_training_set, 'images')
-
         # Set the path to the annotations folder
         path_to_annotations = os.path.join(path_to_training_set, 'annotations')
 
@@ -77,11 +66,21 @@ def main(renaming: bool = False,
 
         # Generate a file of annotation for each image
         generate_annotations(path_to_annotations,
-                             path_to_images,
+                             path_to_train_images,
                              path_to_map,
                              path_to_classes,
                              annotation_format)
 
+        print('---------------------------------------------------------------\n')
+
+    # Dataset files renaming in order to avoid training errors
+    if renaming:
+        # Set the path to the annotations folder
+        path_to_train_annotations = os.path.join(path_to_dataset, 'training', 'annotations')
+
+        rename_dataset_files(path_to_train_images,
+                             path_to_test_images,
+                             path_to_train_annotations)
         print('---------------------------------------------------------------\n')
 
 
