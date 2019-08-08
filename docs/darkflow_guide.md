@@ -1,21 +1,22 @@
-## Intro
+# Guide to Darkflow
 
-[![Build Status](https://travis-ci.org/thtrieu/darkflow.svg?branch=master)](https://travis-ci.org/thtrieu/darkflow) [![codecov](https://codecov.io/gh/thtrieu/darkflow/branch/master/graph/badge.svg)](https://codecov.io/gh/thtrieu/darkflow)
+The present document describes how to properly install and work with the 
 
-Real-time object detection and classification. Paper: [version 1](https://arxiv.org/pdf/1506.02640.pdf), [version 2](https://arxiv.org/pdf/1612.08242.pdf).
+[darkflow]: https://github.com/thtrieu/darkflow	"darkflow-official-repo"
 
-Read more about YOLO (in darknet) and download weight files [here](http://pjreddie.com/darknet/yolo/). In case the weight file cannot be found, I uploaded some of mine [here](https://drive.google.com/drive/folders/0B1tW_VtY7onidEwyQ2FtQVplWEU), which include `yolo-full` and `yolo-tiny` of v1.0, `tiny-yolo-v1.1` of v1.1 and `yolo`, `tiny-yolo-voc` of v2.
+ framework. It is meant to be an internal reference made using the official README of the repository and by integrating with self-discovered information.
 
+## Getting started
 
-See demo below or see on [this imgur](http://i.imgur.com/EyZZKAA.gif)
+### Dependencies
 
-<p align="center"> <img src="demo.gif"/> </p>
+Darkflow has the following dependencies:
 
-## Dependencies
+* tensorflow
+* numpy
+* opencv-python.
 
-Python3, tensorflow 1.0, numpy, opencv 3.
-
-### Getting started
+### Installation
 
 You can choose _one_ of the following three ways to get started with darkflow.
 
@@ -34,16 +35,7 @@ You can choose _one_ of the following three ways to get started with darkflow.
     pip install .
     ```
 
-## Update
-
-**Android demo on Tensorflow's** [here](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/android/src/org/tensorflow/demo/TensorFlowYoloDetector.java)
-
-**I am looking for help:**
- - `help wanted` labels in issue track
-
-## Parsing the annotations
-
-Skip this if you are not training or fine-tuning anything (you simply want to forward flow a trained net)
+### Parsing the annotations
 
 For example, if you want to work with only 3 classes `tvmonitor`, `person`, `pottedplant`; edit `labels.txt` as follows
 
@@ -53,11 +45,15 @@ person
 pottedplant
 ```
 
-And that's it. `darkflow` will take care of the rest. You can also set darkflow to load from a custom labels file with the `--labels` flag (i.e. `--labels myOtherLabelsFile.txt`). This can be helpful when working with multiple models with different sets of output labels. When this flag is not set, darkflow will load from `labels.txt` by default (unless you are using one of the recognized `.cfg` files designed for the COCO or VOC dataset - then the labels file will be ignored and the COCO or VOC labels will be loaded).
+And that's it. `darkflow` will take care of the rest. 
 
-## Design the net
+You can also set darkflow to load from a custom labels file with the `--labels` flag (i.e. `--labels myOtherLabelsFile.txt`). This can be helpful when working with multiple models with different sets of output labels. When this flag is not set, darkflow will load from `labels.txt` by default (unless you are using one of the recognized `.cfg` files designed for the COCO or VOC dataset - then the labels file will be ignored and the COCO or VOC labels will be loaded).
 
-Skip this if you are working with one of the original configurations since they are already there. Otherwise, see the following example:
+### Design the net
+
+Skip this if you are working with one of the original configurations since they are already there. 
+
+Otherwise, see the following example:
 
 ```python
 ...
@@ -78,7 +74,7 @@ activation = linear
 ...
 ```
 
-## Flowing the graph using `flow`
+### Flowing the graph using `flow`
 
 ```bash
 # Have a look at its options
@@ -95,17 +91,22 @@ flow --model cfg/tiny-yolo.cfg --load bin/tiny-yolo.weights
 flow --model cfg/yolo-new.cfg
 
 # 3. It is useful to reuse the first identical layers of tiny for `yolo-new`
-flow --model cfg/yolo-new.cfg --load bin/tiny-yolo.weights
 # this will print out which layers are reused, which are initialized
+flow --model cfg/yolo-new.cfg --load bin/tiny-yolo.weights
 ```
 
-All input images from default folder `sample_img/` are flowed through the net and predictions are put in `sample_img/out/`. We can always specify more parameters for such forward passes, such as detection threshold, batch size, images folder, etc.
+All input images from default folder `sample_img/` are flowed through the net and predictions are put in `sample_img/out/`. 
+
+We can always specify more parameters for such forward passes, such as detection threshold, batch size, images folder, etc.
 
 ```bash
 # Forward all images in sample_img/ using tiny yolo and 100% GPU usage
 flow --imgdir sample_img/ --model cfg/tiny-yolo.cfg --load bin/tiny-yolo.weights --gpu 1.0
 ```
-json output can be generated with descriptions of the pixel location of each bounding box and the pixel location. Each prediction is stored in the `sample_img/out` folder by default. An example json array is shown below.
+JSON output can be generated with descriptions of the pixel location of each bounding box.
+
+ Each prediction is stored in the `sample_img/out` folder by default. An example json array is shown below.
+
 ```bash
 # Forward all images in sample_img/ using tiny yolo and JSON output.
 flow --imgdir sample_img/ --model cfg/tiny-yolo.cfg --load bin/tiny-yolo.weights --json
@@ -121,9 +122,13 @@ JSON output:
  - topleft: pixel coordinate of top left corner of box.
  - bottomright: pixel coordinate of bottom right corner of box.
 
-## Training new model
+## Training a new model
 
-Training is simple as you only have to add option `--train`. Training set and annotation will be parsed if this is the first time a new configuration is trained. To point to training set and annotations, use option `--dataset` and `--annotation`. A few examples:
+### Starting the training procedure
+
+Training is simple as you only have to add the `--train` option. 
+
+Training set and annotation will be parsed if this is the first time a new configuration is trained. To point to training set and annotations, use option `--dataset` and `--annotation`. A few examples:
 
 ```bash
 # Initialize yolo-new from yolo-tiny, then train the net on 100% GPU:
@@ -132,6 +137,24 @@ flow --model cfg/yolo-new.cfg --load bin/tiny-yolo.weights --train --gpu 1.0
 # Completely initialize yolo-new and train it with ADAM optimizer
 flow --model cfg/yolo-new.cfg --train --trainer adam
 ```
+
+#### Example
+
+Example of training on Pascal VOC 2007:
+
+```bash
+# Download the Pascal VOC dataset:
+curl -O https://pjreddie.com/media/files/VOCtest_06-Nov-2007.tar
+tar xf VOCtest_06-Nov-2007.tar
+
+# An example of the Pascal VOC annotation format:
+vim VOCdevkit/VOC2007/Annotations/000001.xml
+
+# Train the net on the Pascal dataset:
+flow --model cfg/yolo-new.cfg --train --dataset "~/VOCdevkit/VOC2007/JPEGImages" --annotation "~/VOCdevkit/VOC2007/Annotations"
+```
+
+### Resuming from checkpoints
 
 During training, the script will occasionally save intermediate results into Tensorflow checkpoints, stored in `ckpt/`. To resume to any checkpoint before performing training/testing, use `--load [checkpoint_num]` option, if `checkpoint_num < 0`, `darkflow` will load the most recent save by parsing `ckpt/checkpoint`.
 
@@ -146,19 +169,6 @@ flow --model cfg/yolo-new.cfg --load 1500
 flow --train --model cfg/tiny-yolo.cfg --load bin/tiny-yolo.weights
 ```
 
-Example of training on Pascal VOC 2007:
-```bash
-# Download the Pascal VOC dataset:
-curl -O https://pjreddie.com/media/files/VOCtest_06-Nov-2007.tar
-tar xf VOCtest_06-Nov-2007.tar
-
-# An example of the Pascal VOC annotation format:
-vim VOCdevkit/VOC2007/Annotations/000001.xml
-
-# Train the net on the Pascal dataset:
-flow --model cfg/yolo-new.cfg --train --dataset "~/VOCdevkit/VOC2007/JPEGImages" --annotation "~/VOCdevkit/VOC2007/Annotations"
-```
-
 ### Training on your own dataset
 
 *The steps below assume we want to use tiny YOLO and our dataset has 3 classes*
@@ -166,7 +176,7 @@ flow --model cfg/yolo-new.cfg --train --dataset "~/VOCdevkit/VOC2007/JPEGImages"
 1. Create a copy of the configuration file `tiny-yolo-voc.cfg` and rename it according to your preference `tiny-yolo-voc-3c.cfg` (It is crucial that you leave the original `tiny-yolo-voc.cfg` file unchanged, see below for explanation).
 
 2. In `tiny-yolo-voc-3c.cfg`, change classes in the [region] layer (the last layer) to the number of classes you are going to train for. In our case, classes are set to 3.
-    
+   
     ```python
     ...
 
@@ -181,24 +191,28 @@ flow --model cfg/yolo-new.cfg --train --dataset "~/VOCdevkit/VOC2007/JPEGImages"
     ...
     ```
 
-3. In `tiny-yolo-voc-3c.cfg`, change filters in the [convolutional] layer (the second to last layer) to num * (classes + 5). In our case, num is 5 and classes are 3 so 5 * (3 + 5) = 40 therefore filters are set to 40.
-    
+3. In `tiny-yolo-voc-3c.cfg`, change filters in the [convolutional] layer (the second to last layer) to: 
+   $$
+    num * (classes + 5)
+   $$
+In our case num is 5 and classes is 3, so 5 * (3 + 5) = 40 therefore filters is set to 40.
+   
     ```python
     ...
-
+    
     [convolutional]
     size=1
-    stride=1
+stride=1
     pad=1
     filters=40
     activation=linear
-
-    [region]
-    anchors = 1.08,1.19,  3.42,4.41,  6.63,11.38,  9.42,5.11,  16.62,10.52
     
-    ...
+    [region]
+anchors = 1.08,1.19,  3.42,4.41,  6.63,11.38,  9.42,5.11,  16.62,10.52
+   
+   ...
     ```
-
+   
 4. Change `labels.txt` to include the label(s) you want to train on (number of labels should be the same as the number of classes you set in `tiny-yolo-voc-3c.cfg` file). In our case, `labels.txt` will contain 3 labels.
 
     ```
@@ -206,33 +220,14 @@ flow --model cfg/yolo-new.cfg --train --dataset "~/VOCdevkit/VOC2007/JPEGImages"
     label2
     label3
     ```
+
 5. Reference the `tiny-yolo-voc-3c.cfg` model when you train.
 
     `flow --model cfg/tiny-yolo-voc-3c.cfg --load bin/tiny-yolo-voc.weights --train --annotation train/Annotations --dataset train/Images`
 
+**Note**: why should I leave the original `tiny-yolo-voc.cfg` file unchanged?
 
-* Why should I leave the original `tiny-yolo-voc.cfg` file unchanged?
-    
-    When darkflow sees you are loading `tiny-yolo-voc.weights` it will look for `tiny-yolo-voc.cfg` in your cfg/ folder and compare that configuration file to the new one you have set with `--model cfg/tiny-yolo-voc-3c.cfg`. In this case, every layer will have the same exact number of weights except for the last two, so it will load the weights into all layers up to the last two because they now contain different number of weights.
-
-
-## Camera/video file demo
-
-For a demo that entirely runs on the CPU:
-
-```bash
-flow --model cfg/yolo-new.cfg --load bin/yolo-new.weights --demo videofile.avi
-```
-
-For a demo that runs 100% on the GPU:
-
-```bash
-flow --model cfg/yolo-new.cfg --load bin/yolo-new.weights --demo videofile.avi --gpu 1.0
-```
-
-To use your webcam/camera, simply replace `videofile.avi` with keyword `camera`.
-
-To save a video with predicted bounding box, add `--saveVideo` option.
+When darkflow sees you are loading `tiny-yolo-voc.weights` it will look for `tiny-yolo-voc.cfg` in your `cfg/` folder and compare that configuration file to the new one you have set with `--model cfg/tiny-yolo-voc-3c.cfg`. In this case, every layer will have the same exact number of weights except for the last two, so it will load the weights into all layers up to the last two because they now contain different number of weights.
 
 ## Using darkflow from another python application
 
@@ -253,25 +248,35 @@ result = tfnet.return_predict(imgcv)
 print(result)
 ```
 
+## CLI commands
 
-## Save the built graph to a protobuf file (`.pb`)
+- --imgdir         path to testing directory with images
+- --binary         path to .weights directory
+- --config         path to .cfg directory
+- --dataset        path to dataset directory
+- --labels         path to labels file
+- --backup         path to backup folder
+- --summary        path to TensorBoard summaries directory
+- --annotation     path to annotation directory
+- --threshold      detection threshold
+- --model          configuration of choice
+- --trainer        training algorithm
+- --momentum       applicable for rmsprop and momentum optimizers
+- --verbalise      say out loud while building graph
+- --train          train the whole net
+- --load           how to initialize the net? Either from .weights or a checkpoint, or even from scratch
+- --savepb         save net and weight to a .pb file
+- --gpu            how much gpu (from 0.0 to 1.0)
+- --gpuName        GPU device name
+- --lr             learning rate
+- --keep           Number of most recent training results to save
+- --batch          batch size
+- --epoch          number of epoch
+- --save           save checkpoint every ? training examples
+- --demo           demo on webcam
+- --queue          process demo in batch
+- --json           Outputs bounding box information in json format.
+- --saveVideo      Records video from input video or camera
+- --pbLoad         path to .pb protobuf file (metaLoad must also be specified)
+- --metaLoad       path to .meta file generated during --savepb that corresponds to .pb file
 
-```bash
-## Saving the lastest checkpoint to protobuf file
-flow --model cfg/yolo-new.cfg --load -1 --savepb
-
-## Saving graph and weights to protobuf file
-flow --model cfg/yolo.cfg --load bin/yolo.weights --savepb
-```
-When saving the `.pb` file, a `.meta` file will also be generated alongside it. This `.meta` file is a JSON dump of everything in the `meta` dictionary that contains information nessecary for post-processing such as `anchors` and `labels`. This way, everything you need to make predictions from the graph and do post processing is contained in those two files - no need to have the `.cfg` or any labels file tagging along.
-
-The created `.pb` file can be used to migrate the graph to mobile devices (JAVA / C++ / Objective-C++). The name of input tensor and output tensor are respectively `'input'` and `'output'`. For further usage of this protobuf file, please refer to the official documentation of `Tensorflow` on C++ API [_here_](https://www.tensorflow.org/versions/r0.9/api_docs/cc/index.html). To run it on, say, iOS application, simply add the file to Bundle Resources and update the path to this file inside source code.
-
-Also, darkflow supports loading from a `.pb` and `.meta` file for generating predictions (instead of loading from a `.cfg` and checkpoint or `.weights`).
-```bash
-## Forward images in sample_img for predictions based on protobuf file
-flow --pbLoad built_graph/yolo.pb --metaLoad built_graph/yolo.meta --imgdir sample_img/
-```
-If you'd like to load a `.pb` and `.meta` file when using `return_predict()` you can set the `"pbLoad"` and `"metaLoad"` options in place of the `"model"` and `"load"` options you would normally set.
-
-That's all.

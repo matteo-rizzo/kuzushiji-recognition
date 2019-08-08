@@ -34,4 +34,3 @@ Per fare questo intuitivamente mi verrebbe da:
 - Aggiungere ad ogni immagine tutti i bounding box in una dimensione differente (quindi aggiungere un layer, o canale, all'immagine) che contenga solo i bounding box nella posizione giusta.
 
 L'input della rete sarebbe un "panino" di immagini, dove ogni layer (canale, dimensione, o come la si vuole chiamare) rappresenta una immagine preprocessata con tecniche differenti, e l'ultimo layer contiene le informazioni sui bounding box. Poi si allena la rete, non so ancora di che tipo, su questi "file immagine" e potrebbe uscirne qualcosa.
-

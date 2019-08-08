@@ -3,56 +3,10 @@ import pandas as pd
 import regex as re
 
 from PIL import Image
-from pascal_voc_writer import Writer
 
 from scripts.utils.utils import to_file_name, to_id
-
-
-def write_annotation(annotation: pd.DataFrame,
-                     path_to_annotations: str,
-                     image_id: str,
-                     ann_format: str):
-    """
-    Writes an annotation on file based on the selected format.
-
-    :param annotation: the annotation data
-    :param path_to_annotations: the path to the annotations files
-    :param image_id: the base name of the image (without file extension)
-    :param ann_format: the format of the annotation, which may be:
-                                - YOLOv2
-                                - darkflow
-    """
-
-    # Create the txt annotation file for the image
-    if ann_format == 'YOLOv2':
-        annotation.to_csv(os.path.join(path_to_annotations, to_file_name(image_id, 'txt')),
-                          header=None,
-                          index=None,
-                          sep=' ',
-                          mode='a')
-
-    # Create the xml annotation file for the image
-    if ann_format == 'darkflow':
-
-        if annotation.empty:
-            annotation.to_csv(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))
-        else:
-            # Create a writer object for the image
-            writer = Writer(os.path.join(path_to_annotations, to_file_name(image_id, 'jpg')),
-                            width=annotation['img_width'][0],
-                            height=annotation['img_height'][0],
-                            database='training')
-
-            # Add the data related to each row (label) of the dataframe
-            for _, row in annotation.iterrows():
-                writer.addObject(name=row['class'],
-                                 xmin=row['xmin'],
-                                 ymin=row['ymin'],
-                                 xmax=row['xmax'],
-                                 ymax=row['ymax'])
-
-            # Write the data to an XML file
-            writer.save(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))
+from scripts.data_format_conversion.functions.darkflow_conversion import convert_to_darkflow, write_as_darkflow
+from scripts.data_format_conversion.functions.yolov2_conversion import convert_to_yolov2, write_as_yolov2
 
 
 def delete_annotations(path_to_annotations):
@@ -72,135 +26,6 @@ def delete_annotations(path_to_annotations):
         print('\nNo previously generated annotations to delete at {}'.format(path_to_annotations))
 
 
-def convert_to_yolov2(label: [],
-                      class_mapping: pd.DataFrame,
-                      image_width: int,
-                      image_height: int) -> []:
-    """
-    Converts the label data to the YOLO data format.
-
-    The dataset is provided with labels in the format: <unicode> <x_bl> <y_bl> <abs_bb_width> <abs_bb_height>
-
-    Where:
-    - <unicode>        : is the class label as a unicode
-    - <x_bl>           : is the bottom-left corner x coordinate of the bounding box
-    - <y_bl>           : is the bottom-left corner y coordinate of the bounding box
-    - <abs_bb_width>   : is the width of the bounding box
-    - <abs_bb_height>  : is the height of the bounding box
-
-    The YOLO format is: <class_number> <x_c> <y_c> <bb_width> <bb_height>.
-
-    Where:
-    - <class_number>            : an integer number from 0 to (classes-1) indicating the class of the object
-    - <x_c> <y_c>               : the coordinates of the center of the rectangle (normalized between 0.0 and 1.0)
-    - <bb_width> <bb_height>    : float values relative to width and height of the image for the bounding box
-                                  (normalized between 0.0 and 1.0)
-
-    The conversion is:
-
-    - <class_number>    = mapping(<unicode>)
-    - <x_c>             = <absolute_x_c>  / <image_width>
-    - <y_c>             = <absolute_y_c>  / <image_height>
-    - <bb_width>        = <abs_bb_width>  / <image_width>
-    - <bb_height>       = <abs_bb_height> / <image_height>
-
-    Where:
-    - <absolute_x_c> = <x_bl> + <abs_bb_width>  / 2
-    - <absolute_y_c> = <y_bl> + <abs_bb_height> / 2
-
-    :param label: the label for one character in the image
-    :param class_mapping: the class number to character mapping
-    :param image_width: the absolute the width of the image
-    :param image_height: the absolute height of the image
-    :return: a list with the converted data
-    """
-
-    # Get the label data in the dataset format
-    unicode, x_bl, y_bl, abs_bb_width, abs_bb_height = label.split()
-
-    # Cast each data to int
-    x_bl = int(x_bl)
-    y_bl = int(y_bl)
-    abs_bb_width = int(abs_bb_width)
-    abs_bb_height = int(abs_bb_height)
-
-    # Convert the class string id to the corresponding integer value
-    class_number = class_mapping[class_mapping.Unicode == unicode].index[0]
-
-    # Calculate the normalized coordinates of the center of the bounding box
-    x_c = (x_bl + abs_bb_width / 2) / image_width
-    y_c = (y_bl + abs_bb_height / 2) / image_height
-
-    # Calculate the normalized dimensions of the bounding box
-    bb_width = abs_bb_width / image_width
-    bb_height = abs_bb_height / image_height
-
-    return [class_number,
-            x_c,
-            y_c,
-            bb_width,
-            bb_height]
-
-
-def convert_to_darkflow(label: [],
-                        class_mapping: pd.DataFrame,
-                        image_width: int,
-                        image_height: int) -> []:
-    """
-    Converts the label data to the darkflow data format (i.e. PASCAL VOC XML).
-
-    The dataset is provided with labels in the format: <unicode> <x_bl> <y_bl> <abs_bb_width> <abs_bb_height>
-
-    Where:
-    - <unicode>        : is the class label as a unicode
-    - <x_bl>           : is the bottom-left corner x coordinate of the bounding box
-    - <y_bl>           : is the bottom-left corner y coordinate of the bounding box
-    - <abs_bb_width>   : is the width of the bounding box
-    - <abs_bb_height>  : is the height of the bounding box
-
-    The darkflow data format is: <class_name> <xmin> <ymin> <xmax> <ymax> <img_width> <img_height>
-
-    Where:
-    - <class_name> : is the name of the class object as string
-    - <img_width>  : is the width of the image
-    - <img_height> : is the height of the image
-    - <xmin>       : is the bottom-left x coordinate of the bounding box
-    - <ymin>       : is the bottom-left y coordinate of the bounding box
-    - <xmax>       : is the top-right x coordinate of the bounding box
-    - <ymax>       : is the top-right y coordinate of the bounding box
-
-    :param label: the label for one character in the image
-    :param class_mapping: the class number to character mapping
-    :param image_width: the absolute the width of the image
-    :param image_height: the absolute height of the image
-    :return: a list with the converted data
-    """
-
-    # Get the label data in the dataset format
-    unicode, xmin, ymin, abs_bb_width, abs_bb_height = label.split()
-
-    # Make sure the class is a string
-    class_name = str(unicode)
-
-    # Cast each data to int
-    xmin = int(xmin)
-    ymin = int(ymin)
-    abs_bb_width = int(abs_bb_width)
-    abs_bb_height = int(abs_bb_height)
-
-    # Calculate the top-right coordinates of the bounding box
-    xmax = xmin + abs_bb_width
-    ymax = ymin + abs_bb_height
-
-    return [class_name,
-            image_width,
-            image_height,
-            xmin,
-            ymin,
-            xmax,
-            ymax]
-
-
 def get_annotation_data(image_base_name: str,
                         path_to_images: str,
                         ann_format: str,
@@ -214,7 +39,7 @@ def get_annotation_data(image_base_name: str,
     :param ann_format: the annotation format, which can be either YOLOv2 or darkflow
     :param label_mapping: the image-labels mapping
     :param class_mapping: the class string to class number mapping
-    :return:
+    :return: the annotation of the current image as a dataframe
     """
 
     # Get all the labels of the image as a string
@@ -284,6 +109,7 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
 
     # Iterate over the names of the images
     for image_name in list(os.listdir(path_to_images)):
+        # Get the base name of the image (without file extension)
         image_id = to_id(image_name)
 
         print('\nGenerating annotations for image {}...'.format(image_id))
@@ -298,8 +124,13 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
         # Print the first 5 rows of the annotation
         print(annotation.head())
 
+        write_as = {
+            'YOLOv2': write_as_yolov2,
+            'darkflow': write_as_darkflow
+        }
+
         # Write the annotation on file
-        write_annotation(annotation, path_to_annotations, image_id, ann_format)
+        write_as[ann_format](annotation, path_to_annotations, image_id)
 
     print('\n {n_ann}/{n_img} annotations have been generated successfully.'
           .format(n_ann=len(list(os.listdir(path_to_annotations))),
