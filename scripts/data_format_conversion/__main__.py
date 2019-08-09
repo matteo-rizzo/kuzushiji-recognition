@@ -93,7 +93,7 @@ def main(labels: bool = False,
                                  path_to_train_annotations)
             print('---------------------------------------------------------------\n')
     else:
-        print('Scripts execution aborted.')
+        print('Script execution aborted.')
 
 
 if __name__ == '__main__':

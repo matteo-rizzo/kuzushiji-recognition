@@ -1,6 +1,7 @@
 import os
-import pandas as pd
+from xml.etree import ElementTree
 
+import pandas as pd
 from pascal_voc_writer import Writer
 
 from scripts.utils.utils import to_file_name
@@ -76,11 +77,11 @@ def write_as_darkflow(annotation: pd.DataFrame,
     :param image_id: the base name of the image (without file extension)
     """
 
-    # if annotation.empty:
-    #     annotation.to_csv(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')), header=None)
-    # else:
+    file_name = to_file_name(image_id, 'jpg').replace('-', '_')
+
     # Create a writer object for the image
-    writer = Writer(os.path.join(path_to_annotations, to_file_name(image_id, 'jpg')),
+    writer = Writer(path=os.path.join(path_to_annotations, file_name),
+                    filename=os.path.join('..', 'images', file_name),
                     width=annotation['img_width'][0],
                     height=annotation['img_height'][0],
                     database='training')
@@ -93,5 +94,23 @@ def write_as_darkflow(annotation: pd.DataFrame,
                          xmax=row['xmax'],
                          ymax=row['ymax'])
 
+    # Set the path to the XML annotation
+    path_to_xml = os.path.join(path_to_annotations, to_file_name(image_id, 'xml'))
+
     # Write the data to an XML file
-    writer.save(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))
+    writer.save(path_to_xml)
+
+    # If the XML file is empty because the image has no objects
+    if not annotation.loc[0]['class']:
+        # Get the XML tree of the annotation
+        tree = ElementTree.parse(path_to_xml)
+
+        # Get the root of the annotation
+        root = tree.getroot()
+
+        # Delete the object tag
+        obj = root.getchildren()[-1]
+        root.remove(obj)
+        ElementTree.dump(root)
+
+        tree.write(path_to_xml)

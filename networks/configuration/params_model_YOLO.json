@@ -8,7 +8,7 @@
     "config": "libs/darkflow/cfg",
     "model": "libs/darkflow/cfg/yolo-4787c.cfg",
     "load": "libs/darkflow/bin/yolo.weights",
-    "batch": 8,
+    "batch": 50,
     "epoch": 10,
     "gpu": 0.0,
     "train": true,
