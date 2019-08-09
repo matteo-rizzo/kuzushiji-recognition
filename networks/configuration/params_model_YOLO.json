@@ -5,7 +5,8 @@
     "restore_weights": false
   },
   "network": {
-    "model": "libs/darkflow/cfg/yolo-voc-4787c.cfg",
+    "config": "libs/darkflow/cfg",
+    "model": "libs/darkflow/cfg/yolo-4787c.cfg",
     "load": "libs/darkflow/bin/yolo.weights",
     "batch": 8,
     "epoch": 10,

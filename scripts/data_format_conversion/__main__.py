@@ -5,10 +5,10 @@ from scripts.data_format_conversion.functions.files_renaming import rename_datas
 from scripts.data_format_conversion.functions.labels import generate_labels
 
 
-def main(renaming: bool = False,
-         labels: bool = True,
-         annotations: bool = False,
-         annotation_format: str = 'darkflow'):
+def main(labels: bool = False,
+         annotations: bool = True,
+         annotation_format: str = 'darkflow',
+         renaming: bool = True):
     """
     YOLO requires annotations in the format:
 
@@ -21,64 +21,79 @@ def main(renaming: bool = False,
 
     Darkflow requires annotations in the PASCAL VOC XML format.
 
-    :param renaming: a boolean flag to rename all the files related to the dataset
     :param labels: boolean flag to state if labels must be generated
     :param annotations: boolean flag to state if annotations must be generated
     :param annotation_format: defines the format of the annotations (YOLOv2 or Darkflow)
+    :param renaming: a boolean flag to rename all the files related to the dataset
     """
 
     print('\n---------------------------------------------------------------')
     print('                   DATA FORMAT CONVERSION                      ')
     print('---------------------------------------------------------------\n')
 
-    # Set the base path to the dataset
-    path_to_dataset = os.path.join('datasets', 'kaggle')
+    user_ok = input('The script is going to run the following tasks:\n'
+                    'Generations of labels:                         {labels}\n'
+                    'Generations of annotations in {format} format: {annotations}\n'
+                    'Renaming of dataset files:                     {renaming}\n \n'
+                    'Confirm? [Y/n]\n'
+                    .format(labels=labels,
+                            format=annotation_format,
+                            annotations=annotations,
+                            renaming=renaming))
 
-    # Set the path to the training and test set
-    path_to_training_set = os.path.join(path_to_dataset, 'training')
-    path_to_testing_set = os.path.join(path_to_dataset, 'testing')
+    confirmations = ['y', 'Y', 'yes', 'ok']
 
-    # Set the path to the images folders
-    path_to_train_images = os.path.join(path_to_training_set, 'images')
-    path_to_test_images = os.path.join(path_to_testing_set, 'images')
+    if user_ok in confirmations:
+        # Set the base path to the dataset
+        path_to_dataset = os.path.join('datasets', 'kaggle')
 
-    # Set the path where the classes are stored (in string format)
-    path_to_classes = os.path.join(path_to_dataset, 'classes.csv')
+        # Set the path to the training and test set
+        path_to_training_set = os.path.join(path_to_dataset, 'training')
+        path_to_testing_set = os.path.join(path_to_dataset, 'testing')
 
-    # Generate the class name to class number mapping
-    if labels:
-        # Generate the mapping between labels (integers) and classes (strings)
-        generate_labels(path_to_classes, path_to_dataset)
+        # Set the path to the images folders
+        path_to_train_images = os.path.join(path_to_training_set, 'images')
+        path_to_test_images = os.path.join(path_to_testing_set, 'images')
 
-        print('---------------------------------------------------------------\n')
+        # Set the path where the classes are stored (in string format)
+        path_to_classes = os.path.join(path_to_dataset, 'classes.csv')
 
-    # Generate the annotations
-    if annotations:
-        # Set the path to the annotations folder
-        path_to_annotations = os.path.join(path_to_training_set, 'annotations')
+        # Generate the class name to class number mapping
+        if labels:
+            # Generate the mapping between labels (integers) and classes (strings)
+            generate_labels(path_to_classes, path_to_dataset)
 
-        # Set the path to the image-labels mapping
-        # note that here classes are strings and not integers
-        path_to_map = os.path.join(path_to_dataset, 'image_labels_map.csv')
+            print('---------------------------------------------------------------\n')
 
-        # Generate a file of annotation for each image
-        generate_annotations(path_to_annotations,
-                             path_to_train_images,
-                             path_to_map,
-                             path_to_classes,
-                             annotation_format)
+        # Generate the annotations
+        if annotations:
+            # Set the path to the annotations folder
+            path_to_annotations = os.path.join(path_to_training_set, 'annotations')
 
-        print('---------------------------------------------------------------\n')
+            # Set the path to the image-labels mapping
+            # note that here classes are strings and not integers
+            path_to_map = os.path.join(path_to_dataset, 'image_labels_map.csv')
 
-    # Dataset files renaming in order to avoid training errors
-    if renaming:
-        # Set the path to the annotations folder
-        path_to_train_annotations = os.path.join(path_to_dataset, 'training', 'annotations')
+            # Generate a file of annotation for each image
+            generate_annotations(path_to_annotations,
+                                 path_to_train_images,
+                                 path_to_map,
+                                 path_to_classes,
+                                 annotation_format)
 
-        rename_dataset_files(path_to_train_images,
-                             path_to_test_images,
-                             path_to_train_annotations)
-        print('---------------------------------------------------------------\n')
+            print('---------------------------------------------------------------\n')
+
+        # Dataset files renaming in order to avoid training errors
+        if renaming:
+            # Set the path to the annotations folder
+            path_to_train_annotations = os.path.join(path_to_dataset, 'training', 'annotations')
+
+            rename_dataset_files(path_to_train_images,
+                                 path_to_test_images,
+                                 path_to_train_annotations)
+            print('---------------------------------------------------------------\n')
+    else:
+        print('Scripts execution aborted.')
 
 
 if __name__ == '__main__':

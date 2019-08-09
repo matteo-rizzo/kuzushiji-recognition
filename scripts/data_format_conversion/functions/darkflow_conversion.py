@@ -76,22 +76,22 @@ def write_as_darkflow(annotation: pd.DataFrame,
     :param image_id: the base name of the image (without file extension)
     """
 
-    if annotation.empty:
-        annotation.to_csv(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))
-    else:
-        # Create a writer object for the image
-        writer = Writer(os.path.join(path_to_annotations, to_file_name(image_id, 'jpg')),
-                        width=annotation['img_width'][0],
-                        height=annotation['img_height'][0],
-                        database='training')
+    # if annotation.empty:
+    #     annotation.to_csv(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')), header=None)
+    # else:
+    # Create a writer object for the image
+    writer = Writer(os.path.join(path_to_annotations, to_file_name(image_id, 'jpg')),
+                    width=annotation['img_width'][0],
+                    height=annotation['img_height'][0],
+                    database='training')
 
-        # Add the data related to each row (label) of the dataframe
-        for _, row in annotation.iterrows():
-            writer.addObject(name=row['class'],
-                             xmin=row['xmin'],
-                             ymin=row['ymin'],
-                             xmax=row['xmax'],
-                             ymax=row['ymax'])
+    # Add the data related to each row (label) of the dataframe
+    for _, row in annotation.iterrows():
+        writer.addObject(name=row['class'],
+                         xmin=row['xmin'],
+                         ymin=row['ymin'],
+                         xmax=row['xmax'],
+                         ymax=row['ymax'])
 
-        # Write the data to an XML file
-        writer.save(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))
+    # Write the data to an XML file
+    writer.save(os.path.join(path_to_annotations, to_file_name(image_id, 'xml')))

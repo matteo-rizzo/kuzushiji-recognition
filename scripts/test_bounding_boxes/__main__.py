@@ -5,7 +5,7 @@ import pandas as pd
 from scripts.test_bounding_boxes.functions.visualization import visualize_bounding_boxes
 
 
-def main(image_id: str = 'hnsd006-033'):
+def main(image_id: str = 'umgy006_035'):
     """
     Test an annotation drawing the corresponding bounding boxes on an image
     :param image_id: the base name of the image to be tested (without file extension)

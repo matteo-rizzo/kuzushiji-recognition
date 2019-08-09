@@ -1,12 +1,12 @@
 import os
+
 import pandas as pd
 import regex as re
-
 from PIL import Image
 
-from scripts.utils.utils import to_file_name, to_id
 from scripts.data_format_conversion.functions.darkflow_conversion import convert_to_darkflow, write_as_darkflow
 from scripts.data_format_conversion.functions.yolov2_conversion import convert_to_yolov2, write_as_yolov2
+from scripts.utils.utils import to_file_name, to_id
 
 
 def delete_annotations(path_to_annotations):
@@ -58,6 +58,10 @@ def get_annotation_data(image_base_name: str,
 
     # Create a list of lists to store the annotation data
     annotation_data = [convert_to[ann_format](label, class_mapping, img_width, img_height) for label in labels]
+
+    # If the image has no labels, insert just image width and height
+    if not annotation_data:
+        annotation_data = [['', '', '', '', '', img_width, img_height]]
 
     data_format = {
         'YOLOv2': ['class', 'x_c', 'y_c', 'bb_width', 'bb_height'],
@@ -122,7 +126,8 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
                                          ann_format=ann_format)
 
         # Print the first 5 rows of the annotation
-        print(annotation.head())
+        if not annotation.empty:
+            print(annotation.head())
 
         write_as = {
             'YOLOv2': write_as_yolov2,
