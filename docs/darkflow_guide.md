@@ -1,6 +1,6 @@
 # Guide to Darkflow
 
-The present document describes how to properly install and work with the [darkflow][https://github.com/thtrieu/darkflow] framework. It is meant to be an internal reference made using the official README of the repository and by integrating with self-discovered information.
+The present document describes how to properly install and work with the [darkflow](https://github.com/thtrieu/darkflow) framework. It is meant to be an internal reference made using the official README of the repository and by integrating with self-discovered information.
 
 ## Getting started
 
