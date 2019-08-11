@@ -16,7 +16,7 @@ def to_file_name(image_name: str, extension: str = 'jpg'):
     :param image_name: the name of an image
     :return: the file name of the given image
     """
-    if ".jpg" not in image_name:
+    if extension not in image_name:
         image_name = image_name + '.' + extension
     return image_name
 

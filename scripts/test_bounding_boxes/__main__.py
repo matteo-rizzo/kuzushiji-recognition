@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import pandas as pd
 
@@ -13,7 +14,7 @@ def main(image_id: str = 'umgy006_035'):
 
     # Set up all the paths to the images
     path_to_dataset = os.path.join('datasets', 'kaggle')
-    path_to_train_images = os.path.join(path_to_dataset, 'training', 'images')
+    path_to_train_images = os.path.join(path_to_dataset, 'training', 'backup')
 
     print('\n---------------------------------------------------------------')
     print('                   TEST OF BOUNDING BOXES                      ')

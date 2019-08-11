@@ -44,6 +44,7 @@ def main(labels: bool = False,
     confirmations = ['y', 'Y', 'yes', 'ok']
 
     if user_ok in confirmations:
+
         # Set the base path to the dataset
         path_to_dataset = os.path.join('datasets', 'kaggle')
 

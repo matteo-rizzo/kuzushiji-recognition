@@ -12,6 +12,7 @@
     "epoch": 10,
     "gpu": 0.0,
     "train": true,
+    "save": 100,
     "labels": "datasets/kaggle/labels/labels.txt",
     "annotation": "datasets/kaggle/training/annotations",
     "dataset": "datasets/kaggle/training/images"

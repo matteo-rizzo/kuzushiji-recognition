@@ -1,20 +1,22 @@
-import os
 import logging
+import os
+
 import absl.logging
 import tensorflow as tf
 
-from networks.classes.Logger import Logger
-from networks.classes.Params import Params
 from networks.classes.Dataset import Dataset
-from networks.classes.ModelYOLO import ModelYOLO
+from networks.classes.Logger import Logger
 from networks.classes.ModelCustom import ModelCustom
+from networks.classes.ModelYOLO import ModelYOLO
+from networks.classes.Params import Params
 
 
 def main():
     # -- TENSORFLOW BASIC CONFIG ---
 
     # Enable eager execution
-    tf.compat.v1.enable_eager_execution()
+    # tf.compat.v1.enable_eager_execution()
+    eager_exec_status = str('Yes') if tf.compat.v1.executing_eagerly else str('No')
 
     # Set up the log for tensorflow
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -53,6 +55,7 @@ def main():
     log.info('Software versions:')
     log.info('* Tensorflow version: ' + tf.__version__)
     log.info('* Keras version:      ' + tf.__version__)
+    log.info('* Executing eagerly?  ' + eager_exec_status)
 
     log.info('General parameters:')
     log.info('* Model:              ' + model_name)
