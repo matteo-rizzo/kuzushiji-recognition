@@ -7,9 +7,9 @@
   "network": {
     "config": "libs/darkflow/cfg",
     "model": "libs/darkflow/cfg/yolo-4787c.cfg",
-    "load": 1100,
+    "load": "libs/darkflow/bin/yolo.cfg",
     "batch": 64,
-    "epoch": 50,
+    "epoch": 10,
     "lr": 1e-05,
     "gpu": 0.0,
     "train": true,

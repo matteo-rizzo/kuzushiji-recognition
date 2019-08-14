@@ -63,7 +63,7 @@ class ModelYOLO(Model):
         Performs a prediction using the model.
         """
 
-        image_file_name = '100241706_00009_1.jpg'
+        image_file_name = '100241706_00016_1.jpg'
         threshold = self._network_params['threshold']
 
         img_path = os.path.join(os.getcwd(),
@@ -107,7 +107,7 @@ class ModelYOLO(Model):
             confidence = result['confidence']
             label = result['label'] + " " + str(round(confidence, 3))
 
-            if confidence > threshold:
+            if confidence >= threshold:
                 boxed_image = cv2.rectangle(img=boxed_image,
                                             pt1=(top_x, top_y),
                                             pt2=(btm_x, btm_y),

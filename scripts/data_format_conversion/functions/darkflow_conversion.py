@@ -58,12 +58,12 @@ def convert_to_darkflow(label: [],
     ymax = ymin + abs_bb_height
 
     return [class_name,
-            image_width,
-            image_height,
             xmin,
             ymin,
             xmax,
-            ymax]
+            ymax,
+            image_width,
+            image_height]
 
 
 def write_as_darkflow(annotation: pd.DataFrame,
