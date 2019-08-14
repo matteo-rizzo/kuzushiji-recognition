@@ -1,4 +1,5 @@
 import os
+
 import tensorflow as tf
 
 from networks.classes.Logger import Logger

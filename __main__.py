@@ -113,6 +113,9 @@ def main():
         log.info('Starting the training procedure...')
         model.train()
 
+        log.info('Testing the model against an image in the training set...')
+        model.predict()
+
     # --- TEST ---
 
     # Evaluate training against the given test set

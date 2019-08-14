@@ -1,13 +1,14 @@
 import os
-import cv2
-import tensorflow as tf
 import pprint as pp
-import numpy as np
+
+import cv2
 import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+from libs.darkflow.darkflow.net.build import TFNet
 
 from networks.classes.Logger import Logger
 from networks.classes.Model import Model
-from libs.darkflow.darkflow.net.build import TFNet
 
 
 class ModelYOLO(Model):
@@ -54,6 +55,7 @@ class ModelYOLO(Model):
         """
         Trains the model for the specified number of epochs.
         """
+
         self._model.train()
 
     def predict(self):
@@ -61,24 +63,38 @@ class ModelYOLO(Model):
         Performs a prediction using the model.
         """
 
-        img_path = os.path.join(os.getcwd(), 'datasets', 'sample_img', 'sample_multiple_objects.jpg')
+        image_file_name = '100241706_00005_2.jpg'
+        threshold = self._network_params['threshold']
+
+        img_path = os.path.join(os.getcwd(),
+                                'datasets',
+                                'kaggle',
+                                'training',
+                                'images',
+                                image_file_name)
 
         original_img = cv2.imread(img_path)
         original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
 
         results = self._model.return_predict(original_img)
-        pp.pprint(results)
+        self._test_log.info('Test image data:')
+        self._test_log.info('* Image     :    {}'.format(image_file_name))
+        self._test_log.info('* Threshold :    {}\n'.format(threshold))
+        self._test_log.info('{} objects detected:\n'.format(len(results)))
+        self._test_log.info(pp.pformat(results))
 
         plt.subplots(figsize=(10, 10))
         plt.imshow(original_img)
         plt.show()
 
         plt.subplots(figsize=(20, 10))
-        plt.imshow(self.boxing(original_img, results))
+        plt.imshow(self.boxing(original_img,
+                               results,
+                               threshold))
         plt.show()
 
     @staticmethod
-    def boxing(original_img, predictions):
+    def boxing(original_img, predictions, threshold):
         boxed_image = np.copy(original_img)
 
         for result in predictions:
@@ -91,7 +107,7 @@ class ModelYOLO(Model):
             confidence = result['confidence']
             label = result['label'] + " " + str(round(confidence, 3))
 
-            if confidence > 0.3:
+            if confidence > threshold:
                 boxed_image = cv2.rectangle(img=boxed_image,
                                             pt1=(top_x, top_y),
                                             pt2=(btm_x, btm_y),

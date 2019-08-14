@@ -299,6 +299,5 @@ networks/experiments/
 # Libraries
 libs/
 
-# Network weights and config
-bin/
-cfg/
+# Checkpoints
+ckpt/
