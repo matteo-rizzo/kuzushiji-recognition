@@ -293,8 +293,9 @@ modules.xml
 # Datasets
 datasets/
 
-# Experiments
+# Experiments and configuration
 networks/experiments/
+networks/configuration/
 
 # Libraries
 libs/
