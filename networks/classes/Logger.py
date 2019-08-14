@@ -32,6 +32,10 @@ class Logger:
         Create a logger for the execution
         """
         exec_log_path = os.path.join(self.log_directory_path, 'execution.log')
+
+        if os.path.isfile(exec_log_path):
+            os.remove(exec_log_path)
+
         exec_logger = logging.getLogger('execution')
 
         if exec_logger.hasHandlers():
@@ -58,6 +62,10 @@ class Logger:
         Create a logger for training
         """
         train_log_path = os.path.join(self.log_directory_path, 'training.log')
+
+        if os.path.isfile(train_log_path):
+            os.remove(train_log_path)
+
         train_logger = logging.getLogger('training')
         train_logger.setLevel('INFO')
 
@@ -71,6 +79,10 @@ class Logger:
         Create a logger for testing
         """
         test_log_path = os.path.join(self.log_directory_path, 'test.log')
+
+        if os.path.isfile(test_log_path):
+            os.remove(test_log_path)
+
         test_logger = logging.getLogger('testing')
         test_logger.setLevel('INFO')
 

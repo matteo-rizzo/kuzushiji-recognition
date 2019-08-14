@@ -63,7 +63,7 @@ class ModelYOLO(Model):
         Performs a prediction using the model.
         """
 
-        image_file_name = '100241706_00005_2.jpg'
+        image_file_name = '100241706_00009_1.jpg'
         threshold = self._network_params['threshold']
 
         img_path = os.path.join(os.getcwd(),

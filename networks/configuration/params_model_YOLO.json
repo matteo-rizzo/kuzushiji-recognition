@@ -14,7 +14,7 @@
     "gpu": 0.0,
     "train": true,
     "save": 4000,
-    "threshold": 0.00002,
+    "threshold": 0.00001,
     "labels": "datasets/kaggle/labels/labels.txt",
     "annotation": "datasets/kaggle/training/annotations",
     "dataset": "datasets/kaggle/training/images"
