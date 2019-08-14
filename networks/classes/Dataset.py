@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+import os
+import random
 from pathlib import Path
 
-import random
 import pandas as pd
-import os
 import tensorflow as tf
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -36,7 +37,7 @@ class Dataset:
         """
 
         # Get all the paths to the images of the dataset
-        all_image_paths = [os.path.join(self.path, image_name) for image_name in list(os.listdir(self.path))]
+        all_image_paths = [str(os.path.join(self.path, image_name)) for image_name in list(os.listdir(self.path))]
         dataset_size = len(all_image_paths)
 
         # Get all the labels of the images in the dataset
@@ -61,7 +62,7 @@ class Dataset:
         return image_label_dataset, dataset_size
 
     def __load_and_preprocess_image(self, path):
-        image = tf.read_file(path)
+        image = tf.read_file(str(path))
         return self.__preprocess_image(image)
 
     def __preprocess_image(self, image):

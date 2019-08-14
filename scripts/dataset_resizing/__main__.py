@@ -4,7 +4,7 @@ from scripts.dataset_resizing.functions.resizing import resize_dataset
 from scripts.dataset_resizing.functions.restoring import restore_dataset_from_backup
 
 
-def main(restore: bool = True, resize: bool = True, size: int = 50):
+def main(restore: bool = True, resize: bool = True, size: int = 100):
     """
     Resizes the dataset to the given size and/or restores it from the backup.
 

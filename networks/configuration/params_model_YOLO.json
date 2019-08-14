@@ -1,20 +1,16 @@
 {
-  "epochs": {
-    "number": 0,
-    "initial": 0,
-    "restore_weights": false
-  },
+  "epochs": {},
   "network": {
     "config": "libs/darkflow/cfg",
     "model": "libs/darkflow/cfg/yolo-4787c.cfg",
-    "load": "libs/darkflow/bin/yolo.cfg",
-    "batch": 64,
-    "epoch": 10,
+    "load": 50,
+    "batch": 10,
+    "epoch": 5,
     "lr": 1e-05,
     "gpu": 0.0,
     "train": true,
     "save": 4000,
-    "threshold": 0.00001,
+    "threshold": 0.00002,
     "labels": "datasets/kaggle/labels/labels.txt",
     "annotation": "datasets/kaggle/training/annotations",
     "dataset": "datasets/kaggle/training/images"
