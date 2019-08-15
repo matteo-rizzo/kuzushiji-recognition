@@ -291,14 +291,14 @@ modules.xml
 .pydevproject
 
 # Datasets
-datasets/
+/datasets/
 
 # Experiments and configuration
-networks/experiments/
-networks/configuration/
+/networks/experiments/
+/networks/configuration/
 
 # Libraries
-libs/
+/libs/
 
 # Checkpoints
-ckpt/
+/ckpt/
