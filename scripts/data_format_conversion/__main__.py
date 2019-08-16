@@ -45,6 +45,8 @@ def main(labels: bool = True,
 
     if user_ok in confirmations:
 
+        os.chdir('~/repo_project_cs')
+
         # Set the base path to the dataset
         path_to_dataset = os.path.join('datasets', 'kaggle')
 
