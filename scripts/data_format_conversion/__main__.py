@@ -5,7 +5,7 @@ from scripts.data_format_conversion.functions.files_renaming import rename_datas
 from scripts.data_format_conversion.functions.labels import generate_labels
 
 
-def main(labels: bool = False,
+def main(labels: bool = True,
          annotations: bool = True,
          annotation_format: str = 'darkflow',
          renaming: bool = True):
