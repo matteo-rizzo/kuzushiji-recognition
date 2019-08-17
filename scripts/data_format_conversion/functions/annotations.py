@@ -4,26 +4,37 @@ import pandas as pd
 import regex as re
 from PIL import Image
 
-from scripts.data_format_conversion.functions.darkflow_conversion import convert_to_darkflow, write_as_darkflow
+from scripts.data_format_conversion.functions.darkflow_conversion import convert_to_darkflow, \
+    write_as_darkflow
 from scripts.data_format_conversion.functions.yolov2_conversion import convert_to_yolov2, write_as_yolov2
+from scripts.data_format_conversion.functions.frcnn_conversion import convert_to_frcnn, write_as_frcnn
 from scripts.utils.utils import to_file_name, to_id
 
 
-def delete_annotations(path_to_annotations):
+def delete_annotations(path_to_annotations, ann_format):
     """
     Deletes all the previous annotations.
     :param path_to_annotations: the path where the previously generated annotations are stored
     """
 
-    file_list = [f for f in os.listdir(path_to_annotations)]
-
-    if file_list:
-        print('\nDeleting previously generated annotations at {}'.format(path_to_annotations))
-
-        for f in file_list:
-            os.remove(os.path.join(path_to_annotations, f))
+    # If frcnn output you only need to delete the txt file
+    if ann_format == 'frcnn':
+        path = os.path.join(path_to_annotations, '..', 'annotations.txt')
+        try:
+            os.remove(path)
+        except OSError:
+            print('\nNo previous file to delete at {}'.format(path))
     else:
-        print('\nNo previously generated annotations to delete at {}'.format(path_to_annotations))
+        # Delete the whole folder in VOC format
+        file_list = [f for f in os.listdir(path_to_annotations)]
+
+        if file_list:
+            print('\nDeleting previously generated annotations at {}'.format(path_to_annotations))
+
+            for f in file_list:
+                os.remove(os.path.join(path_to_annotations, f))
+        else:
+            print('\nNo previously generated annotations to delete at {}'.format(path_to_annotations))
 
 
 def get_annotation_data(image_base_name: str,
@@ -43,7 +54,10 @@ def get_annotation_data(image_base_name: str,
     """
 
     # Get all the labels of the image as a string
-    labels = label_mapping.loc[image_base_name, 'labels']
+    try:
+        labels = label_mapping.loc[image_base_name, 'labels']
+    except KeyError:
+        labels = ''
 
     # Convert the string of labels to list
     labels = [line[:-1] for line in re.findall(r"(?:\S*\s){5}", str(labels))]
@@ -53,19 +67,29 @@ def get_annotation_data(image_base_name: str,
 
     convert_to = {
         'YOLOv2': convert_to_yolov2,
-        'darkflow': convert_to_darkflow
+        'darkflow': convert_to_darkflow,
+        'frcnn': convert_to_frcnn,
     }
 
     # Create a list of lists to store the annotation data
-    annotation_data = [convert_to[ann_format](label, class_mapping, img_width, img_height) for label in labels]
+    img_path = os.path.join(path_to_images, image_base_name)
+    annotation_data = [convert_to[ann_format](label=label,
+                                              class_mapping=class_mapping,
+                                              image_width=img_width,
+                                              image_height=img_height,
+                                              image_path=img_path)
+                       for label in labels]
 
     # If the image has no labels, insert just image width and height
+    # NECESSARIO CAMBIARE IL FORMATO
     if not annotation_data:
-        annotation_data = [['', '', '', '', '', img_width, img_height]]
+        annotation_data = [['', '', '', '', '', img_width, img_height]] \
+            if ann_format != 'frcnn' else [[img_path, '', '', '', '', '']]
 
     data_format = {
         'YOLOv2': ['class', 'x_c', 'y_c', 'bb_width', 'bb_height'],
-        'darkflow': ['class', 'xmin', 'ymin', 'xmax', 'ymax', 'img_width', 'img_height']
+        'darkflow': ['class', 'xmin', 'ymin', 'xmax', 'ymax', 'img_width', 'img_height'],
+        'frcnn': ['filepath', 'xmin', 'ymin', 'xmax', 'ymax', 'class_name']
     }
 
     # Create a dataframe to store the whole annotation
@@ -100,7 +124,7 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
         os.makedirs(path_to_annotations)
     else:
         # Delete previously generated annotations
-        delete_annotations(path_to_annotations)
+        delete_annotations(path_to_annotations, ann_format=ann_format)
 
     # Get the image-labels mapping
     image_labels_map = pd.read_csv(path_to_map, index_col='image_id')
@@ -131,12 +155,16 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
 
         write_as = {
             'YOLOv2': write_as_yolov2,
-            'darkflow': write_as_darkflow
+            'darkflow': write_as_darkflow,
+            'frcnn': write_as_frcnn
         }
 
         # Write the annotation on file
         write_as[ann_format](annotation, path_to_annotations, image_id)
 
+    # Count the written annotations (just for check)
+    count = len(list(os.listdir(path_to_annotations))) if ann_format != 'frcnn' else \
+        sum(1 for _ in open(os.path.join(path_to_annotations, '..', 'annotations.txt')))
+
     print('\n {n_ann}/{n_img} annotations have been generated successfully.'
-          .format(n_ann=len(list(os.listdir(path_to_annotations))),
-                  n_img=len(list(os.listdir(path_to_images)))))
+          .format(n_ann=count, n_img=len(list(os.listdir(path_to_images)))))

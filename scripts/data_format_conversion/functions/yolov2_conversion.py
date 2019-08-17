@@ -7,7 +7,8 @@ from scripts.utils.utils import to_file_name
 def convert_to_yolov2(label: [],
                       class_mapping: pd.DataFrame,
                       image_width: int,
-                      image_height: int) -> []:
+                      image_height: int,
+                      **_) -> []:  # **_ allows to pass indefinite number of irrelevant arguments
     """
     Converts the label data to the YOLO data format.
 

@@ -10,3 +10,5 @@ tqdm
 regex
 pascal_voc_writer
 opencv-python
+keras
+sklearn
