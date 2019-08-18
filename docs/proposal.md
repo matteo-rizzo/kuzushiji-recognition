@@ -2,8 +2,8 @@
 
 Members of the team:
 
-- Matteo Rizzo - 1206694
-- Alessandro Zangari - 1207247
+- **Matteo Rizzo** - 1206694
+- **Alessandro Zangari** - 1207247
 
 ## Objective
 
@@ -48,6 +48,3 @@ Some references for object detection algorithms applied to text recognition task
 ## Cloud computing
 
 We plan to take advantage of Google Cloud Platform services for faster training. We already set up an account and requested the use of a GPU for our project.
-
-
-

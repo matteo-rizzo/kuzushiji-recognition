@@ -100,7 +100,7 @@ def get_annotation_data(image_base_name: str,
     # NECESSARIO CAMBIARE IL FORMATO
     if not annotation_data:
         annotation_data = [['', '', '', '', '', img_width, img_height]] \
-            if ann_format != 'frcnn' else [[to_file_name(img_path), 0, 0, img_width, img_height, '-']]
+            if ann_format != 'frcnn' else [[to_file_name(img_path), 0, 0, 0, 0, '']]
 
     data_format = {
         'YOLOv2': ['class', 'x_c', 'y_c', 'bb_width', 'bb_height'],
@@ -168,6 +168,9 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
         # Print the first 5 rows of the annotation
         if not annotation.empty:
             print(annotation.head())
+        # elif ann_format == 'frcnn':
+        # No negative examples
+        #   continue
 
         write_as = {
             'YOLOv2': write_as_yolov2,
