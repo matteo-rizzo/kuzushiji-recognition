@@ -100,7 +100,7 @@ def get_annotation_data(image_base_name: str,
     # NECESSARIO CAMBIARE IL FORMATO
     if not annotation_data:
         annotation_data = [['', '', '', '', '', img_width, img_height]] \
-            if ann_format != 'frcnn' else [[img_path, '', '', '', '', '']]
+            if ann_format != 'frcnn' else [[to_file_name(img_path), 0, 0, img_width, img_height, '-']]
 
     data_format = {
         'YOLOv2': ['class', 'x_c', 'y_c', 'bb_width', 'bb_height'],
