@@ -7,7 +7,7 @@ gcloud auth login		# autenticati nel browser
 ```
 
 ```bash
-gcloud project list 	# lista progetti
+gcloud projects list 	# lista progetti
 ```
 
 ```bash

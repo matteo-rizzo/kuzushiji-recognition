@@ -23,7 +23,7 @@ def main(labels: bool = False,
 
     :param labels: boolean flag to state if labels must be generated
     :param annotations: boolean flag to state if annotations must be generated
-    :param annotation_format: defines the format of the annotations (YOLOv2 or Darkflow)
+    :param annotation_format: defines the format of the annotations ('YOLOv2' or 'darkflow')
     :param renaming: a boolean flag to rename all the files related to the dataset
     """
 
