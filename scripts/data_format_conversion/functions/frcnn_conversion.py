@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 
+from scripts.utils.utils import to_file_name
+
 
 def convert_to_frcnn(label: [], image_path: str, **_) -> []:
     """
@@ -47,7 +49,7 @@ def convert_to_frcnn(label: [], image_path: str, **_) -> []:
     xmax = xmin + abs_bb_width
     ymax = ymin + abs_bb_height
 
-    return [image_path,
+    return [to_file_name(image_path, 'jpg'),
             xmin,
             ymin,
             xmax,
