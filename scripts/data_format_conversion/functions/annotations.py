@@ -1,5 +1,4 @@
 import os
-
 import pandas as pd
 import regex as re
 from PIL import Image
@@ -9,6 +8,23 @@ from scripts.data_format_conversion.functions.darkflow_conversion import convert
 from scripts.data_format_conversion.functions.yolov2_conversion import convert_to_yolov2, write_as_yolov2
 from scripts.data_format_conversion.functions.frcnn_conversion import convert_to_frcnn, write_as_frcnn
 from scripts.utils.utils import to_file_name, to_id
+
+
+def process_fn(line: str) -> str:
+    """
+    Return the image filename without extension. This is a specific function for Faster R-CNN dataset
+    generation.
+    :param line: a line read from the annotations.txt file in 'frcnn' format
+    :return: the image filename
+    """
+    # Removes eventual endline characters
+    line: str = line.rstrip('\n')
+    # Split the line on ',' (first element is the filepath with extension)
+    filepath: str = line.split(',')[0]
+    # Split the filepath, get just the filename with extension and remove the extension
+    filename: str = to_id(os.path.split(filepath)[1])
+
+    return filename
 
 
 def delete_annotations(path_to_annotations, ann_format):
@@ -163,8 +179,16 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
         write_as[ann_format](annotation, path_to_annotations, image_id)
 
     # Count the written annotations (just for check)
-    count = len(list(os.listdir(path_to_annotations))) if ann_format != 'frcnn' else \
-        sum(1 for _ in open(os.path.join(path_to_annotations, '..', 'annotations.txt')))
+    if ann_format != 'frcnn':
+        count = len(list(os.listdir(path_to_annotations)))
+    else:
+        # Get image names in each annotation lines
+        lines = [process_fn(line) for line in
+                 open(os.path.join(path_to_annotations, '..', 'annotations.txt'))]
+        # Remove duplicates
+        annotated_images = list(dict.fromkeys(lines))
+        # Count the number of annotated images
+        count = len(annotated_images)
 
     print('\n {n_ann}/{n_img} annotations have been generated successfully.'
           .format(n_ann=count, n_img=len(list(os.listdir(path_to_images)))))
