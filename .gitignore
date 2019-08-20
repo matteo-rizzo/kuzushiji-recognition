@@ -295,10 +295,16 @@ modules.xml
 
 # Experiments and configuration
 /networks/experiments/
-/networks/configuration/
+!/networks/configuration/
 
 # Libraries
-/libs/
+/libs/*
+!/libs/frcnn/
+
+# Models folder
+/models
 
 # Checkpoints
 /ckpt/
+
+*.pickle

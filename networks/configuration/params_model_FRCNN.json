@@ -1,0 +1,21 @@
+{
+  "path_to_annotations": "datasets/kaggle/training/annotations.txt",
+  "parser": "simple",
+  "num_rois": 150,
+  "base_network": "resnet50",
+  "horizontal_flips": false,
+  "vertical_flips": false,
+  "rot_90": false,
+  "epochs": 5,
+  "epoch_length": 3881,
+  "config_filename": "libs/frcnn/config.pickle",
+  "output_weight_path": "models",
+  "input_weight_path": "libs/frcnn/pretrain/resnet50_weights_tf_dim_ordering_tf_kernels.h5",
+  "rpn_weight_path": "",
+  "load": "",
+  "dataset_name": "kuz",
+  "optimizer": "SGD",
+  "lr": 1e-2,
+  "momentum": 0.9,
+  "decay": 0.0005
+}
