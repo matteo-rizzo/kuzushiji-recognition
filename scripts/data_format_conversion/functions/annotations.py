@@ -18,11 +18,11 @@ def process_fn(line: str) -> str:
     :return: the image filename
     """
     # Removes eventual endline characters
-    line: str = line.rstrip('\n')
+    line = line.rstrip('\n')
     # Split the line on ',' (first element is the filepath with extension)
-    filepath: str = line.split(',')[0]
+    filepath = line.split(',')[0]
     # Split the filepath, get just the filename with extension and remove the extension
-    filename: str = to_id(os.path.split(filepath)[1])
+    filename = to_id(os.path.split(filepath)[1])
 
     return filename
 
