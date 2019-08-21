@@ -3,13 +3,20 @@ import glob
 import tensorflow as tf
 
 from networks.classes.Logger import Logger
-from networks.classes.Model import Model
+from networks.classes.Model import Model as MyModel
 from tensorflow.python.keras import layers, models, optimizers
 from tensorflow.python.keras.utils import plot_model
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
+from networks.functions.blocks import cbr, aggregation_block, resblock
+from tensorflow.python.keras import Model
+from tensorflow.python.keras.layers import Conv2DTranspose, UpSampling2D, BatchNormalization, \
+    LeakyReLU, Concatenate, Conv2D, Add, Input, AveragePooling2D, GlobalAveragePooling2D, Dense, \
+    Dropout, Activation
+
+output_layer_n = 1 + 4
 
 
-class ModelCustom(Model):
+class ModelCustom(MyModel):
     def __init__(self,
                  run_id: str,
                  model_params: {},
@@ -30,87 +37,102 @@ class ModelCustom(Model):
         # Build the custom model
         self._build()
 
-    def _build(self):
+    def preprocess_data(self):
+        pass
+
+    def _build(self, input_shape, size_detection_mode=True, aggregation=True):
         """
         Builds the convolutional network.
         """
-        # Set up the main parameters of the model
-        img_size = self._network_params['image_size']
-        in_channels = self._network_params['in_channels']
-        out_channels = self._network_params['out_channels']
-        num_labels = self._network_params['n_labels']
-        bn_momentum = self._network_params['bn_momentum']
 
-        # Set up the progression of the output channels
-        channels = [out_channels, out_channels * 2, out_channels * 4]
+        input_layer = Input(input_shape)
 
-        # Initialize the model
-        self._model = models.Sequential()
+        # Resized input
+        input_layer_1 = AveragePooling2D(2)(input_layer)
+        input_layer_2 = AveragePooling2D(2)(input_layer_1)
 
-        for i, c in enumerate(channels):
-            self._model.add(layers.Conv2D(filters=c,
-                                          kernel_size=(7, 7),
-                                          input_shape=(img_size, img_size, in_channels),
-                                          data_format='channels_last',
-                                          padding='same',
-                                          name='conv1_{i}'.format(i=i)),
-                            )
-            self._model.add(layers.BatchNormalization(momentum=bn_momentum, name='batch_norm_{i}'.format(i=i)))
-            self._model.add(layers.Activation('selu', name='selu1_{i}'.format(i=i)))
-            self._model.add(
-                layers.MaxPool2D(pool_size=(3, 3),
-                                 strides=(3, 3),
-                                 name='max_pool_{i}'.format(i=i), padding='valid'
-                                 ))
+        #### ENCODER ####
 
-        self._model.add(layers.Flatten(name='flatt_1'))
-        self._model.add(layers.Dense(units=128, name='last_linear', activation='linear'))
-        self._model.add(layers.BatchNormalization(momentum=bn_momentum, name='batch_norm_last'))
-        self._model.add(layers.Activation('selu', name='last_selu'))
-        self._model.add(layers.Dense(units=num_labels, name='classifier', activation='sigmoid'))
+        x_0 = cbr(input_layer, 16, 3, 2)  # 512->256
+        concat_1 = Concatenate()([x_0, input_layer_1])
+
+        x_1 = cbr(concat_1, 32, 3, 2)  # 256->128
+        concat_2 = Concatenate()([x_1, input_layer_2])
+
+        x_2 = cbr(concat_2, 64, 3, 2)  # 128->64
+
+        x = cbr(x_2, 64, 3, 1)
+        x = resblock(x, 64)
+        x = resblock(x, 64)
+
+        x_3 = cbr(x, 128, 3, 2)  # 64->32
+        x = cbr(x_3, 128, 3, 1)
+        x = resblock(x, 128)
+        x = resblock(x, 128)
+        x = resblock(x, 128)
+
+        x_4 = cbr(x, 256, 3, 2)  # 32->16
+        x = cbr(x_4, 256, 3, 1)
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+
+        x_5 = cbr(x, 512, 3, 2)  # 16->8
+        x = cbr(x_5, 512, 3, 1)
+
+        x = resblock(x, 512)
+        x = resblock(x, 512)
+        x = resblock(x, 512)
+
+        if size_detection_mode:
+            x = GlobalAveragePooling2D()(x)
+            x = Dropout(0.2)(x)
+            out = Dense(1, activation="linear")(x)
+
+        else:  # CenterNet mode
+            #### DECODER ####
+            x_1 = cbr(x_1, output_layer_n, 1, 1)
+            x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
+            x_2 = cbr(x_2, output_layer_n, 1, 1)
+            x_2 = aggregation_block(x_2, x_3, output_layer_n, output_layer_n)
+            x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
+            x_3 = cbr(x_3, output_layer_n, 1, 1)
+            x_3 = aggregation_block(x_3, x_4, output_layer_n, output_layer_n)
+            x_2 = aggregation_block(x_2, x_3, output_layer_n, output_layer_n)
+            x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
+
+            x_4 = cbr(x_4, output_layer_n, 1, 1)
+
+            x = cbr(x, output_layer_n, 1, 1)
+            x = UpSampling2D(size=(2, 2))(x)  # 8->16 tconvのがいいか
+
+            x = Concatenate()([x, x_4])
+            x = cbr(x, output_layer_n, 3, 1)
+            x = UpSampling2D(size=(2, 2))(x)  # 16->32
+
+            x = Concatenate()([x, x_3])
+            x = cbr(x, output_layer_n, 3, 1)
+            x = UpSampling2D(size=(2, 2))(x)  # 32->64   128のがいいかも？
+
+            x = Concatenate()([x, x_2])
+            x = cbr(x, output_layer_n, 3, 1)
+            x = UpSampling2D(size=(2, 2))(x)  # 64->128
+
+            x = Concatenate()([x, x_1])
+            x = Conv2D(output_layer_n, kernel_size=3, strides=1, padding="same")(x)
+            out = Activation("sigmoid")(x)
+
+        model = Model(input_layer, out)
+
+        return model
 
     def _restore_weights(self, experiment_path):
-        initial_epoch = self._epochs_params.initial
-
-        if initial_epoch < 10:
-            init_epoch = '0' + str(initial_epoch)
-        else:
-            init_epoch = str(initial_epoch)
-
-        restore_filename_reg = 'weights.{}-*.hdf5'.format(init_epoch)
-        restore_path_reg = os.path.join(experiment_path, restore_filename_reg)
-        list_files = glob.glob(restore_path_reg)
-        assert len(list_files) > 0, 'ERR: No weights file match for provided name {}'.format(restore_path_reg)
-
-        restore_filename = list_files[0].split('/')[-1]
-        restore_path = os.path.join(experiment_path, restore_filename)
-
-        assert os.path.isfile(restore_path), 'ERR: Weight file in path {} seems not to be a file'.format(restore_path)
-
-        self._train_log.info('Restoring weights in file {}...'.format(restore_filename))
-        self._model.load_weights(restore_path)
+        pass
 
     def _compile_model(self):
-        """
-        Compiles the model
-        :return: a learning rate
-        """
-        # Set the learning rate
-        lr = self._network_params['learning_rate'] if self._network_params['learning_rate'] > 0.0 else 0.001
-        lr = tf.train.exponential_decay(
-            learning_rate=lr,
-            global_step=self._epochs_params['initial'],
-            decay_rate=self._network_params['lr_decay'],
-            decay_steps=self._network_params['n_images'] * self._ratios['training'] // self._network_params[
-                'batch_size']
-        )
-
-        # Set the optimizer
-        optimizer = optimizers.Adam(lr=lr)
-        self._model.compile(optimizer=optimizer,
-                            loss='sparse_categorical_crossentropy',
-                            metrics=['sparse_categorical_accuracy'])
-        return lr
+        pass
 
     def _setup_callbacks(self):
         """
@@ -173,7 +195,8 @@ class ModelCustom(Model):
         else:
             if len(os.listdir(weights_log_path)) > 0:
                 raise FileExistsError(
-                    '{} has trained weights. Please change run_id or delete existing folder.'.format(weights_log_path))
+                    '{} has trained weights. Please change run_id or delete existing folder.'.format(
+                        weights_log_path))
 
         # Display the architecture of the model
         self._train_log.info('Architecture of the model:')
@@ -188,9 +211,11 @@ class ModelCustom(Model):
         self._train_log.info('* Initial epoch:            ' + str(self._epochs_params['initial']) + '\n')
         self._model.fit(self._training_set,
                         epochs=int(n_epochs),
-                        steps_per_epoch=int(self._ratios['training'] // self._network_params['batch_size']) + 1,
+                        steps_per_epoch=int(
+                            self._ratios['training'] // self._network_params['batch_size']) + 1,
                         validation_data=self._validation_set,
-                        validation_steps=int(self._ratios['validation'] // self._network_params['batch_size']) + 1,
+                        validation_steps=int(
+                            self._ratios['validation'] // self._network_params['batch_size']) + 1,
                         callbacks=callbacks,
                         initial_epoch=int(self._epochs_params['initial']))
 
@@ -229,7 +254,8 @@ class ModelCustom(Model):
 
         test_ratio = 1 - self._ratios.training - self._ratios.validation
         test_loss, test_acc = self._model.evaluate(self._test_set,
-                                                   steps=test_ratio // self._network_params['batch_size'])
+                                                   steps=test_ratio // self._network_params[
+                                                       'batch_size'])
         return test_loss, test_acc
 
     def predict(self) -> [float]:
