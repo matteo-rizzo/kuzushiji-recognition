@@ -15,7 +15,6 @@ class ModelYOLO(Model):
     def __init__(self,
                  run_id: str,
                  model_params: {},
-                 ratios: {},
                  training_set: tf.data.Dataset,
                  validation_set: tf.data.Dataset,
                  test_set: tf.data.Dataset,
@@ -34,7 +33,6 @@ class ModelYOLO(Model):
         # Construct the super class
         super().__init__(run_id,
                          model_params,
-                         ratios,
                          training_set,
                          validation_set,
                          test_set,

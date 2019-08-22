@@ -100,7 +100,6 @@ def main():
     training_set, validation_set, test_set = training_dataset.split()
     model = models[model_name](run_id,
                                model_params,
-                               ratios,
                                training_set,
                                validation_set,
                                test_set,

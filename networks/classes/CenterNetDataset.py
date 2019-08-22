@@ -5,22 +5,23 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import os
 import tensorflow as tf
-
-# from tensorflow.python.keras.layers import
-
+import io
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-class Preprocessor:
+class CenterNetDataset:
     def __init__(self, params: Dict):
-        self.__train_csv_path = params.train_csv_path
-        self.__train_images_path = params.train_images_path
-        self.__test_images_path = params.test_images_path
-        self.__sample_submission = params.sample_submission
-        self.__annotation_list_train: List[List[str, pd.DataFrame]]
+        self.__train_csv_path = params['train_csv_path']
+        self.__train_images_path = params['train_images_path']
+        self.__test_images_path = params['test_images_path']
+        self.__sample_submission = params['sample_submission']
+        self.__training_ratio = params['training_ratio']
+        self.__batch_size = params['batch_size']
+        self.__annotation_list_train: List[List]
         self.__dataset: Tuple[tf.data.Dataset, int]
-        self.__training_size = params.training_size
+        self.__input_height = params['input_height']
+        self.__input_width = params['input_width']
 
     def annotate(self):
         # train_csv_path = "datasets/kaggle/image_labels_map.csv"
@@ -50,8 +51,7 @@ class Preprocessor:
 
         # Make a dict assigning an integer to each category
         dict_cat = {list(category_names)[j]: str(j) for j in range(len(category_names))}
-        inv_dict_cat = {str(j): list(category_names)[j] for j in range(len(category_names))}
-        # print(dict_cat)
+        # inv_dict_cat = {str(j): list(category_names)[j] for j in range(len(category_names))}
 
         for i in range(len(df_train)):
             # Get one row for each label character for image i, as category,x,y,width,height
@@ -72,16 +72,26 @@ class Preprocessor:
             ann[:, 1] += ann[:, 3] // 2  # center_x
             ann[:, 2] += ann[:, 4] // 2  # center_y
             annotation_list_train.append(
-                ["{}{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]), ann])
+                ["{}/{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]),
+                 ann])
 
-        print("Sample image show")
-        input_width, input_height = 512, 512
-        img = np.asarray(
-            Image.open(annotation_list_train[0][0]).resize((input_width, input_height)).convert('RGB'))
-        plt.imshow(img)
-        plt.show()
+            # print("Sample image show")
+            # img = np.asarray(
+            #    Image.open(annotation_list_train[0][0]).resize((self.__input_width,
+            #       self.__input_height)).convert('RGB'))
+            # plt.imshow(img)
+            # plt.show()
 
-    def __check_char_size(self) -> List[List[str, float]]:
+            self.__annotation_list_train = annotation_list_train
+            # This is a list of list where each row represent an image and its list of characters with
+            # relative coordinates of bbox. Characters are codified as integer
+
+    def check_char_size(self) -> List[List]:
+        """
+        Computes the average bbox ratio respect to image area considering all the images.
+        Plot a graph with ratio distibution.
+        :return: List where each row represent the average bbpx ratio for character in an image.
+        """
         aspect_ratio_pic_all = []
         aspect_ratio_pic_all_test = []
         average_letter_size_all = []
@@ -131,7 +141,16 @@ class Preprocessor:
         return train_input_for_size_estimate
 
     def __preprocess_image(self, image, label, is_train=True, random_crop=True):
-        input_width, input_height = 512, 512
+        """
+        Process an image.
+
+        :param image: tensor representing image
+        :param label: tensor representing label
+        :param is_train: true if preprocessing for training set, else false
+        :param random_crop: whether to apply a random crop
+        :return: image and labels tensors.
+        """
+        input_width, input_height = self.__input_width, self.__input_height
 
         if random_crop:
             crop_ratio = np.random.uniform(0.7, 1)
@@ -146,8 +165,8 @@ class Preprocessor:
         if random_crop and is_train:
 
             # Get image size
-            f = Image.open(image)
-            pic_width, pic_height = f.size
+
+            pic_height, pic_width, _ = image_decoded.get_shape().as_list()
 
             top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (pic_height
                                                                                             - 1)
@@ -172,49 +191,57 @@ class Preprocessor:
         # Make sure values are in range [0, 255]
         image_resized /= 255
 
+        if random_crop:
+            # Remove 1st dimension if image has been cropped: (1, height, width, 3) -> (height, width, 3)
+            image_resized = tf.reshape(image_resized, image_resized.shape[1:])
+
         return image_resized, label
 
     def dataset_gen(self):
-        train_input = self.__check_char_size()
+        """
+        Generate the tf.data.Dataset containing all the objects.
+        """
+        train_input = self.check_char_size()
 
-        image_paths = [sample[0] for sample in train_input]
-        image_labels = [sample[1] for sample in train_input]
+        image_paths = [sample[0] for sample in train_input]  # sample path
+        image_labels = [sample[1] for sample in train_input]  # avg bbox ratios
 
-        image_dataset = tf.data.Dataset.from_sparse_tensor_slices(image_paths)
+        image_dataset = tf.data.Dataset.from_tensor_slices(image_paths)
 
-        label_dataset = tf.data.Dataset.from_sparse_tensor_slices(image_labels)
+        label_dataset = tf.data.Dataset.from_tensor_slices(image_labels)
 
         self.__dataset = (
-            tf.data.Dataset.zip((image_dataset, label_dataset)).shuffle(buffer_size=150),
+            tf.data.Dataset.zip((image_dataset, label_dataset)).shuffle(buffer_size=500),
             len(image_paths))
 
-    def get_training_set(self) -> tf.data.Dataset:
-
-        TRAIN_SIZE = self.__training_size * self.__dataset[1]
+    def get_training_set(self) -> Tuple[tf.data.Dataset, int]:
+        TRAIN_SIZE = int(self.__training_ratio * self.__dataset[1])
 
         return (self.__dataset[0]
                 .take(TRAIN_SIZE)
-                .map(lambda path, label: self.__preprocess_image(path, label,
-                                                                 is_train=True,
-                                                                 random_crop=True),
+                .map(lambda path, label: tf.py_function(self.__preprocess_image,
+                                                        [path, label, True, True],
+                                                        (tf.float32, tf.float64)),
                      num_parallel_calls=AUTOTUNE)
-                .batch(100)
+                .batch(self.__batch_size)
                 .repeat()
-                .prefetch(AUTOTUNE))
+                .prefetch(AUTOTUNE),
+                TRAIN_SIZE)
 
-    def get_validation_set(self) -> tf.data.Dataset:
-
-        TRAIN_SIZE = self.__training_size * self.__dataset[1]
+    def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
+        TRAIN_SIZE = int(self.__training_ratio * self.__dataset[1])
 
         return (self.__dataset[0]
                 .skip(TRAIN_SIZE)
-                .map(lambda path, label: self.__preprocess_image(path, label,
-                                                                 is_train=False,
-                                                                 random_crop=True),
+                .map(lambda path, label: tf.py_function(self.__preprocess_image,
+                                                        [path, label, False, False],
+                                                        (tf.float32, tf.float64)),
                      num_parallel_calls=AUTOTUNE)
-                .batch(100)
+                .batch(self.__batch_size)
                 .repeat()
-                .prefetch(AUTOTUNE))
+                .prefetch(AUTOTUNE),
+                self.__dataset[1] - TRAIN_SIZE)
 
-    def get_test_set(self) -> tf.data.Dataset:
-        pass
+    def get_test_set(self) -> Tuple[tf.data.Dataset, int]:
+        # TODO
+        return (None, 0)

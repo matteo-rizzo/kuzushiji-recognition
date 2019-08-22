@@ -1,11 +1,12 @@
 import os
 import glob
 import tensorflow as tf
+from typing import Tuple
 
 from networks.classes.Logger import Logger
 from networks.classes.Model import Model as MyModel
 from tensorflow.python.keras import layers, models, optimizers
-from tensorflow.python.keras.utils import plot_model
+
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
 from networks.functions.blocks import cbr, aggregation_block, resblock
 from tensorflow.python.keras import Model
@@ -13,36 +14,44 @@ from tensorflow.python.keras.layers import Conv2DTranspose, UpSampling2D, BatchN
     LeakyReLU, Concatenate, Conv2D, Add, Input, AveragePooling2D, GlobalAveragePooling2D, Dense, \
     Dropout, Activation
 
+import matplotlib.pyplot as plt
+
 output_layer_n = 1 + 4
 
 
-class ModelCustom(MyModel):
+class ModelCenterNet(MyModel):
     def __init__(self,
                  run_id: str,
                  model_params: {},
-                 ratios: {},
                  training_set: tf.data.Dataset,
                  validation_set: tf.data.Dataset,
                  test_set: tf.data.Dataset,
-                 log_handler: Logger):
+                 train_size: int,
+                 val_size: int,
+                 test_size: int,
+                 input_shape: Tuple[int, int, int],
+                 log_handler: Logger,
+                 mode="sizecheck"):
         # Construct the super class
         super().__init__(run_id,
                          model_params,
-                         ratios,
                          training_set,
                          validation_set,
                          test_set,
+                         train_size,
+                         val_size,
+                         test_size,
                          log_handler)
 
+        self._size_detection_mode = mode
+
         # Build the custom model
-        self._build()
+        self._model: tf.python.keras.Model
+        self._build(input_shape=input_shape)
 
-    def preprocess_data(self):
-        pass
-
-    def _build(self, input_shape, size_detection_mode=True, aggregation=True):
+    def _build(self, input_shape, aggregation=True):
         """
-        Builds the convolutional network.
+        Builds the network.
         """
 
         input_layer = Input(input_shape)
@@ -86,7 +95,7 @@ class ModelCustom(MyModel):
         x = resblock(x, 512)
         x = resblock(x, 512)
 
-        if size_detection_mode:
+        if self._size_detection_mode:
             x = GlobalAveragePooling2D()(x)
             x = Dropout(0.2)(x)
             out = Dense(1, activation="linear")(x)
@@ -106,7 +115,7 @@ class ModelCustom(MyModel):
             x_4 = cbr(x_4, output_layer_n, 1, 1)
 
             x = cbr(x, output_layer_n, 1, 1)
-            x = UpSampling2D(size=(2, 2))(x)  # 8->16 tconvのがいいか
+            x = UpSampling2D(size=(2, 2))(x)  # 8->16 tconv
 
             x = Concatenate()([x, x_4])
             x = cbr(x, output_layer_n, 3, 1)
@@ -114,7 +123,7 @@ class ModelCustom(MyModel):
 
             x = Concatenate()([x, x_3])
             x = cbr(x, output_layer_n, 3, 1)
-            x = UpSampling2D(size=(2, 2))(x)  # 32->64   128のがいいかも？
+            x = UpSampling2D(size=(2, 2))(x)  # 32->64   128
 
             x = Concatenate()([x, x_2])
             x = cbr(x, output_layer_n, 3, 1)
@@ -124,15 +133,17 @@ class ModelCustom(MyModel):
             x = Conv2D(output_layer_n, kernel_size=3, strides=1, padding="same")(x)
             out = Activation("sigmoid")(x)
 
-        model = Model(input_layer, out)
-
-        return model
-
-    def _restore_weights(self, experiment_path):
-        pass
+        self._model = Model(input_layer, out)
 
     def _compile_model(self):
-        pass
+        lr = self._network_params["learning_rate"] if \
+            self._network_params["learning_rate"] > 0.0 else 0.001
+
+        # Set the optimizer
+        optimizer = optimizers.Adam(lr=lr)
+        self._model.compile(optimizer=optimizer,
+                            loss='mean_squared_error')
+        return lr
 
     def _setup_callbacks(self):
         """
@@ -162,13 +173,13 @@ class ModelCustom(MyModel):
                                   update_freq=self._network_params['batch_size'] * 10)
 
         # setup early stopping to stop training if val_loss is not increasing after 3 epochs
-        early_stopping = EarlyStopping(
-            monitor='val_loss',
-            patience=2,
-            mode='min',
-        )
+        # early_stopping = EarlyStopping(
+        #    monitor='val_loss',
+        #    patience=2,
+        #    mode='min',
+        # )
 
-        return [early_stopping, tensorboard, checkpointer]
+        return [tensorboard, checkpointer]
 
     def train(self):
         """
@@ -191,7 +202,7 @@ class ModelCustom(MyModel):
 
         # Restore weights if the proper flag has been set
         if self._epochs_params['restore_weights']:
-            self._restore_weights(weights_log_path)
+            self._restore_weights(weights_log_path, 'training')
         else:
             if len(os.listdir(weights_log_path)) > 0:
                 raise FileExistsError(
@@ -209,13 +220,12 @@ class ModelCustom(MyModel):
         self._train_log.info('Starting the fitting procedure:')
         self._train_log.info('* Total number of epochs:   ' + str(self._epochs_params['number']))
         self._train_log.info('* Initial epoch:            ' + str(self._epochs_params['initial']) + '\n')
+
         self._model.fit(self._training_set,
                         epochs=int(n_epochs),
-                        steps_per_epoch=int(
-                            self._ratios['training'] // self._network_params['batch_size']) + 1,
+                        steps_per_epoch=int(self._train_size // self._network_params['batch_size']) + 1,
                         validation_data=self._validation_set,
-                        validation_steps=int(
-                            self._ratios['validation'] // self._network_params['batch_size']) + 1,
+                        validation_steps=int(self._val_size // self._network_params['batch_size']) + 1,
                         callbacks=callbacks,
                         initial_epoch=int(self._epochs_params['initial']))
 
@@ -223,43 +233,41 @@ class ModelCustom(MyModel):
         self._train_log.info('Training procedure performed successfully!\n')
         self._trained = True
 
-    def plot_model(self):
+    def evaluate(self) -> any:
         """
-        Plot the keras model in png format
+        Evaluate the model on the validation set.
+        :return:
         """
-        plot_model(self._model, to_file='model.png')
-
-    def display_summary(self):
-        """
-        Displays the architecture of the model
-        """
-        self._model.summary()
-
-    def evaluate(self) -> (float, float):
-        """
-        Evaluate the model returning loss and accuracy.
-        :return: two lists of scalars, one for loss and one metrics
-        """
-
-        self._test_log.info('Testing the model...')
-
+        self._test_log.info("Evaluating the model...")
         if not self._trained:
-            # Create a folder for the model log of the current experiment
             weights_log_path = os.path.join(self._current_experiment_path, 'weights')
-            self._restore_weights(weights_log_path)
+            self._restore_weights(weights_log_path, 'testing')
 
         # Compile the model
-        self._test_log.info('Compiling the model...')
-        _ = self._compile_model()
+        self._test_log.info("Compiling the model...")
+        self._compile_model()
 
-        test_ratio = 1 - self._ratios.training - self._ratios.validation
-        test_loss, test_acc = self._model.evaluate(self._test_set,
-                                                   steps=test_ratio // self._network_params[
-                                                       'batch_size'])
-        return test_loss, test_acc
+        predictions = self._model.predict(self._validation_set, steps=self._val_size //
+                                                                      self._network_params['batch_size'])
+
+        # test_loss, test_acc = self._model.evaluate(self._validation_set,
+        #                                           steps=self._test_size //
+        #                                           self._network_params['batch_size'])
+
+        # True values
+        target = tf.data.get_output_classes(self._validation_set)
+
+        # BISOGNA CAPIRE COSA RITORNA in TARGET
+
+        plt.scatter(predictions, target[:len(predictions)])
+        plt.title('---letter_size/picture_size--- estimated vs target ', loc='center', fontsize=10)
+        plt.show()
+
+        # return test_loss, test_acc
 
     def predict(self) -> [float]:
-        test_ratio = 1 - self._ratios.training - self._ratios.validation
+        assert self._trained, "Error: can't predict with untrained model!"
+
         result = self._model.predict(self._test_set,
-                                     steps=test_ratio // self._network_params['batch_size'])
+                                     steps=self._test_size // self._network_params['batch_size'] + 1)
         return result

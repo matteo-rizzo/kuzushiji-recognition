@@ -10,7 +10,7 @@
     "test": "datasets/kaggle/testing/images"
   },
   "ratios": {
-    "training": 0.6,
+    "training": 0.7,
     "validation": 0.3
   }
 }
