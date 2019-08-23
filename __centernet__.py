@@ -4,6 +4,7 @@ import os
 import absl.logging
 import tensorflow as tf
 
+from networks.classes.SizePredictDataset import SizePredictDataset
 from networks.classes.CenterNetDataset import CenterNetDataset
 from networks.classes.ModelCenterNet import ModelCenterNet
 from networks.classes.Logger import Logger
@@ -63,7 +64,7 @@ def main():
 
     # Import the dataset for training
     log.info('Importing the dataset for training...')
-    dataset_all = CenterNetDataset(dataset_params)
+    dataset_all = SizePredictDataset(dataset_params)
 
     dataset_all.gen_dataset_size_model()
 
@@ -98,7 +99,9 @@ def main():
     model.train()
     model.evaluate()
 
-    dataset_all.batch_size = 1
+    centernet_params.network['batch_size'] = 1
+    dataset_detection = CenterNetDataset(centernet_params)
+
 
     # Predict average bbox size for training images
     prediction_train = model.predict(dataset=training_set, size=t_size, batch_size=1)
