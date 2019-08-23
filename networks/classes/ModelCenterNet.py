@@ -1,7 +1,8 @@
 import os
 import glob
 import tensorflow as tf
-from typing import Tuple
+from typing import Tuple, List
+import numpy as np
 
 from networks.classes.Logger import Logger
 from networks.classes.Model import Model as MyModel
@@ -255,19 +256,26 @@ class ModelCenterNet(MyModel):
         #                                           self._network_params['batch_size'])
 
         # True values
-        target = tf.data.get_output_classes(self._validation_set)
+        target_labels = []
+        batch_count = 0
+        for batch_samples in self._validation_set:
+            batch_count += 1
+            target_labels.extend(batch_samples[1].numpy())
+            if batch_count == (self._val_size // self._network_params['batch_size']) + 1:
+                # Seen all examples, so exit the dataset iteration
+                break
 
-        # BISOGNA CAPIRE COSA RITORNA in TARGET
-
-        plt.scatter(predictions, target[:len(predictions)])
+        plt.scatter(predictions, target_labels[:len(predictions)])
         plt.title('---letter_size/picture_size--- estimated vs target ', loc='center', fontsize=10)
         plt.show()
 
         # return test_loss, test_acc
 
-    def predict(self) -> [float]:
+    def predict(self, dataset: tf.data.Dataset, size: int, batch_size: int) -> List[np.ndarray]:
+        self._test_log.info("Predicting...")
         assert self._trained, "Error: can't predict with untrained model!"
 
-        result = self._model.predict(self._test_set,
-                                     steps=self._test_size // self._network_params['batch_size'] + 1)
+        result = self._model.predict(dataset,
+                                     steps=size // batch_size + 1)
+
         return result

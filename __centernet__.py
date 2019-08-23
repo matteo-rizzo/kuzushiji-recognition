@@ -65,8 +65,7 @@ def main():
     log.info('Importing the dataset for training...')
     dataset_all = CenterNetDataset(dataset_params)
 
-    dataset_all.annotate()
-    dataset_all.dataset_gen()
+    dataset_all.gen_dataset_size_model()
 
     training_set, t_size = dataset_all.get_training_set()
     validation_set, v_size = dataset_all.get_validation_set()
@@ -98,6 +97,14 @@ def main():
 
     model.train()
     model.evaluate()
+
+    dataset_all.batch_size = 1
+
+    # Predict average bbox size for training images
+    prediction_train = model.predict(dataset=training_set, size=t_size, batch_size=1)
+
+    # Expand dataset adding recommended split size for characters
+    dataset_all.gen_dataset_centernet_model(prediction_train)
 
     # log.info('Testing the model against an image in the training set...')
     # model.predict()
