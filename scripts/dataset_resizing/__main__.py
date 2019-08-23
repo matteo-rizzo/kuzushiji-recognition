@@ -2,15 +2,22 @@ import os
 
 from scripts.dataset_resizing.functions.resizing import resize_dataset
 from scripts.dataset_resizing.functions.restoring import restore_dataset_from_backup
+from scripts.dataset_resizing.functions.scaling import scale_dataset
 
 
-def main(restore: bool = True, resize: bool = False, size: int = 100):
+def main(restore: bool = True,
+         resize: bool = True,
+         size: int = 64,
+         scaling: bool = True,
+         scale: float = 0.5):
     """
     Resizes the dataset to the given size and/or restores it from the backup.
 
     :param restore: a boolean flag to restore the dataset from its backup
     :param resize: a boolean flag to resize the dataset to a given size
     :param size: the new size of the dataset
+    :param scaling: a boolean flag to scale the images in the dataset to the given scale
+    :param scale: the new scale of the images in the dataset
     """
 
     print('\n---------------------------------------------------------------')
@@ -18,12 +25,15 @@ def main(restore: bool = True, resize: bool = False, size: int = 100):
     print('---------------------------------------------------------------\n')
 
     user_ok = input('The script is going to run the following tasks:\n'
-                    'Restoration of the dataset from backup :    {restore}\n'
-                    'Resizing of the dataset to size {size} :    {resize}\n \n'
+                    '* Restoration of the dataset from backup             :    {restore}\n'
+                    '* Resizing of the dataset to size {size}             :    {resize}\n'
+                    '* Scaling the images of the dataset to scale {scale} :    {scaling}\n \n'
                     'Confirm? [Y/n]\n'
                     .format(restore=restore,
                             resize=resize,
-                            size=size))
+                            size=size,
+                            scaling=scaling,
+                            scale=scale))
 
     confirmations = ['y', 'Y', 'yes', 'ok']
 
@@ -50,6 +60,14 @@ def main(restore: bool = True, resize: bool = False, size: int = 100):
                                          size=size))
 
             resize_dataset(size, path_to_images, path_to_annotations)
+            print('---------------------------------------------------------------\n')
+
+        if scaling:
+
+            if scale == 0:
+                raise ValueError('Scaling the images to 0 would be pointless!')
+
+            scale_dataset(path_to_images, scale)
             print('---------------------------------------------------------------\n')
     else:
         print('Script execution aborted.')

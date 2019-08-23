@@ -7,7 +7,7 @@ from scripts.data_format_conversion.functions.labels import generate_labels
 
 def main(labels: bool = False,
          annotations: bool = True,
-         annotation_format: str = 'frcnn',
+         annotation_format: str = 'darkflow',
          renaming: bool = True):
     """
     YOLO requires annotations in the format:
