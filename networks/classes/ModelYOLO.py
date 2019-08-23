@@ -36,6 +36,9 @@ class ModelYOLO(Model):
                          training_set,
                          validation_set,
                          test_set,
+                         60,
+                         30,
+                         10,
                          log_handler)
 
         # Build the YOLO model

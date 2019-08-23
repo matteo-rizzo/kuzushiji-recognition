@@ -3,10 +3,10 @@
   "network": {
     "config": "libs/darkflow/cfg",
     "model": "libs/darkflow/cfg/yolo-4787c.cfg",
-    "load": 392,
+    "load": 413,
     "batch": 52,
     "epoch": 50,
-    "lr": 1e-06,
+    "lr": 1e-05,
     "gpu": 0.001,
     "train": true,
     "save": 400,

@@ -6,7 +6,6 @@ import tensorflow as tf
 
 from networks.classes.Dataset import Dataset
 from networks.classes.Logger import Logger
-from networks.classes.ModelCustom import ModelCustom
 from networks.classes.ModelYOLO import ModelYOLO
 from networks.classes.Params import Params
 
@@ -92,7 +91,6 @@ def main():
 
     # Set the model
     models = {
-        'Custom': ModelCustom,
         'YOLO': ModelYOLO
     }
 

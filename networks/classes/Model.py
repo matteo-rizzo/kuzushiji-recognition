@@ -1,5 +1,5 @@
-import os
 import glob
+import os
 
 import tensorflow as tf
 from tensorflow.python.keras.utils import plot_model
@@ -32,6 +32,8 @@ class Model:
         self._training_set = training_set
         self._validation_set = validation_set
         self._test_set = test_set
+
+        # Set up the sizes of the sets
         self._train_size = train_size
         self._val_size = val_size
         self._test_size = test_size

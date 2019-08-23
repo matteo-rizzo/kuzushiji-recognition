@@ -1,21 +1,19 @@
 import os
-import glob
-import tensorflow as tf
 from typing import Tuple, List
+
+import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
+from tensorflow.python.keras import Model
+from tensorflow.python.keras import optimizers
+from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.python.keras.layers import UpSampling2D, Concatenate, Conv2D, Input, AveragePooling2D, \
+    GlobalAveragePooling2D, Dense, \
+    Dropout, Activation
 
 from networks.classes.Logger import Logger
 from networks.classes.Model import Model as MyModel
-from tensorflow.python.keras import layers, models, optimizers
-
-from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
 from networks.functions.blocks import cbr, aggregation_block, resblock
-from tensorflow.python.keras import Model
-from tensorflow.python.keras.layers import Conv2DTranspose, UpSampling2D, BatchNormalization, \
-    LeakyReLU, Concatenate, Conv2D, Add, Input, AveragePooling2D, GlobalAveragePooling2D, Dense, \
-    Dropout, Activation
-
-import matplotlib.pyplot as plt
 
 output_layer_n = 1 + 4
 
