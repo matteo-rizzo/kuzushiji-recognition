@@ -64,7 +64,7 @@ class ModelYOLO(Model):
         Performs a prediction using the model.
         """
 
-        image_file_name = '100241706_00016_1.jpg'
+        image_file_name = '100241706_00006_1.jpg'
         threshold = self._network_params['threshold']
 
         img_path = os.path.join(os.getcwd(),
@@ -88,7 +88,7 @@ class ModelYOLO(Model):
         plt.imshow(original_img)
         plt.show()
 
-        plt.subplots(figsize=(20, 10))
+        plt.subplots(figsize=(10, 10))
         plt.imshow(self.boxing(original_img,
                                results,
                                threshold))

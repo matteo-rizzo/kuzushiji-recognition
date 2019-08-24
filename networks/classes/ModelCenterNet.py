@@ -31,6 +31,7 @@ class ModelCenterNet(MyModel):
                  input_shape: Tuple[int, int, int],
                  log_handler: Logger,
                  mode="sizecheck"):
+
         # Construct the super class
         super().__init__(run_id,
                          model_params,

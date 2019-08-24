@@ -41,6 +41,9 @@ def convert_to_darkflow(label: [],
     :return: a list with the converted data
     """
 
+    # Set up a scale of the images
+    scale = 0.5
+
     # Get the label data in the dataset format
     unicode, xmin, ymin, abs_bb_width, abs_bb_height = label.split()
 
@@ -48,10 +51,10 @@ def convert_to_darkflow(label: [],
     class_name = str(unicode)
 
     # Cast each data to int
-    xmin = int(xmin)
-    ymin = int(ymin)
-    abs_bb_width = int(abs_bb_width)
-    abs_bb_height = int(abs_bb_height)
+    xmin = int(int(xmin) * scale)
+    ymin = int(int(ymin) * scale)
+    abs_bb_width = int(int(abs_bb_width) * scale)
+    abs_bb_height = int(int(abs_bb_height) * scale)
 
     # Calculate the top-right coordinates of the bounding box
     xmax = xmin + abs_bb_width
