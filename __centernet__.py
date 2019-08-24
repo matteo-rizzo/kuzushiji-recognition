@@ -88,13 +88,13 @@ def main():
     if model_1_params['restore_weights']:
         model_utils.restore_weights(model_1, exe_log, model_1_params['initial_epoch'], weights_path_1)
 
+    # Build dataset
+    dataset_params['batch_size'] = model_1_params['batch_size']
+    dataset_avg_size = SizePredictDataset(dataset_params)
+
+    dataset_avg_size.generate_dataset()
+
     if model_1_params['train']:
-        # Build dataset
-        dataset_params['batch_size'] = model_1_params['batch_size']
-        dataset_avg_size = SizePredictDataset(dataset_params)
-
-        dataset_avg_size.generate_dataset()
-
         sizecheck_ts, sizecheck_ts_size = dataset_avg_size.get_training_set()
         sizecheck_vs, sizecheck_vs_size = dataset_avg_size.get_validation_set()
         # sizecheck_ps, sizecheck_ps_size = dataset_avg_size.get_test_set()
@@ -129,16 +129,18 @@ def main():
         model_utils.restore_weights(model_2, exe_log, model_2_params['initial_epoch'], weights_path_2)
 
     if model_2_params['train']:
-        # Get predictions from model 1
+        # Get predictions from model 1 and compute the recommended split
 
         predictions = model_utils.predict(model_1, sizecheck_ts,
                                           int(sizecheck_ts_size // model_1_params['batch_size'] + 1))
+
+        train_list = dataset_avg_size.annotate_split_recommend(predictions)
 
         # Generate dataset for model 2
 
         dataset_params['batch_size'] = model_2_params['batch_size']
         dataset_detection = CenterNetDataset(dataset_params)
-        dataset_detection.generate_dataset(predictions)
+        dataset_detection.generate_dataset(train_list)
         detection_ts, detection_ts_size = dataset_detection.get_training_set()
         detection_vs, detection_vs_size = dataset_detection.get_validation_set()
 
@@ -160,16 +162,18 @@ def main():
                              evaluation_set=detection_vs,
                              evaluation_steps=int(detection_vs_size // model_2_params['batch_size'] + 1))
 
-        # --------------- MODEL 3 ----------------
 
-        model_3 = model_utils.generate_model(input_shape=input_shape, mode=3)
 
-        weights_path_3 = os.path.join(base_experiments_path, run_id + '_3', 'weights')
 
-        if model_3_params['restore_weights']:
-            model_utils.restore_weights(model_3, exe_log, model_3_params['initial_epoch'],
+    # --------------- MODEL 3 ----------------
 
-                                        weights_path_3)
+    model_3 = model_utils.generate_model(input_shape=input_shape, mode=3)
+
+    weights_path_3 = os.path.join(base_experiments_path, run_id + '_3', 'weights')
+
+    if model_3_params['restore_weights']:
+        model_utils.restore_weights(model_3, exe_log, model_3_params['initial_epoch'],
+                                    weights_path_3)
 
     # --- TEST ---
 

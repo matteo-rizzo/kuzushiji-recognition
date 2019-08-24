@@ -7,7 +7,7 @@ import tensorflow as tf
 from tensorflow.python.keras import Model
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
 from tensorflow.python.keras.layers import UpSampling2D, Concatenate, Conv2D, Input, AveragePooling2D, \
-    GlobalAveragePooling2D, Dense, Dropout, Activation
+    GlobalAveragePooling2D, Dense, Dropout, Activation, MaxPooling2D
 
 import logging
 from networks.functions.blocks import cbr, aggregation_block, resblock
@@ -102,6 +102,7 @@ class ModelUtilities:
 
             x = Concatenate()([x, x_1])
             x = Conv2D(output_layer_n, kernel_size=3, strides=1, padding="same")(x)
+            x = MaxPooling2D(pool_size=(3, 3), strides=None, padding="same")(x)
             out = Activation("sigmoid")(x)
 
         return Model(input_layer, out)

@@ -26,7 +26,7 @@ class SizePredictDataset:
 
     def generate_dataset(self):
         self.__annotate()
-        train_input = self.__check_char_size()
+        train_input = self.__annotate_char_area()
         self.__compose_dataset_object(train_input)
 
     def __annotate(self):
@@ -92,7 +92,7 @@ class SizePredictDataset:
             # This is a list of list where each row represent an image and its list of characters with
             # relative coordinates of bbox. Characters are codified as integers
 
-    def __check_char_size(self) -> List[List]:
+    def __annotate_char_area(self) -> List[List]:
         """
         Computes the average bbox ratio respect to image area considering all the images.
         Plot a graph with ratio distibution.
@@ -146,11 +146,11 @@ class SizePredictDataset:
 
         return train_input_for_size_estimate
 
-    def __annotate_split_recommend(self, train_size_predictions: List[np.ndarray]):
+    def annotate_split_recommend(self, train_size_predictions: List[np.ndarray]) -> List[List]:
         """
-        From a list of bbox size for each train image computes the best size of
-        :param train_size_predictions:
-        :return:
+        From a list of bbox size for each train image computes the best size to split the image
+        :param train_size_predictions: list of predicteb bbox area for all characters
+        :return: extended annotation list with recommended splits
         """
         base_detect_num_h, base_detect_num_w = 25, 25
 
@@ -166,6 +166,7 @@ class SizePredictDataset:
                 [self.__annotation_list_train[i][0], self.__annotation_list_train[i][1],
                  h_split_recommend,
                  w_split_recommend])
+            # Format: image path, annotations, height split, width split
 
         # Just for test
         for i in np.arange(0, 1):

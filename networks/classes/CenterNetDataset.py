@@ -80,11 +80,25 @@ class CenterNetDataset:
                     y_c = (top + bottom) / 2
 
                     category = 0  # not classify, just detect
-                    heatmap = ((np.exp(
-                        -(((np.arange(output_width) - x_c) / (width / 10)) ** 2) / 2)).reshape(1, -1)
-                               * (np.exp(
-                                -(((np.arange(output_height) - y_c) / (height / 10)) ** 2) / 2)).reshape(
-                                -1, 1))
+                    heatmap = (
+                            (np.exp(
+                                -(((np.arange(output_width) - x_c) / (width / 10)) ** 2) / 2
+                            ))
+                            .reshape(1, -1) *
+                            (np.exp(
+                                -(((np.arange(output_height) - y_c) / (height / 10)) ** 2) / 2
+                            ))
+                            .reshape(-1, 1)
+                    )
+
+                    # In original paper heatmap is computed:
+                    # exp(-((x_distance_from_center) ^ 2 + (y_distance_from_center) ^ 2) / (2 * sig ^ 2))
+                    # Here x_distance_from_center = np.arange(output_width) - x_c
+                    # and y_distance_from_center = np.arange(output_height) - y_c
+                    # sigma = (width / 10) and (height / 10).
+                    # Multiplying allows to consider the shape of characters as ellipses, instead of
+                    # circles
+
                     output_layer[:, :, category] = np.maximum(output_layer[:, :, category],
                                                               heatmap[:, :])
                     output_layer[int(y_c // 1), int(x_c // 1), category_n + category] = 1
@@ -93,11 +107,11 @@ class CenterNetDataset:
                     output_layer[
                         int(y_c // 1), int(x_c // 1), 2 * category_n + 2] = height / output_height
                     output_layer[int(y_c // 1), int(x_c // 1), 2 * category_n + 3] = width / output_width
-                y.append(output_layer)
+                    y.append(output_layer)
 
-                count += 1
-                if count == batch_size:
-                    x = np.array(x, dtype=np.float32)
+                    count += 1
+                    if count == batch_size:
+                        x = np.array(x, dtype=np.float32)
                     y = np.array(y, dtype=np.float32)
 
                     inputs = x / 255
