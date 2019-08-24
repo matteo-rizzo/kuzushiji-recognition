@@ -308,3 +308,5 @@ modules.xml
 /ckpt/
 
 *.pickle
+
+.idea/
