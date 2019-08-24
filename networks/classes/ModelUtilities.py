@@ -5,50 +5,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import Model
-from tensorflow.python.keras import optimizers
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
 from tensorflow.python.keras.layers import UpSampling2D, Concatenate, Conv2D, Input, AveragePooling2D, \
-    GlobalAveragePooling2D, Dense, \
-    Dropout, Activation
+    GlobalAveragePooling2D, Dense, Dropout, Activation
 
-from networks.classes.Logger import Logger
-from networks.classes.Model import Model as MyModel
+import logging
 from networks.functions.blocks import cbr, aggregation_block, resblock
+
+import glob
 
 output_layer_n = 1 + 4
 
 
-class ModelCenterNet(MyModel):
-    def __init__(self,
-                 run_id: str,
-                 model_params: {},
-                 training_set: tf.data.Dataset,
-                 validation_set: tf.data.Dataset,
-                 test_set: tf.data.Dataset,
-                 train_size: int,
-                 val_size: int,
-                 test_size: int,
-                 input_shape: Tuple[int, int, int],
-                 log_handler: Logger,
-                 mode="sizecheck"):
-        # Construct the super class
-        super().__init__(run_id,
-                         model_params,
-                         training_set,
-                         validation_set,
-                         test_set,
-                         train_size,
-                         val_size,
-                         test_size,
-                         log_handler)
+class ModelUtilities:
 
-        self._size_detection_mode = mode
-
-        # Build the custom model
-        self._model: tf.python.keras.Model
-        self._build(input_shape=input_shape)
-
-    def _build(self, input_shape, aggregation=True):
+    @staticmethod
+    def generate_model(input_shape, mode: int, aggregation: bool = True) -> tf.keras.Model:
         """
         Builds the network.
         """
@@ -94,7 +66,7 @@ class ModelCenterNet(MyModel):
         x = resblock(x, 512)
         x = resblock(x, 512)
 
-        if self._size_detection_mode:
+        if mode == 1:
             x = GlobalAveragePooling2D()(x)
             x = Dropout(0.2)(x)
             out = Dense(1, activation="linear")(x)
@@ -132,24 +104,14 @@ class ModelCenterNet(MyModel):
             x = Conv2D(output_layer_n, kernel_size=3, strides=1, padding="same")(x)
             out = Activation("sigmoid")(x)
 
-        self._model = Model(input_layer, out)
+        return Model(input_layer, out)
 
-    def _compile_model(self):
-        lr = self._network_params["learning_rate"] if \
-            self._network_params["learning_rate"] > 0.0 else 0.001
-
-        # Set the optimizer
-        optimizer = optimizers.Adam(lr=lr)
-        self._model.compile(optimizer=optimizer,
-                            loss='mean_squared_error')
-        return lr
-
-    def _setup_callbacks(self):
+    @staticmethod
+    def setup_callbacks(weights_log_path: str, batch_size: int) \
+            -> List[tf.keras.callbacks.Callback]:
         """
         Sets up the callbacks for the training of the model.
         """
-        # Create a folder for the model log of the current experiment
-        weights_log_path = os.path.join(self._current_experiment_path, 'weights')
 
         # Setup callback to save the best weights after each epoch
         checkpointer = ModelCheckpoint(filepath=os.path.join(weights_log_path,
@@ -160,7 +122,7 @@ class ModelCenterNet(MyModel):
                                        monitor='val_loss',
                                        mode='min')
 
-        tensorboard_log_dir = os.path.join(self._current_experiment_path, 'tensorboard')
+        tensorboard_log_dir = os.path.join(weights_log_path, 'tensorboard')
 
         # Note that update_freq is set to batch_size * 10 because the epoch takes too long and batch size too short
         tensorboard = TensorBoard(log_dir=tensorboard_log_dir,
@@ -168,8 +130,8 @@ class ModelCenterNet(MyModel):
                                   histogram_freq=0,
                                   write_grads=True,
                                   write_images=False,
-                                  batch_size=self._network_params['batch_size'],
-                                  update_freq=self._network_params['batch_size'] * 10)
+                                  batch_size=batch_size,
+                                  update_freq=batch_size * 10)
 
         # setup early stopping to stop training if val_loss is not increasing after 3 epochs
         # early_stopping = EarlyStopping(
@@ -180,74 +142,70 @@ class ModelCenterNet(MyModel):
 
         return [tensorboard, checkpointer]
 
-    def train(self):
+    @staticmethod
+    def restore_weights(model: tf.keras.Model, logger: logging.Logger, init_epoch: int,
+                        weights_folder_path: str) -> None:
+        if init_epoch < 10:
+            init_epoch_str = '0' + str(init_epoch)
+        else:
+            init_epoch_str = str(init_epoch)
+
+        restore_filename_reg = 'weights.{}-*.hdf5'.format(init_epoch_str)
+        restore_path_reg = os.path.join(weights_folder_path, restore_filename_reg)
+        list_files = glob.glob(restore_path_reg)
+        assert len(list_files) > 0, 'ERR: No weights file match provided name {}'.format(
+            restore_path_reg)
+
+        # Take real filename
+        restore_filename = list_files[0].split('/')[-1]
+        restore_path = os.path.join(weights_folder_path, restore_filename)
+
+        assert os.path.isfile(restore_path), \
+            'ERR: Weight file in path {} seems not to be a file'.format(restore_path)
+        logger.info("Restoring weights in file {}...".format(restore_filename))
+
+        model.load_weights(restore_path)
+
+    @staticmethod
+    def train(model: tf.keras.Model, logger: logging.Logger, init_epoch: int, epochs: int,
+              training_set: tf.data.Dataset, validation_set: tf.data.Dataset, training_steps: int,
+              validation_steps: int, callbacks: List[tf.keras.callbacks.Callback]):
         """
         Compile and train the model for the specified number of epochs.
         """
 
-        self._train_log.info('Training the model...\n')
-
-        # Set the number of epochs
-        n_epochs = self._epochs_params['number']
-
-        # Compile the model
-        self._train_log.info('Compiling the model...')
-        self._compile_model()
-        self._train_log.info('Model compiled successfully!')
-
-        # Create a folder for the model log of the current experiment
-        weights_log_path = os.path.join(self._current_experiment_path, 'weights')
-        os.makedirs(weights_log_path, exist_ok=True)
-
-        # Restore weights if the proper flag has been set
-        if self._epochs_params['restore_weights']:
-            self._restore_weights(weights_log_path, 'training')
-        else:
-            if len(os.listdir(weights_log_path)) > 0:
-                raise FileExistsError(
-                    '{} has trained weights. Please change run_id or delete existing folder.'.format(
-                        weights_log_path))
+        logger.info('Training the model...\n')
 
         # Display the architecture of the model
-        self._train_log.info('Architecture of the model:')
-        self.display_summary()
-
-        self._train_log.info('Setting up the checkpointer...')
-        callbacks = self._setup_callbacks()
+        logger.info('Architecture of the model:')
+        model.summary()
 
         # Train the model
-        self._train_log.info('Starting the fitting procedure:')
-        self._train_log.info('* Total number of epochs:   ' + str(self._epochs_params['number']))
-        self._train_log.info('* Initial epoch:            ' + str(self._epochs_params['initial']) + '\n')
+        logger.info('Starting the fitting procedure:')
+        logger.info('* Total number of epochs:   ' + str(epochs))
+        logger.info('* Initial epoch:            ' + str(init_epoch) + '\n')
 
-        self._model.fit(self._training_set,
-                        epochs=int(n_epochs),
-                        steps_per_epoch=int(self._train_size // self._network_params['batch_size']) + 1,
-                        validation_data=self._validation_set,
-                        validation_steps=int(self._val_size // self._network_params['batch_size']) + 1,
-                        callbacks=callbacks,
-                        initial_epoch=int(self._epochs_params['initial']))
+        model.fit(training_set,
+                  epochs=epochs,
+                  steps_per_epoch=training_steps,
+                  validation_data=validation_set,
+                  validation_steps=validation_steps,
+                  callbacks=callbacks,
+                  initial_epoch=init_epoch)
 
         # Set up a flag which states that the network is now trained and can be evaluated
-        self._train_log.info('Training procedure performed successfully!\n')
-        self._trained = True
+        logger.info('Training procedure performed successfully!\n')
 
-    def evaluate(self) -> any:
+    @staticmethod
+    def evaluate(model: tf.keras.Model, logger: logging.Logger, evaluation_set: tf.data.Dataset,
+                 evaluation_steps: int) -> any:
         """
         Evaluate the model on the validation set.
         :return:
         """
-        self._test_log.info("Evaluating the model...")
-        if not self._trained:
-            weights_log_path = os.path.join(self._current_experiment_path, 'weights')
-            self._restore_weights(weights_log_path, 'testing')
 
-        # Compile the model
-        self._test_log.info("Compiling the model...")
-        self._compile_model()
-
-        predictions = self._model.predict(self._validation_set, steps=self._val_size //
-                                                                      self._network_params['batch_size'])
+        logging.info('Evaluating the model...')
+        predictions = model.predict(evaluation_set, steps=evaluation_steps)
 
         # test_loss, test_acc = self._model.evaluate(self._validation_set,
         #                                           steps=self._test_size //
@@ -256,10 +214,10 @@ class ModelCenterNet(MyModel):
         # True values
         target_labels = []
         batch_count = 0
-        for batch_samples in self._validation_set:
+        for batch_samples in evaluation_set:
             batch_count += 1
             target_labels.extend(batch_samples[1].numpy())
-            if batch_count == (self._val_size // self._network_params['batch_size']) + 1:
+            if batch_count == evaluation_steps:
                 # Seen all examples, so exit the dataset iteration
                 break
 
@@ -269,11 +227,11 @@ class ModelCenterNet(MyModel):
 
         # return test_loss, test_acc
 
-    def predict(self, dataset: tf.data.Dataset, size: int, batch_size: int) -> List[np.ndarray]:
-        self._test_log.info("Predicting...")
-        assert self._trained, "Error: can't predict with untrained model!"
+    @staticmethod
+    def predict(model: tf.keras.Model, logger: logging.Logger, dataset: tf.data.Dataset, steps: int) \
+            -> List[np.ndarray]:
+        logger.info("Predicting...")
 
-        result = self._model.predict(dataset,
-                                     steps=size // batch_size + 1)
+        result = model.predict(dataset, steps=steps)
 
         return result

@@ -24,17 +24,9 @@ class SizePredictDataset:
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
 
-    def gen_dataset_size_model(self):
+    def generate_dataset(self):
         self.__annotate()
         train_input = self.__check_char_size()
-        self.__compose_dataset_object(train_input)
-
-    def gen_dataset_centernet_model(self, predictions: List[np.ndarray]):
-        if not self.__dataset:
-            self.__annotate()
-            self.__check_char_size()
-
-        train_input = self.__annotate_split_recommend(predictions)
         self.__compose_dataset_object(train_input)
 
     def __annotate(self):

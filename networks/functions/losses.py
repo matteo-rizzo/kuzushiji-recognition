@@ -1,5 +1,6 @@
-import tensorflow.python.keras.backend as K
+import tensorflow.keras.backend as K
 
+category_n = 1
 
 def all_loss(y_true, y_pred):
     mask = K.sign(y_true[..., 2 * category_n + 2])

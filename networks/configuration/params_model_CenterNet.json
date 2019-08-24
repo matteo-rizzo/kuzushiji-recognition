@@ -8,22 +8,33 @@
     "input_width": 512,
     "input_height": 512
   },
-  "model": {
-    "run_id": "test_centernet",
-    "mode": "sizecheck"
+  "run_id": "test_centernet",
+  "model_1": {
+    "batch_size": 32,
+    "restore_weights": false,
+    "train": true,
+    "epochs": 20,
+    "initial_epoch": 0,
+    "learning_rate": 1e-4
   },
-  "epochs": {
-    "number": 0,
-    "initial": 0,
-    "restore_weights": false
+  "model_2": {
+    "batch_size": 32,
+    "restore_weights": false,
+    "train": true,
+    "epochs": 20,
+    "initial_epoch": 0,
+    "learning_rate": 1e-3
   },
-  "network": {
-    "n_images": 3881,
-    "n_labels": 2,
-    "learning_rate": 1e-5,
-    "in_channels": 1,
-    "out_channels": 32,
-    "dropout_rate": 0.4,
-    "batch_size": 32
-  }
+  "model_3": {
+    "batch_size": 32,
+    "restore_weights": false,
+    "train": false,
+    "epochs": 0,
+    "initial_epoch": 0
+  },
+  "n_images": 3881,
+  "n_labels": 2,
+  "in_channels": 1,
+  "out_channels": 32,
+  "dropout_rate": 0.4
 }
