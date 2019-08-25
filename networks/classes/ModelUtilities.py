@@ -102,7 +102,7 @@ class ModelUtilities:
 
             x = Concatenate()([x, x_1])
             x = Conv2D(output_layer_n, kernel_size=3, strides=1, padding="same")(x)
-            x = MaxPooling2D(pool_size=(3, 3), strides=None, padding="same")(x)
+            # x = MaxPooling2D(pool_size=(3, 3), strides=None, padding="same")(x)
             out = Activation("sigmoid")(x)
 
         return Model(input_layer, out)

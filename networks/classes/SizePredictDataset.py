@@ -25,10 +25,13 @@ class SizePredictDataset:
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
 
+    def get_dataset_labels(self) -> List[float]:
+        return [el[1] for el in self.__annotation_list_train_area]
+
     def generate_dataset(self):
         self.__annotate()
-        train_input = self.__annotate_char_area()
-        self.__compose_dataset_object(train_input)
+        self.__annotate_char_area()
+        self.__compose_dataset_object()
 
     def __annotate(self):
         # train_csv_path = "datasets/kaggle/image_labels_map.csv"
@@ -102,7 +105,7 @@ class SizePredictDataset:
         self.__aspect_ratio_pic_all = []
         aspect_ratio_pic_all_test = []
         average_letter_size_all = []
-        train_input_for_size_estimate = []
+        annotation_list_train_area = []
         # resize_dir = "resized/"
 
         # if os.path.exists(resize_dir) == False: os.mkdir(resize_dir)
@@ -126,7 +129,7 @@ class SizePredictDataset:
                 average_letter_size_all.append(average_letter_size)
 
                 # Add example for training with image path and log average bbox size for objects in it
-                train_input_for_size_estimate.append(
+                annotation_list_train_area.append(
                     [self.__annotation_list_train[i][0], np.log(average_letter_size)])
 
         # Create test set
@@ -145,12 +148,14 @@ class SizePredictDataset:
         plt.title('log(ratio of letter_size / picture_size)', loc='center', fontsize=12)
         plt.show()
 
-        return train_input_for_size_estimate
+        self.__annotation_list_train_area = annotation_list_train_area
 
-    def annotate_split_recommend(self, train_size_predictions: List[float]) -> List[List]:
+        return annotation_list_train_area  # List[str, float]
+
+    def annotate_split_recommend(self, annotations_w_area: List[float]) -> List[List]:
         """
         From a list of bbox size for each train image computes the best size to split the image
-        :param train_size_predictions: list of predicteb bbox area for all characters
+        :param annotations_w_area: list of predicteb bbox area for all characters
         :return: extended annotation list with recommended splits in format:
             image path: str, annotations: np.array, height split: float, width split: float
         """
@@ -159,7 +164,7 @@ class SizePredictDataset:
         annotation_list_train_w_split = []
 
         # For each predicted bbox size calculate recommended height and width
-        for i, predicted_size in enumerate(train_size_predictions):
+        for i, predicted_size in enumerate(annotations_w_area):
             # __aspect_ratio_pic_all = height / width
             detect_num_h = self.__aspect_ratio_pic_all[i] * exp(-predicted_size / 2)
             detect_num_w = exp(-predicted_size / 2)
@@ -240,13 +245,13 @@ class SizePredictDataset:
 
         return image_resized, label
 
-    def __compose_dataset_object(self, train_input):
+    def __compose_dataset_object(self):
         """
         Generate the tf.data.Dataset containing all the objects.
         """
 
-        image_paths = [sample[0] for sample in train_input]  # sample path
-        image_labels = [sample[1] for sample in train_input]  # avg bbox ratios
+        image_paths = [sample[0] for sample in self.__annotation_list_train_area]  # sample path
+        image_labels = [sample[1] for sample in self.__annotation_list_train_area]  # avg bbox ratios
 
         image_dataset = tf.data.Dataset.from_tensor_slices(image_paths)
 

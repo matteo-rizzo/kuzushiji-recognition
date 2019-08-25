@@ -3,6 +3,7 @@ import os
 
 import absl.logging
 import tensorflow as tf
+from typing import List
 
 from networks.classes.SizePredictDataset import SizePredictDataset
 from networks.classes.CenterNetDataset import CenterNetDataset
@@ -127,32 +128,36 @@ def main():
         model_utils.restore_weights(model_2, exe_log, model_2_params['initial_epoch'], weights_path_2)
 
     if model_2_params['train']:
-        # Get predictions from model 1 and compute the recommended split
+        # Get labels from dataset and compute the recommended split
 
-        predictions = model_utils.predict(model=model_1,
-                                          logger=tes_log,
-                                          dataset=sizecheck_ts,
-                                          steps=int(
-                                              sizecheck_ts_size // model_1_params['batch_size'] + 1))
+        avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
 
-        flat_predictions = [item for array in predictions for item in array]
-        train_list = dataset_avg_size.annotate_split_recommend(flat_predictions)
+        # flat_predictions = [item for array in predictions for item in array]
+        train_list = dataset_avg_size.annotate_split_recommend(avg_sizes)
         # train_list[0] = path to image
-        # train_list[1] = predicted character bbox area
+        # train_list[1] = annotations (ann)
         # train_list[2] = recommended height split
         # train_list[3] = recommended width split
+        # where annotations is data on bbox:
+        # ann[:, 1] = xmin
+        # ann[:, 2] = ymin
+        # ann[:, 3] = x width
+        # ann[:, 4] = y height
 
         # Generate dataset for model 2
 
         dataset_params['batch_size'] = model_2_params['batch_size']
         dataset_detection = CenterNetDataset(dataset_params)
         dataset_detection.generate_dataset(train_list)
+
         detection_ts, detection_ts_size = dataset_detection.get_training_set()
         detection_vs, detection_vs_size = dataset_detection.get_validation_set()
 
+        # print(detection_ts_size, detection_vs_size)
+
         # Train the model
 
-        exe_log.info('Starting the training procedure for model 1...')
+        exe_log.info('Starting the training procedure for model 2...')
 
         callbacks = model_utils.setup_callbacks(weights_log_path=weights_path_2,
                                                 batch_size=model_2_params['batch_size'])
@@ -160,8 +165,8 @@ def main():
         model_utils.train(model_2, tra_log, model_2_params['initial_epoch'], model_2_params['epochs'],
                           training_set=detection_ts,
                           validation_set=detection_vs,
-                          training_steps=int(detection_ts_size // model_2_params['batch_size'] + 1),
-                          validation_steps=int(detection_vs_size // model_2_params['batch_size'] + 1),
+                          training_steps=int(detection_ts_size // model_2_params['batch_size']) + 1,
+                          validation_steps=int(detection_vs_size // model_2_params['batch_size']) + 1,
                           callbacks=callbacks)
 
         model_utils.evaluate(model_2, logger=tes_log,

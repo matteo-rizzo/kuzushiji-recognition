@@ -6,7 +6,9 @@
     "sample_submission": "datasets/kaggle/sample_submission.csv",
     "training_ratio": 0.7,
     "input_width": 512,
-    "input_height": 512
+    "input_height": 512,
+    "output_width": 128,
+    "output_height": 128
   },
   "run_id": "test_centernet",
   "model_1": {
@@ -18,7 +20,7 @@
     "learning_rate": 1e-4
   },
   "model_2": {
-    "batch_size": 32,
+    "batch_size": 16,
     "restore_weights": false,
     "train": true,
     "epochs": 20,

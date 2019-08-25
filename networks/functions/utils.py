@@ -1,8 +1,9 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 
 pred_out_w, pred_out_h = 128, 128
+
 
 def draw_rectangle(box_and_score, img, color):
     number_of_rect = np.minimum(500, len(box_and_score))
@@ -82,3 +83,18 @@ def NMS_all(predicts, category_n, score_thresh, iou_thresh):
     _, unique_idx = np.unique(box_and_score_all[:, 2], return_index=True)
     # print(unique_idx)
     return box_and_score_all[sorted(unique_idx)]
+
+
+def visualize_heatmap(image_path: str, r_width: int, r_height: int, heatmap: np.array):
+    img = np.array(Image.open(image_path)).resize(new_shape=(r_width, r_height)).convert('RGB')
+
+    gaussian = heatmap[:, :, 0]
+    centers = heatmap[:, :, 1]
+    fig, axes = plt.subplots(1, 3, figsize=(15, 15))
+    axes[0].set_axis_off()
+    axes[0].imshow(img)
+    axes[1].set_axis_off()
+    axes[1].imshow(gaussian)
+    axes[2].set_axis_off()
+    axes[2].imshow(centers)
+    plt.show()
