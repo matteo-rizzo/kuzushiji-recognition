@@ -17,10 +17,8 @@ def main():
     # -- TENSORFLOW BASIC CONFIG ---
 
     # Enable eager execution
-    # tf.compat.v1.enable_eager_execution()
-    tf.enable_eager_execution()
+    tf.compat.v1.enable_eager_execution()
     eager_exec_status = str('Yes') if tf.executing_eagerly() else str('No')
-    # eager_exec_status = str('Yes') if tf.compat.v1.executing_eagerly else str('No')
 
     # Set up the log for tensorflow
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -94,11 +92,11 @@ def main():
 
     dataset_avg_size.generate_dataset()
 
-    if model_1_params['train']:
-        sizecheck_ts, sizecheck_ts_size = dataset_avg_size.get_training_set()
-        sizecheck_vs, sizecheck_vs_size = dataset_avg_size.get_validation_set()
-        # sizecheck_ps, sizecheck_ps_size = dataset_avg_size.get_test_set()
+    sizecheck_ts, sizecheck_ts_size = dataset_avg_size.get_training_set()
+    sizecheck_vs, sizecheck_vs_size = dataset_avg_size.get_validation_set()
+    # sizecheck_ps, sizecheck_ps_size = dataset_avg_size.get_test_set()
 
+    if model_1_params['train']:
         # Train the model
         exe_log.info('Starting the training procedure for model 1...')
 
@@ -131,10 +129,18 @@ def main():
     if model_2_params['train']:
         # Get predictions from model 1 and compute the recommended split
 
-        predictions = model_utils.predict(model_1, sizecheck_ts,
-                                          int(sizecheck_ts_size // model_1_params['batch_size'] + 1))
+        predictions = model_utils.predict(model=model_1,
+                                          logger=tes_log,
+                                          dataset=sizecheck_ts,
+                                          steps=int(
+                                              sizecheck_ts_size // model_1_params['batch_size'] + 1))
 
-        train_list = dataset_avg_size.annotate_split_recommend(predictions)
+        flat_predictions = [item for array in predictions for item in array]
+        train_list = dataset_avg_size.annotate_split_recommend(flat_predictions)
+        # train_list[0] = path to image
+        # train_list[1] = predicted character bbox area
+        # train_list[2] = recommended height split
+        # train_list[3] = recommended width split
 
         # Generate dataset for model 2
 
@@ -161,9 +167,6 @@ def main():
         model_utils.evaluate(model_2, logger=tes_log,
                              evaluation_set=detection_vs,
                              evaluation_steps=int(detection_vs_size // model_2_params['batch_size'] + 1))
-
-
-
 
     # --------------- MODEL 3 ----------------
 

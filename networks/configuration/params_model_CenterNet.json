@@ -11,10 +11,10 @@
   "run_id": "test_centernet",
   "model_1": {
     "batch_size": 32,
-    "restore_weights": false,
-    "train": true,
+    "restore_weights": true,
+    "train": false,
     "epochs": 20,
-    "initial_epoch": 0,
+    "initial_epoch": 14,
     "learning_rate": 1e-4
   },
   "model_2": {

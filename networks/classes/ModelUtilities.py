@@ -205,7 +205,7 @@ class ModelUtilities:
         :return:
         """
 
-        logging.info('Evaluating the model...')
+        logger.info('Evaluating the model...')
         predictions = model.predict(evaluation_set, steps=evaluation_steps)
 
         # test_loss, test_acc = self._model.evaluate(self._validation_set,
@@ -223,7 +223,7 @@ class ModelUtilities:
                 break
 
         plt.scatter(predictions, target_labels[:len(predictions)])
-        plt.title('---letter_size/picture_size--- estimated vs target ', loc='center', fontsize=10)
+        plt.title('---Letter_size/picture_size--- estimated vs target ', loc='center', fontsize=10)
         plt.show()
 
         # return test_loss, test_acc

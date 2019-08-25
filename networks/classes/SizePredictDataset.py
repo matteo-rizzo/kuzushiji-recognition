@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import os
 import tensorflow as tf
 import io
+from math import exp
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -146,22 +147,24 @@ class SizePredictDataset:
 
         return train_input_for_size_estimate
 
-    def annotate_split_recommend(self, train_size_predictions: List[np.ndarray]) -> List[List]:
+    def annotate_split_recommend(self, train_size_predictions: List[float]) -> List[List]:
         """
         From a list of bbox size for each train image computes the best size to split the image
         :param train_size_predictions: list of predicteb bbox area for all characters
-        :return: extended annotation list with recommended splits
+        :return: extended annotation list with recommended splits in format:
+            image path: str, annotations: np.array, height split: float, width split: float
         """
         base_detect_num_h, base_detect_num_w = 25, 25
 
         annotation_list_train_w_split = []
 
-        # For each predicted bbox size calculate recommended heigth and width
+        # For each predicted bbox size calculate recommended height and width
         for i, predicted_size in enumerate(train_size_predictions):
-            detect_num_h = self.__aspect_ratio_pic_all[i] * np.exp(-predicted_size / 2)
-            detect_num_w = detect_num_h / self.__aspect_ratio_pic_all[i]
-            h_split_recommend = np.maximum(1, detect_num_h / base_detect_num_h)
-            w_split_recommend = np.maximum(1, detect_num_w / base_detect_num_w)
+            # __aspect_ratio_pic_all = height / width
+            detect_num_h = self.__aspect_ratio_pic_all[i] * exp(-predicted_size / 2)
+            detect_num_w = exp(-predicted_size / 2)
+            h_split_recommend = max([1, detect_num_h / base_detect_num_h])
+            w_split_recommend = max([1, detect_num_w / base_detect_num_w])
             annotation_list_train_w_split.append(
                 [self.__annotation_list_train[i][0], self.__annotation_list_train[i][1],
                  h_split_recommend,
@@ -205,6 +208,8 @@ class SizePredictDataset:
             # Get image size
 
             pic_height, pic_width, _ = image_decoded.get_shape().as_list()
+
+            # Compute offset
 
             top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (pic_height
                                                                                             - 1)
