@@ -12,6 +12,9 @@ from networks.classes.ModelUtilities import ModelUtilities as model_utils
 from networks.classes.Logger import Logger
 from networks.classes.Params import Params
 from networks.functions import losses
+import numpy as np
+from PIL import Image
+from networks.functions.utils import visualize_heatmap
 
 
 def main():
@@ -127,29 +130,28 @@ def main():
     if model_2_params['restore_weights']:
         model_utils.restore_weights(model_2, exe_log, model_2_params['initial_epoch'], weights_path_2)
 
+    # Get labels from dataset and compute the recommended split
+    avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
+
+    # flat_predictions = [item for array in predictions for item in array]
+    train_list = dataset_avg_size.annotate_split_recommend(avg_sizes)
+    # train_list[0] = path to image
+    # train_list[1] = annotations (ann)
+    # train_list[2] = recommended height split
+    # train_list[3] = recommended width split
+    # where annotations is data on bbox:
+    # ann[:, 1] = xmin
+    # ann[:, 2] = ymin
+    # ann[:, 3] = x width
+    # ann[:, 4] = y height
+
+    # Generate dataset for model 2
+
+    dataset_params['batch_size'] = model_2_params['batch_size']
+    dataset_detection = CenterNetDataset(dataset_params)
+    X_train, X_val = dataset_detection.generate_dataset(train_list)
+
     if model_2_params['train']:
-        # Get labels from dataset and compute the recommended split
-
-        avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
-
-        # flat_predictions = [item for array in predictions for item in array]
-        train_list = dataset_avg_size.annotate_split_recommend(avg_sizes)
-        # train_list[0] = path to image
-        # train_list[1] = annotations (ann)
-        # train_list[2] = recommended height split
-        # train_list[3] = recommended width split
-        # where annotations is data on bbox:
-        # ann[:, 1] = xmin
-        # ann[:, 2] = ymin
-        # ann[:, 3] = x width
-        # ann[:, 4] = y height
-
-        # Generate dataset for model 2
-
-        dataset_params['batch_size'] = model_2_params['batch_size']
-        dataset_detection = CenterNetDataset(dataset_params)
-        dataset_detection.generate_dataset(train_list)
-
         detection_ts, detection_ts_size = dataset_detection.get_training_set()
         detection_vs, detection_vs_size = dataset_detection.get_validation_set()
 
@@ -169,9 +171,30 @@ def main():
                           validation_steps=int(detection_vs_size // model_2_params['batch_size']) + 1,
                           callbacks=callbacks)
 
-        model_utils.evaluate(model_2, logger=tes_log,
-                             evaluation_set=detection_vs,
-                             evaluation_steps=int(detection_vs_size // model_2_params['batch_size'] + 1))
+        metrics = model_utils.evaluate(model_2, logger=tes_log,
+                                       evaluation_set=detection_vs,
+                                       evaluation_steps=int(
+                                           detection_vs_size // model_2_params['batch_size'] + 1))
+
+        tes_log.info(
+            'Evaluation metrics:\nall_loss: {}\nsize_loss: {}\nheatmap_loss: {}\noffset_loss: {}'
+                .format(metrics[0], metrics[1], metrics[2], metrics[3]))
+
+    # VISUALIZATION
+
+    for i, example in enumerate(X_val):
+        img = np.asarray(Image.open(example[0]).resize((input_shape[0], input_shape[1])).convert('RGB'))
+        pred = model_utils.predict(model_2, tes_log,
+                                   (img.reshape((1, input_shape[1], input_shape[0],
+                                                 input_shape[2])) / 255),
+                                   steps=1) \
+            .reshape((dataset_params['output_height'], dataset_params[
+            'output_width'], 5))
+
+        visualize_heatmap(pred, input_shape[0])
+
+        if i == 2:
+            break
 
     # --------------- MODEL 3 ----------------
 
@@ -180,8 +203,7 @@ def main():
     weights_path_3 = os.path.join(base_experiments_path, run_id + '_3', 'weights')
 
     if model_3_params['restore_weights']:
-        model_utils.restore_weights(model_3, exe_log, model_3_params['initial_epoch'],
-                                    weights_path_3)
+        model_utils.restore_weights(model_3, exe_log, model_3_params['initial_epoch'], weights_path_3)
 
     # --- TEST ---
 

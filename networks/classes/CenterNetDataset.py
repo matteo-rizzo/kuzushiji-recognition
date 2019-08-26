@@ -137,7 +137,7 @@ class CenterNetDataset:
 
                     yield inputs, targets
 
-    def generate_dataset(self, input_list):
+    def generate_dataset(self, input_list) -> Tuple[List[List], List[List]]:
         """
         Generate the tf.data.Dataset containing all the objects.
         """
@@ -162,6 +162,8 @@ class CenterNetDataset:
                 .repeat()
                 .prefetch(AUTOTUNE),
             len(X_test))
+
+        return X_train, X_test
 
     def get_training_set(self) -> Tuple[tf.data.Dataset, int]:
         return self.__training_set

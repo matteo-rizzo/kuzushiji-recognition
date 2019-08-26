@@ -21,11 +21,11 @@
   },
   "model_2": {
     "batch_size": 16,
-    "restore_weights": false,
+    "restore_weights": true,
     "train": true,
-    "epochs": 20,
-    "initial_epoch": 0,
-    "learning_rate": 1e-3
+    "epochs": 35,
+    "initial_epoch": 25,
+    "learning_rate": 1e-6
   },
   "model_3": {
     "batch_size": 32,

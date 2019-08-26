@@ -55,7 +55,7 @@ def check_iou_score(true_boxes, detected_boxes, iou_thresh):
     return score
 
 
-def NMS_all(predicts, category_n, score_thresh, iou_thresh):
+def infer_bounding_box(predicts, category_n, score_thresh, iou_thresh):
     y_c = predicts[..., category_n] + np.arange(pred_out_h).reshape(-1, 1)
     x_c = predicts[..., category_n + 1] + np.arange(pred_out_w).reshape(1, -1)
     height = predicts[..., category_n + 2] * pred_out_h
@@ -85,8 +85,7 @@ def NMS_all(predicts, category_n, score_thresh, iou_thresh):
     return box_and_score_all[sorted(unique_idx)]
 
 
-def visualize_heatmap(image_path: str, r_width: int, r_height: int, heatmap: np.array):
-    img = np.array(Image.open(image_path)).resize(new_shape=(r_width, r_height)).convert('RGB')
+def visualize_heatmap(img: np.array, heatmap: np.array):
 
     gaussian = heatmap[:, :, 0]
     centers = heatmap[:, :, 1]

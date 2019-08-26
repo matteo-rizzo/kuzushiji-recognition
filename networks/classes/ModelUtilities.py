@@ -1,5 +1,5 @@
 import os
-from typing import Tuple, List
+from typing import Tuple, List, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -199,34 +199,33 @@ class ModelUtilities:
 
     @staticmethod
     def evaluate(model: tf.keras.Model, logger: logging.Logger, evaluation_set: tf.data.Dataset,
-                 evaluation_steps: int) -> any:
+                 evaluation_steps: int, ) -> Union[float, List[float]]:
         """
-        Evaluate the model on the validation set.
-        :return:
+        Evaluate the model on provided set.
+        :return: the loss value if model has no other metrics, otw returns array with loss and metrics
+        values.
         """
 
         logger.info('Evaluating the model...')
-        predictions = model.predict(evaluation_set, steps=evaluation_steps)
 
-        # test_loss, test_acc = self._model.evaluate(self._validation_set,
-        #                                           steps=self._test_size //
-        #                                           self._network_params['batch_size'])
+        return model.evaluate(evaluation_set,
+                              steps=evaluation_steps)
 
-        # True values
-        target_labels = []
-        batch_count = 0
-        for batch_samples in evaluation_set:
-            batch_count += 1
-            target_labels.extend(batch_samples[1].numpy())
-            if batch_count == evaluation_steps:
-                # Seen all examples, so exit the dataset iteration
-                break
-
-        plt.scatter(predictions, target_labels[:len(predictions)])
-        plt.title('---Letter_size/picture_size--- estimated vs target ', loc='center', fontsize=10)
-        plt.show()
-
-        # return test_loss, test_acc
+        # predictions = model.predict(evaluation_set, steps=evaluation_steps)
+        #
+        # # True values
+        # target_labels = []
+        # batch_count = 0
+        # for batch_samples in evaluation_set:
+        #     batch_count += 1
+        #     target_labels.extend(batch_samples[1].numpy())
+        #     if batch_count == evaluation_steps:
+        #         # Seen all examples, so exit the dataset iteration
+        #         break
+        #
+        # plt.scatter(predictions, target_labels[:len(predictions)])
+        # plt.title('---Letter_size/picture_size--- estimated vs target ', loc='center', fontsize=10)
+        # plt.show()
 
     @staticmethod
     def predict(model: tf.keras.Model, logger: logging.Logger, dataset: tf.data.Dataset, steps: int) \
