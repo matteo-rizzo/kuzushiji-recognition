@@ -22,9 +22,9 @@
   "model_2": {
     "batch_size": 16,
     "restore_weights": true,
-    "train": true,
+    "train": false,
     "epochs": 35,
-    "initial_epoch": 25,
+    "initial_epoch": 32,
     "learning_rate": 1e-6
   },
   "model_3": {
@@ -32,7 +32,8 @@
     "restore_weights": false,
     "train": false,
     "epochs": 0,
-    "initial_epoch": 0
+    "initial_epoch": 0,
+    "learning_rate": 1e-5
   },
   "n_images": 3881,
   "n_labels": 2,

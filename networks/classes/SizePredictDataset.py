@@ -146,7 +146,7 @@ class SizePredictDataset:
 
         plt.hist(np.log(average_letter_size_all), bins=100)
         plt.title('log(ratio of letter_size / picture_size)', loc='center', fontsize=12)
-        plt.show()
+        # plt.show()
 
         self.__annotation_list_train_area = annotation_list_train_area
 
@@ -177,12 +177,12 @@ class SizePredictDataset:
             # Format: image path, annotations, height split, width split
 
         # Just for test
-        for i in np.arange(0, 1):
-            print("recommended height split:{}, recommended width_split:{}".format(
-                annotation_list_train_w_split[i][2], annotation_list_train_w_split[i][3]))
-            img = np.asarray(Image.open(annotation_list_train_w_split[i][0]).convert('RGB'))
-            plt.imshow(img)
-            plt.show()
+        # for i in np.arange(0, 1):
+        #     print("recommended height split:{}, recommended width_split:{}".format(
+        #         annotation_list_train_w_split[i][2], annotation_list_train_w_split[i][3]))
+        #     img = np.asarray(Image.open(annotation_list_train_w_split[i][0]).convert('RGB'))
+        #     plt.imshow(img)
+        #     plt.show()
 
         return annotation_list_train_w_split
 

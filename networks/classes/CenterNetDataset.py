@@ -124,10 +124,14 @@ class CenterNetDataset:
 
                 y.append(output_layer)
 
+                # print(output_layer.shape)
+
                 count += 1
                 if count == batch_size:
                     x = np.array(x, dtype=np.float32)
                     y = np.array(y, dtype=np.float32)
+
+                    # print('Yield batch shape ', y.shape)
 
                     inputs = x / 255
                     targets = y
