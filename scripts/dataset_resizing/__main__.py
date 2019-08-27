@@ -6,7 +6,7 @@ from scripts.dataset_resizing.functions.scaling import scale_dataset
 
 
 def main(restore: bool = True,
-         resize: bool = True,
+         resize: bool = False,
          size: int = 5,
          scaling: bool = False,
          scale: float = 1):

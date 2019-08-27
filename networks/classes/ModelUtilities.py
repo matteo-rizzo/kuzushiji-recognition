@@ -12,13 +12,137 @@ from tensorflow.python.keras.layers import UpSampling2D, Concatenate, Conv2D, In
 
 from networks.functions.blocks import cbr, aggregation_block, resblock
 
-output_layer_n = 1 + 4
-
 
 class ModelUtilities:
 
     @staticmethod
-    def generate_model(input_shape, mode: int, n_category: int = 1) -> tf.keras.Model:
+    def __resize_input_layers(input_layer):
+        input_layer_1 = AveragePooling2D(2)(input_layer)
+        input_layer_2 = AveragePooling2D(2)(input_layer_1)
+
+        return input_layer_1, input_layer_2
+
+    @staticmethod
+    def __generate_encoder(input_layer_0, input_layer_1, input_layer_2):
+
+        # 512->256
+        x_0 = cbr(input_layer_0, 16, 3, 2)
+        concat_1 = Concatenate()([x_0, input_layer_1])
+
+        # 256->128
+        x_1 = cbr(concat_1, 32, 3, 2)
+        concat_2 = Concatenate()([x_1, input_layer_2])
+
+        # 128->64
+        x_2 = cbr(concat_2, 64, 3, 2)
+
+        x = cbr(x_2, 64, 3, 1)
+        x = resblock(x, 64)
+        x = resblock(x, 64)
+
+        # 64->32
+        x_3 = cbr(x, 128, 3, 2)
+        x = cbr(x_3, 128, 3, 1)
+        x = resblock(x, 128)
+        x = resblock(x, 128)
+        x = resblock(x, 128)
+
+        # 32->16
+        x_4 = cbr(x, 256, 3, 2)
+        x = cbr(x_4, 256, 3, 1)
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+
+        # 16->8
+        x_5 = cbr(x, 512, 3, 2)
+        x = cbr(x_5, 512, 3, 1)
+
+        x = resblock(x, 512)
+        x = resblock(x, 512)
+        x = resblock(x, 512)
+
+        return x_1, x_2, x_3, x_4, x
+
+    def __generate_preprocessing_model(self, input_layer, n_category=None):
+
+        input_layer_1, input_layer_2 = self.__resize_input_layers(input_layer)
+
+        _, _, _, _, x = self.__generate_encoder(input_layer, input_layer_1, input_layer_2)
+
+        x = GlobalAveragePooling2D()(x)
+        x = Dropout(0.2)(x)
+
+        out = Dense(1, activation="linear")(x)
+
+        return Model(input_layer, out)
+
+    def __generate_centernet_model(self, input_layer, n_category=None):
+
+        output_layer_n = 1 + 4
+
+        input_layer_1, input_layer_2 = self.__resize_input_layers(input_layer)
+
+        x_1, x_2, x_3, x_4, x = self.__generate_encoder(input_layer, input_layer_1, input_layer_2)
+
+        x_1 = cbr(x_1, output_layer_n, 1, 1)
+        x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
+
+        x_2 = cbr(x_2, output_layer_n, 1, 1)
+        x_2 = aggregation_block(x_2, x_3, output_layer_n, output_layer_n)
+
+        x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
+
+        x_3 = cbr(x_3, output_layer_n, 1, 1)
+        x_3 = aggregation_block(x_3, x_4, output_layer_n, output_layer_n)
+        x_2 = aggregation_block(x_2, x_3, output_layer_n, output_layer_n)
+        x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
+
+        x_4 = cbr(x_4, output_layer_n, 1, 1)
+
+        x = cbr(x, output_layer_n, 1, 1)
+        x = UpSampling2D(size=(2, 2))(x)  # 8->16 tconv
+        x = Concatenate()([x, x_4])
+        x = cbr(x, output_layer_n, 3, 1)
+        x = UpSampling2D(size=(2, 2))(x)  # 16->32
+        x = Concatenate()([x, x_3])
+
+        x = cbr(x, output_layer_n, 3, 1)
+        x = UpSampling2D(size=(2, 2))(x)  # 32->64   128
+        x = Concatenate()([x, x_2])
+        x = cbr(x, output_layer_n, 3, 1)
+        x = UpSampling2D(size=(2, 2))(x)  # 64->128
+        x = Concatenate()([x, x_1])
+
+        x = Conv2D(output_layer_n, kernel_size=3, strides=1, padding="same")(x)
+        # x = MaxPooling2D(pool_size=(3, 3), strides=None, padding="same")(x)
+
+        out = Activation("sigmoid")(x)
+
+        return Model(input_layer, out)
+
+    @staticmethod
+    def __generate_classification_model(input_layer, n_category):
+
+        x = cbr(input_layer, 64, 3, 1)
+        x = resblock(x, 64)
+        x = resblock(x, 64)
+        x = cbr(input_layer, 128, 3, 2)  # 16
+        x = resblock(x, 128)
+        x = resblock(x, 128)
+        x = cbr(input_layer, 256, 3, 2)  # 8
+        x = resblock(x, 256)
+        x = resblock(x, 256)
+        x = GlobalAveragePooling2D()(x)
+        x = Dropout(0.2)(x)
+
+        out = Dense(n_category, activation="softmax")(x)
+
+        return Model(input_layer, out)
+
+    def generate_model(self, input_shape, mode: int, n_category: int = 1) -> tf.keras.Model:
         """
         Builds the network.
 
@@ -29,124 +153,15 @@ class ModelUtilities:
         :return: a Keras model
         """
 
-        # modes = {
-        #     '1': generate_preprocessing_model,
-        #     '2': generate_centernet_model,
-        #     '3': generate_classification_model
-        # }
+        modes = {
+            '1': self.__generate_preprocessing_model,
+            '2': self.__generate_centernet_model,
+            '3': self.__generate_classification_model
+        }
 
-        if mode != 3:
-            input_layer = Input(input_shape)
+        input_layer = Input(input_shape)
 
-            # Resized input
-            input_layer_1 = AveragePooling2D(2)(input_layer)
-            input_layer_2 = AveragePooling2D(2)(input_layer_1)
-
-            # Encoder
-
-            # 512->256
-            x_0 = cbr(input_layer, 16, 3, 2)
-            concat_1 = Concatenate()([x_0, input_layer_1])
-
-            # 256->128
-            x_1 = cbr(concat_1, 32, 3, 2)
-            concat_2 = Concatenate()([x_1, input_layer_2])
-
-            # 128->64
-            x_2 = cbr(concat_2, 64, 3, 2)
-
-            x = cbr(x_2, 64, 3, 1)
-            x = resblock(x, 64)
-            x = resblock(x, 64)
-
-            # 64->32
-            x_3 = cbr(x, 128, 3, 2)
-            x = cbr(x_3, 128, 3, 1)
-            x = resblock(x, 128)
-            x = resblock(x, 128)
-            x = resblock(x, 128)
-
-            # 32->16
-            x_4 = cbr(x, 256, 3, 2)
-            x = cbr(x_4, 256, 3, 1)
-            x = resblock(x, 256)
-            x = resblock(x, 256)
-            x = resblock(x, 256)
-            x = resblock(x, 256)
-            x = resblock(x, 256)
-
-            # 16->8
-            x_5 = cbr(x, 512, 3, 2)
-            x = cbr(x_5, 512, 3, 1)
-
-            x = resblock(x, 512)
-            x = resblock(x, 512)
-            x = resblock(x, 512)
-
-            # Pre-processing mode (1)
-            if mode == 1:
-                x = GlobalAveragePooling2D()(x)
-                x = Dropout(0.2)(x)
-                out = Dense(1, activation="linear")(x)
-            else:
-                # CenterNet mode (2)
-
-                # Decoder
-
-                x_1 = cbr(x_1, output_layer_n, 1, 1)
-                x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
-
-                x_2 = cbr(x_2, output_layer_n, 1, 1)
-                x_2 = aggregation_block(x_2, x_3, output_layer_n, output_layer_n)
-
-                x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
-
-                x_3 = cbr(x_3, output_layer_n, 1, 1)
-
-                x_3 = aggregation_block(x_3, x_4, output_layer_n, output_layer_n)
-                x_2 = aggregation_block(x_2, x_3, output_layer_n, output_layer_n)
-                x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
-
-                x_4 = cbr(x_4, output_layer_n, 1, 1)
-
-                x = cbr(x, output_layer_n, 1, 1)
-                x = UpSampling2D(size=(2, 2))(x)  # 8->16 tconv
-
-                x = Concatenate()([x, x_4])
-                x = cbr(x, output_layer_n, 3, 1)
-                x = UpSampling2D(size=(2, 2))(x)  # 16->32
-
-                x = Concatenate()([x, x_3])
-                x = cbr(x, output_layer_n, 3, 1)
-                x = UpSampling2D(size=(2, 2))(x)  # 32->64   128
-
-                x = Concatenate()([x, x_2])
-                x = cbr(x, output_layer_n, 3, 1)
-                x = UpSampling2D(size=(2, 2))(x)  # 64->128
-
-                x = Concatenate()([x, x_1])
-                x = Conv2D(output_layer_n, kernel_size=3, strides=1, padding="same")(x)
-                # x = MaxPooling2D(pool_size=(3, 3), strides=None, padding="same")(x)
-                out = Activation("sigmoid")(x)
-        else:
-
-            # Classification mode (3)
-
-            input_layer = Input(input_shape)  # 32
-            x = cbr(input_layer, 64, 3, 1)
-            x = resblock(x, 64)
-            x = resblock(x, 64)
-            x = cbr(input_layer, 128, 3, 2)  # 16
-            x = resblock(x, 128)
-            x = resblock(x, 128)
-            x = cbr(input_layer, 256, 3, 2)  # 8
-            x = resblock(x, 256)
-            x = resblock(x, 256)
-            x = GlobalAveragePooling2D()(x)
-            x = Dropout(0.2)(x)
-            out = Dense(n_category, activation="softmax")(x)
-
-        return Model(input_layer, out)
+        return modes[str(mode)](input_layer, n_category)
 
     @staticmethod
     def setup_callbacks(weights_log_path: str, batch_size: int) \
@@ -175,7 +190,7 @@ class ModelUtilities:
                                   batch_size=batch_size,
                                   update_freq=batch_size * 10)
 
-        # setup early stopping to stop training if val_loss is not increasing after 3 epochs
+        # Setup early stopping to stop training if val_loss is not increasing after 3 epochs
         # early_stopping = EarlyStopping(
         #    monitor='val_loss',
         #    patience=2,

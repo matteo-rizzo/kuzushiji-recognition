@@ -42,10 +42,6 @@ class SizePredictDataset:
         self.__compose_dataset_object()
 
     def __annotate(self):
-        # train_csv_path = "datasets/kaggle/image_labels_map.csv"
-        # train_images_path = "datasets/kaggle/training/images/"
-        # path_3 = "../input/test_images/"
-        # path_4 = "../input/sample_submission.csv"
         df_train = pd.read_csv(self.__train_csv_path)
 
         # Remove any row with at least one nan value
@@ -104,7 +100,7 @@ class SizePredictDataset:
             # (codified as integers) with relative coordinates of bbox
             self.__annotation_list_train = annotation_list_train
 
-    def __annotate_char_area(self) -> List[List[str, float]]:
+    def __annotate_char_area(self) -> List[List]:
         """
         Computes the average bbox ratio w.r.t. the image area considering all the images,
         and plots a graph with ratio distribution.
@@ -210,10 +206,7 @@ class SizePredictDataset:
         """
         input_width, input_height = self.__input_width, self.__input_height
 
-        if random_crop:
-            crop_ratio = np.random.uniform(0.7, 1)
-        else:
-            crop_ratio = 1
+        crop_ratio = np.random.uniform(0.7, 1) if random_crop else 1
 
         # Load image
         image_string = tf.read_file(image)

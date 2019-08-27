@@ -8,7 +8,7 @@ from tensorflow.python.keras.optimizers import Adam
 
 from networks.classes.CenterNetDataset import CenterNetDataset
 from networks.classes.Logger import Logger
-from networks.classes.ModelUtilities import ModelUtilities as model_utils
+from networks.classes.ModelUtilities import ModelUtilities
 from networks.classes.Params import Params
 from networks.classes.SizePredictDataset import SizePredictDataset
 from networks.functions import losses
@@ -120,6 +120,7 @@ def main():
     # STEP 2: Detection by CenterNet
 
     # Build the CenterNet model
+    model_utils = ModelUtilities()
     model_2 = model_utils.generate_model(input_shape=input_shape, mode=2)
     model_2.compile(optimizer=Adam(lr=model_2_params['learning_rate']),
                     loss=losses.all_loss,
