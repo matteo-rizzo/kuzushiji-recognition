@@ -58,10 +58,10 @@ def heatmap_loss(y_true, y_pred):
     alpha = 2.
     beta = 4.
 
-    # Slice the true heatmap
-    heatmap_true_rate = K.flatten(y_true[..., :category_n])
-    heatmap_true = K.flatten(y_true[..., category_n:(2 * category_n)])
-    heatmap_pred = K.flatten(y_pred[..., :category_n])
+    # Slice the heatmap
+    heatmap_true_rate = K.flatten(y_true[..., :category_n])  # column 0 (gaussian heatmap)
+    heatmap_true = K.flatten(y_true[..., category_n:(2 * category_n)])  # column 1 (centers)
+    heatmap_pred = K.flatten(y_pred[..., :category_n])  # column 0 (score of predicted centers)
     heatloss = -K.sum(
         heatmap_true *
         ((1 - heatmap_pred) ** alpha) * K.log(heatmap_pred + 1e-6) +
