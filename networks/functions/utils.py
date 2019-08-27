@@ -1,23 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
-from tensorflow.python.keras.layers import MaxPooling2D, UpSampling2D, Lambda
-from tensorflow import image
+from typing import List
 
 pred_out_w, pred_out_h = 128, 128
-
-
-def visualize_heatmap(img: np.array, heatmap: np.array):
-    gaussian = heatmap[:, :, 0]
-    centers = heatmap[:, :, 1]
-    fig, axes = plt.subplots(1, 3, figsize=(15, 15))
-    axes[0].set_axis_off()
-    axes[0].imshow(img)
-    axes[1].set_axis_off()
-    axes[1].imshow(gaussian)
-    axes[2].set_axis_off()
-    axes[2].imshow(centers)
-    plt.show()
 
 
 def draw_rectangle(box_and_score, img, color):
@@ -73,7 +59,20 @@ def check_iou_score(true_boxes, detected_boxes, iou_thresh):
 #################################################################
 
 
-def get_bb_boxes(predictions: np.array, annotation_list: np.array, print: bool = False):
+def get_bb_boxes(predictions: np.ndarray, annotation_list: np.array, print: bool = False) \
+        -> List[np.array]:
+    """
+    Compute the bounding boxes and perform non maximum supression
+    :param predictions: array of predictions with shape (batch, out_width, out_height, n_cat + 4)
+    :param annotation_list: list o samples where:
+            - annotation_list[0] = path to image
+            - annotation_list[1] = annotations, as np.array
+            - annotation_list[2] = recommended height split
+            - annotation_list[3] = recommended width split
+    :param print: whether to show bboxes and iou scores
+    :return: list of boxes, as [image_path,category,score,ymin,xmin,ymax,xmax].
+            Category is always 0 in our case.
+    """
     all_boxes = []
     for i in np.arange(0, predictions.shape[0]):
         img = Image.open(annotation_list[i][0]).convert("RGB")
@@ -94,15 +93,19 @@ def get_bb_boxes(predictions: np.array, annotation_list: np.array, print: bool =
         heatmap = predictions[i, :, :, 0]
 
         print_w, print_h = img.size
-        # resize predicted box to original size
+        # resize predicted box to original size. Leave unchanged score, category
         box_and_score = box_and_score * [1, 1, print_h / pred_out_h, print_w / pred_out_w,
                                          print_h / pred_out_h, print_w / pred_out_w]
+
+        # Add a field for image path to each box
+        image_path = np.full((box_and_score.shape[0], 1), annotation_list[i][0])
+        box_and_score = np.concatenate((image_path, box_and_score), axis=1)
 
         all_boxes.append(box_and_score)
 
         if print:
-            check_iou_score(true_boxes, box_and_score[:, 2:], iou_thresh=0.5)
-            img = draw_rectangle(box_and_score[:, 2:], img, "red")
+            check_iou_score(true_boxes, box_and_score[:, 3:].astype(np.float32), iou_thresh=0.5)
+            img = draw_rectangle(box_and_score[:, 3:].astype(np.float32), img, "red")
             img = draw_rectangle(true_boxes, img, "blue")
 
             fig, axes = plt.subplots(1, 2, figsize=(15, 15))
@@ -225,6 +228,19 @@ def boxes_image_nms(score, y_c, x_c, height, width, iou_thresh, merge_mode=False
 ######################################################
 ##############  #THINGS I TRIED ###################
 ######################################################
+
+
+# def visualize_heatmap(img: np.array, heatmap: np.array):
+#     gaussian = heatmap[:, :, 0]
+#     centers = heatmap[:, :, 1]
+#     fig, axes = plt.subplots(1, 3, figsize=(15, 15))
+#     axes[0].set_axis_off()
+#     axes[0].imshow(img)
+#     axes[1].set_axis_off()
+#     axes[1].imshow(gaussian)
+#     axes[2].set_axis_off()
+#     axes[2].imshow(centers)
+#     plt.show()
 
 
 # def infer_bounding_box(predicts, category_n, score_thresh) -> np.array:

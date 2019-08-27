@@ -42,7 +42,7 @@ class ClassifierDataset:
                     crop_ratio = np.random.uniform(0.8, 1)
                 else:
                     crop_ratio = 1
-                with Image.open(sample[0]) as img:
+                with Image.open(sample[0]) as img:  # Image path
 
                     if random_crop and is_train:
                         img_width, img_height = img.size

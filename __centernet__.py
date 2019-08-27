@@ -14,9 +14,7 @@ from networks.classes.Logger import Logger
 from networks.classes.Params import Params
 from networks.functions import losses
 import numpy as np
-from PIL import Image
-from networks.functions.utils import visualize_heatmap
-from networks.functions.utils import get_bb_boxes, boxes_for_image, draw_rectangle, check_iou_score
+from networks.functions.utils import get_bb_boxes
 import matplotlib.pyplot as plt
 
 
@@ -183,38 +181,8 @@ def main():
             'Evaluation metrics:\nall_loss: {}\nsize_loss: {}\nheatmap_loss: {}\noffset_loss: {}'
                 .format(metrics[0], metrics[1], metrics[2], metrics[3]))
 
-    # VISUALIZATION
+        # Prepare a test dataset from val set. I take the first 10 values of validation set
 
-    # for i, example in enumerate(X_val):
-    #     img = np.asarray(Image.open(example[0]).resize((input_shape[0], input_shape[1])).convert('RGB'))
-    #     pred = model_utils.predict(model_2, tes_log,
-    #                                (img.reshape((1, input_shape[1], input_shape[0],
-    #                                              input_shape[2])) / 255),
-    #                                steps=1)
-    #
-    #     # Label shape : (128, 128, 5)
-    #
-    #     pred_reshaped = pred.reshape(
-    #         (dataset_params['output_height'], dataset_params['output_width'], 5))
-    #
-    #     visualize_heatmap(img, pred_reshaped)
-    #
-    #     if i == 2:
-    #         break
-
-    # --------------- MODEL 3 ----------------
-
-    model_3 = model_utils.generate_model(input_shape=input_shape, mode=3)
-
-    weights_path_3 = os.path.join(base_experiments_path, run_id + '_3', 'weights')
-
-    if model_3_params['restore_weights']:
-        model_utils.restore_weights(model_3, exe_log, model_3_params['initial_epoch'], weights_path_3)
-
-    lr = model_3_params['learning_rate']
-    model_3.compile(loss="categorical_crossentropy", optimizer=Adam(lr=lr), metrics=["accuracy"])
-
-    # Prepare a test dataset from val set
     def resize_fn(path):
         image_string = tf.read_file(path)
         image_decoded = tf.image.decode_jpeg(image_string)
@@ -229,7 +197,25 @@ def main():
 
     # Get predictions of model 2
     detec_predictions = model_utils.predict(model_2, tes_log, test_ds, steps=10)
-    bbox_predictions = get_bb_boxes(detec_predictions, X_val[:10], print=False)
+    bbox_predictions = get_bb_boxes(detec_predictions, X_val[:10], print=True)
+    # List of [image_path,category,score,ymin,xmin,ymax,xmax]. Non numeric type!!
+    # Category is always 0. It is not the character category. It's the center category.
+
+    # --------------- MODEL 3 ----------------
+
+    model_3 = model_utils.generate_model(input_shape=input_shape, mode=3)
+
+    weights_path_3 = os.path.join(base_experiments_path, run_id + '_3', 'weights')
+
+    if model_3_params['restore_weights']:
+        model_utils.restore_weights(model_3, exe_log, model_3_params['initial_epoch'], weights_path_3)
+
+    lr = model_3_params['learning_rate']
+    model_3.compile(loss="categorical_crossentropy", optimizer=Adam(lr=lr), metrics=["accuracy"])
+
+    # Generate training set for model 3
+    # TODO: crop character images
+    # TODO: create dataset from cropped images (as [image, category])
 
     # batch_size_3 = int(model_3_params['batch_size'])
     # dataset_params['batch_size'] = batch_size_3

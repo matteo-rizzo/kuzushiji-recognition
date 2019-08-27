@@ -244,7 +244,7 @@ class ModelUtilities:
 
     @staticmethod
     def predict(model: tf.keras.Model, logger: logging.Logger, dataset: tf.data.Dataset, steps: int) \
-            -> List[np.ndarray]:
+            -> Union[np.ndarray, List[np.ndarray]]:
         logger.info("Predicting...")
 
         result = model.predict(dataset, steps=steps)
