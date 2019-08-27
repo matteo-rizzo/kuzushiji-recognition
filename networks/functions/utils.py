@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
-from typing import List
+from typing import List, Tuple
+import os
+import shutil
+from tqdm import tqdm
 
 pred_out_w, pred_out_h = 128, 128
 
@@ -83,7 +86,7 @@ def get_bb_boxes(predictions: np.ndarray, annotation_list: np.array, print: bool
         if len(box_and_score) == 0:
             continue
 
-        true_boxes = annotation_list[i][1][:, 1:]  # c_x,c_y,width_height
+        true_boxes = annotation_list[i][1][:, 1:]  # c_x,c_y,width,height
         top = true_boxes[:, 1:2] - true_boxes[:, 3:4] / 2
         left = true_boxes[:, 0:1] - true_boxes[:, 2:3] / 2
         bottom = top + true_boxes[:, 3:4]
@@ -224,6 +227,101 @@ def boxes_image_nms(score, y_c, x_c, height, width, iou_thresh, merge_mode=False
         box_idx = box_idx[still_alive]
 
     return boxes[alive_box]  # score,top,left,bottom,right
+
+
+def annotations_to_bounding_boxes(annotations: List) -> np.array:
+    """
+    Utility to convert between the annotation format, and the format required by
+    get_crop_characters_train function for character.
+    :param annotations: List[str, np.array] with image path and image annotations where:
+        - ann[:, 0] = class
+        - ann[:, 1] = x_center
+        - ann[:, 2] = y_center
+        - ann[:, 3] = x width
+        - ann[:, 4] = y height
+    :return: list of [image_path,char_class,ymin,xmin,ymax,xmax]
+    """
+
+    all_images_boxes = None
+
+    first_iteration = True
+
+    for img_path, ann, _, _ in tqdm(annotations):
+        ymin = ann[:, 2:3] - ann[:, 4:5] / 2  # y_center - height / 2
+        xmin = ann[:, 1:2] - ann[:, 3:4] / 2  # x_center - width / 2
+        ymax = ann[:, 2:3] + ann[:, 4:5] / 2  # y_center + height / 2
+        xmax = ann[:, 1:2] + ann[:, 3:4] / 2  # x_center + width / 2
+
+        assert ymin.shape == xmin.shape == ymax.shape == xmax.shape, 'Shape can\'t be different'
+
+        # Create a column long as the number of bounding boxes and fill it with the image path
+        paths = np.full((ymin.shape[0], 1), img_path)
+
+        image_boxes = np.concatenate((paths, ann[:, 0:1], ymin, xmin, ymax, xmax), axis=1)
+
+        if first_iteration:
+            all_images_boxes = image_boxes
+            first_iteration = False
+        else:
+            all_images_boxes = np.concatenate((all_images_boxes, image_boxes), axis=0)
+
+    return all_images_boxes
+
+
+def predictions_to_bounding_boxes(predictions: List[np.array]) -> List[np.array]:
+    """
+    Utility to convert from prediction output to input array of get_crop_characters_train
+
+    :param predictions: list of boxes as predicted by the detection model:
+            So list of [image_path,category,score,ymin,xmin,ymax,xmax]
+    :return:
+    """
+    # FIXME: probably useless. We'll see.
+    pass
+
+
+def get_crop_characters_train(images_to_split: np.array, save_dir: str) -> List[Tuple[str, int]]:
+    """
+    Crop image into all bounding box, saving a differnt image for each one in crop_dir.
+    :param images_to_split: list of [image_path,char_class,ymin,xmin,ymax,xmax]
+    :param save_dir: directory where to save cropped images
+    """
+
+    # If directory already exists and is not empty use the existing images
+    if os.path.isdir(save_dir) and len(os.listdir(save_dir)) > 0:
+        shutil.rmtree(save_dir)
+
+    assert not os.path.isdir(save_dir) or \
+           len(os.listdir(save_dir)) != 0, 'Folder is not empty! Problem with deletion'
+
+    # Create empty directory
+    os.mkdir(save_dir)
+
+    cropped_list = []
+
+    for image in tqdm(images_to_split):
+        box_n = 0
+
+        path = str(image[0])
+        char_class = int(image[1])
+        ymin = float(image[2])  # top
+        xmin = float(image[3])  # left
+        ymax = float(image[4])  # bottom
+        xmax = float(image[5])  # right
+
+        filename = path.split(str(os.sep))[-1].split('.')[0] + '_' + str(box_n) + '.jpg'
+        filepath = os.path.join(save_dir, filename)
+
+        with Image.open(path) as img:
+            img.crop((xmin, ymin, xmax, ymax)).save(filepath)
+
+        cropped_list.append((filepath, char_class))
+        box_n += 1
+
+        # TODO: save 'cropped_list' in a file txt and if images and file are present load from
+        #       there, instead of generating from annotations. Should be faster.
+
+    return cropped_list
 
 ######################################################
 ##############  #THINGS I TRIED ###################

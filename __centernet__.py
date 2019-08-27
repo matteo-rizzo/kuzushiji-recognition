@@ -12,7 +12,8 @@ from networks.classes.ModelUtilities import ModelUtilities
 from networks.classes.Params import Params
 from networks.classes.SizePredictDataset import SizePredictDataset
 from networks.functions import losses
-from networks.functions.utils import get_bb_boxes
+from networks.functions.utils import get_bb_boxes, get_crop_characters_train, \
+    annotations_to_bounding_boxes
 
 
 def main():
@@ -76,7 +77,7 @@ def main():
 
     base_experiments_path = os.path.join(os.getcwd(), 'networks', 'experiments')
 
-    # STEP 1: Pre-processing (Check Object Size)
+    # --------------------- STEP 1: Pre-processing (Check Object Size) ---------------------
 
     # exe_log.info('Building the model...')
 
@@ -117,7 +118,7 @@ def main():
     #                          evaluation_set=sizecheck_vs,
     #                          evaluation_steps=int(sizecheck_vs_size // model_1_params['batch_size'] + 1))
 
-    # STEP 2: Detection by CenterNet
+    # --------------------- STEP 2: Detection by CenterNet ---------------------
 
     # Build the CenterNet model
     model_utils = ModelUtilities()
@@ -154,7 +155,7 @@ def main():
 
     dataset_params['batch_size'] = model_2_params['batch_size']
     dataset_detection = CenterNetDataset(dataset_params)
-    x_train, x_val = dataset_detection.generate_dataset(train_list)
+    X_train, X_val = dataset_detection.generate_dataset(train_list)
     detection_ts, detection_ts_size = dataset_detection.get_training_set()
     detection_vs, detection_vs_size = dataset_detection.get_validation_set()
 
@@ -191,16 +192,15 @@ def main():
                               metrics[2],
                               metrics[3]))
 
-        # Prepare a test dataset from val set. I take the first 10 values of validation set
+    # Prepare a test dataset from val set. I take the first 10 values of validation set
 
     def resize_fn(path):
         image_string = tf.read_file(path)
         image_decoded = tf.image.decode_jpeg(image_string)
         image_resized = tf.image.resize(image_decoded, (input_shape[1], input_shape[0]))
-
         return image_resized / 255
 
-    test_path_list = [ann[0] for ann in x_val[:10]]
+    test_path_list = [ann[0] for ann in X_val[:10]]
     test_ds = tf.data.Dataset.from_tensor_slices(test_path_list) \
         .map(resize_fn,
              num_parallel_calls=tf.data.experimental.AUTOTUNE) \
@@ -209,11 +209,11 @@ def main():
 
     # Get predictions of model 2
     detec_predictions = model_utils.predict(model_2, test_log, test_ds, steps=10)
-    bbox_predictions = get_bb_boxes(detec_predictions, x_val[:10], print=True)
+    bbox_predictions = get_bb_boxes(detec_predictions, X_val[:10], print=False)
     # List of [image_path,category,score,ymin,xmin,ymax,xmax]. Non numeric type!!
     # Category is always 0. It is not the character category. It's the center category.
 
-    # STEP 3: Classification
+    # --------------------- STEP 3: Classification ---------------------
 
     model_3 = model_utils.generate_model(input_shape=input_shape, mode=3)
 
@@ -226,13 +226,19 @@ def main():
     model_3.compile(loss="categorical_crossentropy", optimizer=Adam(lr=lr), metrics=["accuracy"])
 
     # Generate training set for model 3
-    # TODO: crop character images
+    # NOTE: this scripts are only run once to generate the images for training.
+    exe_log.info('Getting bunding boxes from annotations...')
+    crop_format = annotations_to_bounding_boxes(train_list)
+    exe_log.info('Cropping images to characters...')
+    char_train_list = get_crop_characters_train(crop_format,
+                                                os.path.join(os.getcwd(), 'datasets', 'char_crop'))
+    exe_log.info('Cropping done.')
     # TODO: create dataset from cropped images (as [image, category])
 
     # batch_size_3 = int(model_3_params['batch_size'])
     # dataset_params['batch_size'] = batch_size_3
     # dataset_classification = ClassifierDataset(dataset_params)
-    # x_train, x_val = dataset_classification.generate_dataset(bbox_predictions)
+    # X_train, X_val = dataset_classification.generate_dataset(bbox_predictions)
     # classification_ts, classification_ts_size = dataset_classification.get_training_set()
     # classification_vs, classification_vs_size = dataset_classification.get_validation_set()
     #

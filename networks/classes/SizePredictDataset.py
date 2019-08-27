@@ -81,13 +81,17 @@ class SizePredictDataset:
             # ann[:, 3] = x width
             # ann[:, 4] = y height
             ann = ann.astype('int32')
-            # center_x
-            ann[:, 1] += ann[:, 3] // 2
-            # center_y
-            ann[:, 2] += ann[:, 4] // 2
-            annotation_list_train.append(["{}/{}.jpg".format(self.__train_images_path,
-                                                             df_train.loc[i, "image_id"]),
-                                          ann])
+            ann[:, 1] += ann[:, 3] // 2  # center_x
+            ann[:, 2] += ann[:, 4] // 2  # center_y
+            # ann[:, 0] = class
+            # ann[:, 1] = x_center
+            # ann[:, 2] = y_center
+            # ann[:, 3] = x width
+            # ann[:, 4] = y height
+
+            annotation_list_train.append(
+                ["{}/{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]),
+                 ann])
 
             # print("Sample image show")
             # img = np.asarray(
@@ -157,7 +161,7 @@ class SizePredictDataset:
 
         self.__annotation_list_train_area = annotation_list_train_area
 
-        return annotation_list_train_area
+        return annotation_list_train_area  # List[str, float]
 
     def annotate_split_recommend(self, annotations_w_area: List[float]) -> List[List]:
         """
