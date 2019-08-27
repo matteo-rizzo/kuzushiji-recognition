@@ -6,31 +6,34 @@
     "sample_submission": "datasets/kaggle/sample_submission.csv",
     "training_ratio": 0.7,
     "input_width": 512,
-    "input_height": 512
+    "input_height": 512,
+    "output_width": 128,
+    "output_height": 128
   },
   "run_id": "test_centernet",
   "model_1": {
     "batch_size": 32,
-    "restore_weights": false,
-    "train": true,
+    "restore_weights": true,
+    "train": false,
     "epochs": 20,
-    "initial_epoch": 0,
+    "initial_epoch": 14,
     "learning_rate": 1e-4
   },
   "model_2": {
-    "batch_size": 32,
-    "restore_weights": false,
-    "train": true,
-    "epochs": 20,
-    "initial_epoch": 0,
-    "learning_rate": 1e-3
+    "batch_size": 16,
+    "restore_weights": true,
+    "train": false,
+    "epochs": 35,
+    "initial_epoch": 32,
+    "learning_rate": 1e-6
   },
   "model_3": {
     "batch_size": 32,
     "restore_weights": false,
     "train": false,
     "epochs": 0,
-    "initial_epoch": 0
+    "initial_epoch": 0,
+    "learning_rate": 1e-5
   },
   "n_images": 3881,
   "n_labels": 2,

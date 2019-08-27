@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import os
 import tensorflow as tf
 import io
+from math import exp
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -24,10 +25,13 @@ class SizePredictDataset:
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
 
+    def get_dataset_labels(self) -> List[float]:
+        return [el[1] for el in self.__annotation_list_train_area]
+
     def generate_dataset(self):
         self.__annotate()
-        train_input = self.__check_char_size()
-        self.__compose_dataset_object(train_input)
+        self.__annotate_char_area()
+        self.__compose_dataset_object()
 
     def __annotate(self):
         # train_csv_path = "datasets/kaggle/image_labels_map.csv"
@@ -92,7 +96,7 @@ class SizePredictDataset:
             # This is a list of list where each row represent an image and its list of characters with
             # relative coordinates of bbox. Characters are codified as integers
 
-    def __check_char_size(self) -> List[List]:
+    def __annotate_char_area(self) -> List[List]:
         """
         Computes the average bbox ratio respect to image area considering all the images.
         Plot a graph with ratio distibution.
@@ -101,7 +105,7 @@ class SizePredictDataset:
         self.__aspect_ratio_pic_all = []
         aspect_ratio_pic_all_test = []
         average_letter_size_all = []
-        train_input_for_size_estimate = []
+        annotation_list_train_area = []
         # resize_dir = "resized/"
 
         # if os.path.exists(resize_dir) == False: os.mkdir(resize_dir)
@@ -125,7 +129,7 @@ class SizePredictDataset:
                 average_letter_size_all.append(average_letter_size)
 
                 # Add example for training with image path and log average bbox size for objects in it
-                train_input_for_size_estimate.append(
+                annotation_list_train_area.append(
                     [self.__annotation_list_train[i][0], np.log(average_letter_size)])
 
         # Create test set
@@ -142,38 +146,43 @@ class SizePredictDataset:
 
         plt.hist(np.log(average_letter_size_all), bins=100)
         plt.title('log(ratio of letter_size / picture_size)', loc='center', fontsize=12)
-        plt.show()
+        # plt.show()
 
-        return train_input_for_size_estimate
+        self.__annotation_list_train_area = annotation_list_train_area
 
-    def __annotate_split_recommend(self, train_size_predictions: List[np.ndarray]):
+        return annotation_list_train_area  # List[str, float]
+
+    def annotate_split_recommend(self, annotations_w_area: List[float]) -> List[List]:
         """
-        From a list of bbox size for each train image computes the best size of
-        :param train_size_predictions:
-        :return:
+        From a list of bbox size for each train image computes the best size to split the image
+        :param annotations_w_area: list of predicteb bbox area for all characters
+        :return: extended annotation list with recommended splits in format:
+            image path: str, annotations: np.array, height split: float, width split: float
         """
         base_detect_num_h, base_detect_num_w = 25, 25
 
         annotation_list_train_w_split = []
 
-        # For each predicted bbox size calculate recommended heigth and width
-        for i, predicted_size in enumerate(train_size_predictions):
-            detect_num_h = self.__aspect_ratio_pic_all[i] * np.exp(-predicted_size / 2)
-            detect_num_w = detect_num_h / self.__aspect_ratio_pic_all[i]
-            h_split_recommend = np.maximum(1, detect_num_h / base_detect_num_h)
-            w_split_recommend = np.maximum(1, detect_num_w / base_detect_num_w)
+        # For each predicted bbox size calculate recommended height and width
+        for i, predicted_size in enumerate(annotations_w_area):
+            # __aspect_ratio_pic_all = height / width
+            detect_num_h = self.__aspect_ratio_pic_all[i] * exp(-predicted_size / 2)
+            detect_num_w = exp(-predicted_size / 2)
+            h_split_recommend = max([1, detect_num_h / base_detect_num_h])
+            w_split_recommend = max([1, detect_num_w / base_detect_num_w])
             annotation_list_train_w_split.append(
                 [self.__annotation_list_train[i][0], self.__annotation_list_train[i][1],
                  h_split_recommend,
                  w_split_recommend])
+            # Format: image path, annotations, height split, width split
 
         # Just for test
-        for i in np.arange(0, 1):
-            print("recommended height split:{}, recommended width_split:{}".format(
-                annotation_list_train_w_split[i][2], annotation_list_train_w_split[i][3]))
-            img = np.asarray(Image.open(annotation_list_train_w_split[i][0]).convert('RGB'))
-            plt.imshow(img)
-            plt.show()
+        # for i in np.arange(0, 1):
+        #     print("recommended height split:{}, recommended width_split:{}".format(
+        #         annotation_list_train_w_split[i][2], annotation_list_train_w_split[i][3]))
+        #     img = np.asarray(Image.open(annotation_list_train_w_split[i][0]).convert('RGB'))
+        #     plt.imshow(img)
+        #     plt.show()
 
         return annotation_list_train_w_split
 
@@ -205,6 +214,8 @@ class SizePredictDataset:
 
             pic_height, pic_width, _ = image_decoded.get_shape().as_list()
 
+            # Compute offset
+
             top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (pic_height
                                                                                             - 1)
             left_offset = np.random.randint(0, pic_width - int(crop_ratio * pic_width)) / (pic_width - 1)
@@ -234,13 +245,13 @@ class SizePredictDataset:
 
         return image_resized, label
 
-    def __compose_dataset_object(self, train_input):
+    def __compose_dataset_object(self):
         """
         Generate the tf.data.Dataset containing all the objects.
         """
 
-        image_paths = [sample[0] for sample in train_input]  # sample path
-        image_labels = [sample[1] for sample in train_input]  # avg bbox ratios
+        image_paths = [sample[0] for sample in self.__annotation_list_train_area]  # sample path
+        image_labels = [sample[1] for sample in self.__annotation_list_train_area]  # avg bbox ratios
 
         image_dataset = tf.data.Dataset.from_tensor_slices(image_paths)
 
