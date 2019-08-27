@@ -7,9 +7,9 @@ from scripts.dataset_resizing.functions.scaling import scale_dataset
 
 def main(restore: bool = True,
          resize: bool = True,
-         size: int = 64,
-         scaling: bool = True,
-         scale: float = 0.5):
+         size: int = 5,
+         scaling: bool = False,
+         scale: float = 1):
     """
     Resizes the dataset to the given size and/or restores it from the backup.
 

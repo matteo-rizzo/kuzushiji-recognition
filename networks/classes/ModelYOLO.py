@@ -83,6 +83,7 @@ class ModelYOLO(Model):
         self._test_log.info('* Threshold :    {}\n'.format(threshold))
         self._test_log.info('{} objects detected:\n'.format(len(results)))
         self._test_log.info(pp.pformat(results))
+        print(pp.pformat(results))
 
         plt.subplots(figsize=(10, 10))
         plt.imshow(original_img)
@@ -98,12 +99,14 @@ class ModelYOLO(Model):
     def boxing(original_img, predictions, threshold):
         boxed_image = np.copy(original_img)
 
-        for result in predictions:
-            top_x = result['topleft']['x']
-            top_y = result['topleft']['y']
+        scale = 1
 
-            btm_x = result['bottomright']['x']
-            btm_y = result['bottomright']['y']
+        for result in predictions:
+            top_x = int(result['topleft']['x'] * scale)
+            top_y = int(result['topleft']['y'] * scale)
+
+            btm_x = int(result['bottomright']['x'] * scale)
+            btm_y = int(result['bottomright']['y'] * scale)
 
             confidence = result['confidence']
             label = result['label'] + " " + str(round(confidence, 3))
