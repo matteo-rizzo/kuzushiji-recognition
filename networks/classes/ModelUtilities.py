@@ -1,18 +1,16 @@
+import glob
+import logging
 import os
-from typing import Tuple, List, Union
+from typing import List, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import Model
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
 from tensorflow.python.keras.layers import UpSampling2D, Concatenate, Conv2D, Input, AveragePooling2D, \
-    GlobalAveragePooling2D, Dense, Dropout, Activation, MaxPooling2D
+    GlobalAveragePooling2D, Dense, Dropout, Activation
 
-import logging
 from networks.functions.blocks import cbr, aggregation_block, resblock
-
-import glob
 
 output_layer_n = 1 + 4
 
@@ -23,7 +21,20 @@ class ModelUtilities:
     def generate_model(input_shape, mode: int, n_category: int = 1) -> tf.keras.Model:
         """
         Builds the network.
+
+        :param input_shape: the shape of the input images
+        :param mode: the type of model that must be generated
+        :param n_category: the number of categories (possible classes). Defaults to 1 in order to detect the
+        presence or absence of an object only (and not its label).
+        :return: a Keras model
         """
+
+        # modes = {
+        #     '1': generate_preprocessing_model,
+        #     '2': generate_centernet_model,
+        #     '3': generate_classification_model
+        # }
+
         if mode != 3:
             input_layer = Input(input_shape)
 
@@ -31,27 +42,32 @@ class ModelUtilities:
             input_layer_1 = AveragePooling2D(2)(input_layer)
             input_layer_2 = AveragePooling2D(2)(input_layer_1)
 
-            #### ENCODER ####
+            # Encoder
 
-            x_0 = cbr(input_layer, 16, 3, 2)  # 512->256
+            # 512->256
+            x_0 = cbr(input_layer, 16, 3, 2)
             concat_1 = Concatenate()([x_0, input_layer_1])
 
-            x_1 = cbr(concat_1, 32, 3, 2)  # 256->128
+            # 256->128
+            x_1 = cbr(concat_1, 32, 3, 2)
             concat_2 = Concatenate()([x_1, input_layer_2])
 
-            x_2 = cbr(concat_2, 64, 3, 2)  # 128->64
+            # 128->64
+            x_2 = cbr(concat_2, 64, 3, 2)
 
             x = cbr(x_2, 64, 3, 1)
             x = resblock(x, 64)
             x = resblock(x, 64)
 
-            x_3 = cbr(x, 128, 3, 2)  # 64->32
+            # 64->32
+            x_3 = cbr(x, 128, 3, 2)
             x = cbr(x_3, 128, 3, 1)
             x = resblock(x, 128)
             x = resblock(x, 128)
             x = resblock(x, 128)
 
-            x_4 = cbr(x, 256, 3, 2)  # 32->16
+            # 32->16
+            x_4 = cbr(x, 256, 3, 2)
             x = cbr(x_4, 256, 3, 1)
             x = resblock(x, 256)
             x = resblock(x, 256)
@@ -59,26 +75,34 @@ class ModelUtilities:
             x = resblock(x, 256)
             x = resblock(x, 256)
 
-            x_5 = cbr(x, 512, 3, 2)  # 16->8
+            # 16->8
+            x_5 = cbr(x, 512, 3, 2)
             x = cbr(x_5, 512, 3, 1)
 
             x = resblock(x, 512)
             x = resblock(x, 512)
             x = resblock(x, 512)
 
+            # Pre-processing mode (1)
             if mode == 1:
                 x = GlobalAveragePooling2D()(x)
                 x = Dropout(0.2)(x)
                 out = Dense(1, activation="linear")(x)
+            else:
+                # CenterNet mode (2)
 
-            else:  # CenterNet mode (2)
-                #### DECODER ####
+                # Decoder
+
                 x_1 = cbr(x_1, output_layer_n, 1, 1)
                 x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
+
                 x_2 = cbr(x_2, output_layer_n, 1, 1)
                 x_2 = aggregation_block(x_2, x_3, output_layer_n, output_layer_n)
+
                 x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
+
                 x_3 = cbr(x_3, output_layer_n, 1, 1)
+
                 x_3 = aggregation_block(x_3, x_4, output_layer_n, output_layer_n)
                 x_2 = aggregation_block(x_2, x_3, output_layer_n, output_layer_n)
                 x_1 = aggregation_block(x_1, x_2, output_layer_n, output_layer_n)
@@ -104,8 +128,10 @@ class ModelUtilities:
                 x = Conv2D(output_layer_n, kernel_size=3, strides=1, padding="same")(x)
                 # x = MaxPooling2D(pool_size=(3, 3), strides=None, padding="same")(x)
                 out = Activation("sigmoid")(x)
+        else:
 
-        else:  # Classification mode (3)
+            # Classification mode (3)
+
             input_layer = Input(input_shape)  # 32
             x = cbr(input_layer, 64, 3, 1)
             x = resblock(x, 64)
@@ -183,9 +209,15 @@ class ModelUtilities:
         model.load_weights(restore_path)
 
     @staticmethod
-    def train(model: tf.keras.Model, logger: logging.Logger, init_epoch: int, epochs: int,
-              training_set: tf.data.Dataset, validation_set: tf.data.Dataset, training_steps: int,
-              validation_steps: int, callbacks: List[tf.keras.callbacks.Callback]):
+    def train(model: tf.keras.Model,
+              logger: logging.Logger,
+              init_epoch: int,
+              epochs: int,
+              training_set: tf.data.Dataset,
+              validation_set: tf.data.Dataset,
+              training_steps: int,
+              validation_steps: int,
+              callbacks: List[tf.keras.callbacks.Callback]):
         """
         Compile and train the model for the specified number of epochs.
         """

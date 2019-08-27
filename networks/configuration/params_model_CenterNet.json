@@ -10,7 +10,6 @@
     "output_width": 128,
     "output_height": 128
   },
-  "run_id": "test_centernet",
   "model_1": {
     "batch_size": 32,
     "restore_weights": true,
@@ -35,6 +34,7 @@
     "initial_epoch": 0,
     "learning_rate": 1e-5
   },
+  "run_id": "test_centernet",
   "n_images": 3881,
   "n_labels": 2,
   "in_channels": 1,

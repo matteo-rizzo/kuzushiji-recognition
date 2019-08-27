@@ -1,12 +1,9 @@
 from typing import Dict, List, Tuple
-import pandas as pd
-import numpy as np
-from PIL import Image
-import matplotlib.pyplot as plt
-import os
-import tensorflow as tf
-import io
+
 import cv2
+import numpy as np
+import tensorflow as tf
+from PIL import Image
 from sklearn.model_selection import train_test_split
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -18,20 +15,33 @@ class CenterNetDataset:
         self.__train_images_path = params['train_images_path']
         self.__test_images_path = params['test_images_path']
         self.__sample_submission = params['sample_submission']
-        self.__training_ratio = params['training_ratio']
-        self.__batch_size = params['batch_size']
+
         self.__annotation_list_train: List[List]
         self.__aspect_ratio_pic_all: List[float]
+
+        self.__training_ratio = params['training_ratio']
+        self.__batch_size = params['batch_size']
+
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
+
         self.__output_height = params['output_height']
         self.__output_width = params['output_width']
+
         self.__validation_set: Tuple[tf.data.Dataset, int] = None
         self.__training_set: Tuple[tf.data.Dataset, int] = None
 
-    def __dataset_generator(self, list_samples, batch_size):
+    def __dataset_generator(self, list_samples, batch_size) -> (np.float32, np.float32):
+        """
+        Generates a dataset given the samples and a batch size
+
+        :param list_samples: the list of samples the dataset will contain
+        :param batch_size:
+        """
+
         input_height, input_width = self.__input_height, self.__input_width
         output_height, output_width = self.__output_height, self.__output_width
+
         category_n = 1
         output_layer_n = category_n + 4
 
