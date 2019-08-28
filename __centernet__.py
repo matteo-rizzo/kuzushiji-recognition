@@ -20,68 +20,6 @@ from networks.functions.utils import get_bb_boxes, get_crop_characters_train, \
 def run_preprocessing(dataset_params, model_params, input_shape, weights_path, logs):
     logs['execution'].info('Preprocessing the data...')
 
-    # Enable eager execution
-    tf.compat.v1.enable_eager_execution()
-    eager_exec_status = str('Yes') if tf.executing_eagerly() else str('No')
-
-    # Set up the log for tensorflow
-    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-
-    # Remove absl logs
-    logging.root.removeHandler(absl.logging._absl_handler)
-    absl.logging._warn_preinit_stderr = False
-
-    # --- GENERAL PARAMETERS ---
-
-    # Set the path to the configuration folder
-    config_path = os.path.join(os.getcwd(), 'networks', 'configuration')
-
-    # Load the model parameters from json file
-    centernet_params = Params(os.path.join(config_path, 'params_model_CenterNet.json'))
-    dataset_params = centernet_params.dataset
-
-    # Get the info for the current run
-    run_id = centernet_params.run_id
-
-    # Model params
-    model_1_params = centernet_params.model_1
-    model_2_params = centernet_params.model_2
-    model_3_params = centernet_params.model_3
-
-    # --- LOGGERS ---
-
-    log_handler = Logger(run_id)
-    exe_log = log_handler.get_logger('execution')
-    train_log = log_handler.get_logger('training')
-    test_log = log_handler.get_logger('testing')
-
-    # Log configuration
-    exe_log.info('Software versions:')
-    exe_log.info('* Tensorflow version: ' + tf.__version__)
-    exe_log.info('* Keras version:      ' + tf.__version__)
-    exe_log.info('* Executing eagerly?  ' + eager_exec_status)
-
-    exe_log.info('General parameters:')
-    exe_log.info('* Model:               CenterNet')
-    exe_log.info('* Training dataset:   ' + dataset_params['train_images_path'])
-    exe_log.info('* Test dataset:       ' + dataset_params['test_images_path'] + '\n')
-
-    # Log general and training parameters
-    log_handler.log_configuration(run_id, 'CenterNet', implementation=False)
-
-    # --- DATASET ---
-
-    # Import the dataset for training
-    exe_log.info('Importing the dataset for training...')
-
-    input_shape = (dataset_params['input_width'], dataset_params['input_height'], 3)
-
-    base_experiments_path = os.path.join(os.getcwd(), 'networks', 'experiments')
-
-    # --------------------- STEP 1: Pre-processing (Check Object Size) ---------------------
-
-    # exe_log.info('Building the model...')
-
     # Build dataset for model 1
     dataset_params['batch_size'] = model_params['batch_size']
     dataset_avg_size = SizePredictDataset(dataset_params)
@@ -122,7 +60,7 @@ def run_preprocessing(dataset_params, model_params, input_shape, weights_path, l
     #                          evaluation_set=size_check_vs,
     #                          evaluation_steps=int(size_check_vs_size // model_params['batch_size'] + 1))
 
-    # --------------------- STEP 2: Detection by CenterNet ---------------------
+    return dataset_avg_size
 
 
 def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, weights_path, logs):
@@ -137,7 +75,7 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
 
     # Restore the saved weights if required
     if model_params['restore_weights']:
-        model_utils.restore_weights(model_2, logs['execution'], model_params['initial_epoch'], weights_path)
+        model_utils.restore_weights(model, logs['execution'], model_params['initial_epoch'], weights_path)
 
     # Get labels from dataset and compute the recommended split
     avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
@@ -158,7 +96,7 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
 
     dataset_params['batch_size'] = model_params['batch_size']
     dataset_detection = CenterNetDataset(dataset_params)
-    X_train, X_val = dataset_detection.generate_dataset(train_list)
+    x_train, x_val = dataset_detection.generate_dataset(train_list)
     detection_ts, detection_ts_size = dataset_detection.get_training_set()
     detection_vs, detection_vs_size = dataset_detection.get_validation_set()
 
@@ -195,30 +133,35 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
                                   metrics[2],
                                   metrics[3]))
 
-    # Prepare a test dataset from val set. I take the first 10 values of validation set
+        # Prepare a test dataset from val set. I take the first 10 values of validation set
 
     def resize_fn(path):
         image_string = tf.read_file(path)
         image_decoded = tf.image.decode_jpeg(image_string)
         image_resized = tf.image.resize(image_decoded, (input_shape[1], input_shape[0]))
+
         return image_resized / 255
 
-    test_path_list = [ann[0] for ann in X_val[:10]]
+    test_path_list = [ann[0] for ann in x_val[:10]]
     test_ds = tf.data.Dataset.from_tensor_slices(test_path_list) \
         .map(resize_fn,
              num_parallel_calls=tf.data.experimental.AUTOTUNE) \
         .batch(1) \
         .prefetch(tf.data.experimental.AUTOTUNE)
 
-    # Get predictions of model 2
-    detec_predictions = model_utils.predict(model_2, test_log, test_ds, steps=10)
-    bbox_predictions = get_bb_boxes(detec_predictions, X_val[:10], print=False)
+    detec_predictions = model_utils.predict(model, logs['test'], test_ds, steps=10)
+    return train_list, get_bb_boxes(detec_predictions, x_val[:10], print=True)
     # List of [image_path,category,score,ymin,xmin,ymax,xmax]. Non numeric type!!
     # Category is always 0. It is not the character category. It's the center category.
 
-    # --------------------- STEP 3: Classification ---------------------
 
-def run_classification(dataset_params, model_params, bbox_predictions, input_shape, weights_path, logs):
+def run_classification(dataset_params,
+                       model_params,
+                       train_list,
+                       bbox_predictions,
+                       input_shape,
+                       weights_path,
+                       logs):
     # Generate a model
     model_utils = ModelUtilities()
     model = model_utils.generate_model(input_shape=input_shape,
@@ -236,36 +179,24 @@ def run_classification(dataset_params, model_params, bbox_predictions, input_sha
                   optimizer=Adam(lr=model_params['learning_rate']),
                   metrics=["accuracy"])
 
-    lr = model_3_params['learning_rate']
-    model_3.compile(loss="categorical_crossentropy", optimizer=Adam(lr=lr), metrics=["accuracy"])
-
-    # Generate training set for model 3
+    # Generate the training set for classification
     # NOTE: this scripts are only run once to generate the images for training.
-    exe_log.info('Getting bunding boxes from annotations...')
+
+    logs['execution'].info('Getting bounding boxes from annotations...')
     crop_format = annotations_to_bounding_boxes(train_list)
-    exe_log.info('Cropping images to characters...')
+
+    logs['execution'].info('Cropping images to characters...')
     char_train_list = get_crop_characters_train(crop_format,
                                                 os.path.join(os.getcwd(), 'datasets', 'char_crop'))
-    exe_log.info('Cropping done.')
-    # TODO: create dataset from cropped images (as [image, category])
 
-    # batch_size_3 = int(model_3_params['batch_size'])
-    # dataset_params['batch_size'] = batch_size_3
-    # dataset_classification = ClassifierDataset(dataset_params)
-    # X_train, X_val = dataset_classification.generate_dataset(bbox_predictions)
-    # classification_ts, classification_ts_size = dataset_classification.get_training_set()
-    # classification_vs, classification_vs_size = dataset_classification.get_validation_set()
-    #
-    # if model_3_params['train']:
-    #     callbacks = model_utils.setup_callbacks(weights_path_3, batch_size=batch_size_3)
-    #
-    #     model_utils.train(model_3, train_log, init_epoch=model_3_params['initial_epoch'],
-    #                       epochs=model_3_params['epochs'],
-    #                       training_set=classification_ts,
-    #                       validation_set=classification_vs,
-    #                       training_steps=int(classification_ts_size // batch_size_3) + 1,
-    #                       validation_steps=int(classification_vs_size // batch_size_3) + 1,
-    #                       callbacks=callbacks)
+    logs['execution'].info('Cropping done successfully!')
+
+    batch_size = int(model_params['batch_size'])
+    dataset_params['batch_size'] = batch_size
+    dataset_classification = ClassifierDataset(dataset_params)
+    x_train, x_val = dataset_classification.generate_dataset(bbox_predictions)
+    classification_ts, classification_ts_size = dataset_classification.get_training_set()
+    classification_vs, classification_vs_size = dataset_classification.get_validation_set()
 
     if model_params['train']:
         callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
@@ -350,25 +281,29 @@ def main():
     dataset_avg_size = run_preprocessing(dataset_params=dataset_params,
                                          model_params=model_1_params,
                                          input_shape=input_shape,
-                                         weights_path=os.path.join(base_experiments_path, run_id + '_1', 'weights'),
+                                         weights_path=os.path.join(base_experiments_path, run_id + '_1',
+                                                                   'weights'),
                                          logs=logs)
 
     # --- STEP 2: Detection by CenterNet ---
 
-    bbox_predictions = run_detection(dataset_params=dataset_params,
-                                     model_params=model_2_params,
-                                     dataset_avg_size=dataset_avg_size,
-                                     input_shape=input_shape,
-                                     weights_path=os.path.join(base_experiments_path, run_id + '_2', 'weights'),
-                                     logs=logs)
+    train_list, bbox_predictions = run_detection(dataset_params=dataset_params,
+                                                 model_params=model_2_params,
+                                                 dataset_avg_size=dataset_avg_size,
+                                                 input_shape=input_shape,
+                                                 weights_path=os.path.join(base_experiments_path, run_id + '_2',
+                                                                           'weights'),
+                                                 logs=logs)
 
     # --- STEP 3: Classification ---
 
     run_classification(dataset_params=dataset_params,
                        model_params=model_3_params,
+                       train_list=train_list,
                        bbox_predictions=bbox_predictions,
                        input_shape=input_shape,
-                       weights_path=os.path.join(base_experiments_path, run_id + '_3', 'weights'),
+                       weights_path=os.path.join(base_experiments_path, run_id + '_3',
+                                                 'weights'),
                        logs=logs)
 
 
