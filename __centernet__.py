@@ -30,6 +30,7 @@ def run_preprocessing(dataset_params, model_params, input_shape, weights_path, l
     size_check_vs, size_check_vs_size = dataset_avg_size.get_validation_set()
     # size_check_ps, size_check_ps_size = dataset_avg_size.get_test_set()
     #
+    # # Generate a model
     # model_utils = ModelUtilities()
     # model = model_utils.generate_model(input_shape=input_shape, mode=1)
     # model.compile(loss='mean_squared_error',
@@ -46,9 +47,11 @@ def run_preprocessing(dataset_params, model_params, input_shape, weights_path, l
     # if model_params['train']:
     #     logs['execution'].info('Starting the training procedure for model 1...')
     #
+    #     # Set up the callbacks
     #     callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
     #                                             batch_size=model_params['batch_size'])
     #
+    #     # Start the training procedure
     #     model_utils.train(model, logs['training'], model_params['initial_epoch'], model_params['epochs'],
     #                       training_set=size_check_ts,
     #                       validation_set=size_check_vs,
@@ -56,6 +59,7 @@ def run_preprocessing(dataset_params, model_params, input_shape, weights_path, l
     #                       validation_steps=int(size_check_vs_size // model_params['batch_size'] + 1),
     #                       callbacks=callbacks)
     #
+    #     # Evaluate the model
     #     model_utils.evaluate(model, logger=logs['test'],
     #                          evaluation_set=size_check_vs,
     #                          evaluation_steps=int(size_check_vs_size // model_params['batch_size'] + 1))
@@ -75,13 +79,17 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
 
     # Restore the saved weights if required
     if model_params['restore_weights']:
-        model_utils.restore_weights(model, logs['execution'], model_params['initial_epoch'], weights_path)
+        model_utils.restore_weights(model=model,
+                                    logger=logs['execution'],
+                                    init_epoch=model_params['initial_epoch'],
+                                    weights_folder_path=weights_path)
 
     # Get labels from dataset and compute the recommended split
     avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
 
     # flat_predictions = [item for array in predictions for item in array]
     train_list = dataset_avg_size.annotate_split_recommend(avg_sizes)
+
     # train_list[0] = path to image
     # train_list[1] = annotations (ann)
     # train_list[2] = recommended height split
@@ -92,8 +100,7 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
     # ann[:, 3] = x width
     # ann[:, 4] = y height
 
-    # Generate the dataset for model 2
-
+    # Generate the dataset for detection
     dataset_params['batch_size'] = model_params['batch_size']
     dataset_detection = CenterNetDataset(dataset_params)
     x_train, x_val = dataset_detection.generate_dataset(train_list)
@@ -104,9 +111,11 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
     if model_params['train']:
         logs['execution'].info('Starting the training procedure for model 2 (CenterNet)...')
 
+        # Set up the callbacks
         callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
                                                 batch_size=model_params['batch_size'])
 
+        # Start the training procedure
         model_utils.train(model=model,
                           logger=logs['training'],
                           init_epoch=model_params['initial_epoch'],
@@ -117,6 +126,7 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
                           validation_steps=int(detection_vs_size // model_params['batch_size']) + 1,
                           callbacks=callbacks)
 
+        # Evaluate the model
         metrics = model_utils.evaluate(model=model,
                                        logger=logs['test'],
                                        evaluation_set=detection_vs,
@@ -133,8 +143,7 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
                                   metrics[2],
                                   metrics[3]))
 
-        # Prepare a test dataset from val set. I take the first 10 values of validation set
-
+    # Utility function for resizing
     def resize_fn(path):
         image_string = tf.read_file(path)
         image_decoded = tf.image.decode_jpeg(image_string)
@@ -142,6 +151,7 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
 
         return image_resized / 255
 
+    # Prepare a test dataset from the validation set taking its first 10 values
     test_path_list = [ann[0] for ann in x_val[:10]]
     test_ds = tf.data.Dataset.from_tensor_slices(test_path_list) \
         .map(resize_fn,
@@ -149,8 +159,10 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
         .batch(1) \
         .prefetch(tf.data.experimental.AUTOTUNE)
 
-    detec_predictions = model_utils.predict(model, logs['test'], test_ds, steps=10)
-    return train_list, get_bb_boxes(detec_predictions, x_val[:10], print=True)
+    # Perform the prediction on the newly created dataset
+    detected_predictions = model_utils.predict(model, logs['test'], test_ds, steps=10)
+
+    return train_list, get_bb_boxes(detected_predictions, x_val[:10], print=True)
     # List of [image_path,category,score,ymin,xmin,ymax,xmax]. Non numeric type!!
     # Category is always 0. It is not the character category. It's the center category.
 
