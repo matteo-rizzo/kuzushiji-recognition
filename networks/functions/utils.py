@@ -1,12 +1,13 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image, ImageDraw
-from typing import List, Tuple, Dict, Union
 import os
 import shutil
 import sys
-from tqdm import tqdm
+from typing import List, Tuple, Dict, Union
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from PIL import Image, ImageDraw
+from tqdm import tqdm
 
 pred_out_w, pred_out_h = 128, 128
 
@@ -61,13 +62,50 @@ def check_iou_score(true_boxes, detected_boxes, iou_thresh):
     return score
 
 
+def user_check(save_dir):
+    """
+    Asks the user confirmation before deleting all files in the save dir
+
+    :param save_dir: the path to the save dir
+    """
+
+    dir_exists = os.path.isdir(save_dir)
+    all_files = os.listdir(save_dir)
+
+    # If a directory already exists and it is not empty, ask the user what to do
+    if dir_exists and len(all_files) > 0:
+        user_input = input('WARNING! There seems to be some files in the folder in which '
+                           'to save cropped characters.\n'
+                           'Do you wish to delete all existing files and proceed with the operation?\n'
+                           'Please refuse to abort the execution.\n'
+                           'Confirm? [Y/n]\n')
+        confirmations = ['y', 'Y', 'yes', 'ok']
+
+        user_ok = True if user_input in confirmations else False
+
+        if user_ok:
+            # Remove directory and all its files
+            shutil.rmtree(save_dir)
+        else:
+            # Exit and leave files untouched
+            sys.exit(0)
+
+    assert not dir_exists or len(all_files) == 0, 'Folder is not empty! Problem with deletion'
+
+    # Create empty directory if there is not one
+    if not dir_exists:
+        os.mkdir(save_dir)
+
+
 #################################################################
 
 
-def get_bb_boxes(predictions: np.ndarray, annotation_list: np.array, print: bool = False) \
-        -> Dict[str, np.ndarray]:
+def get_bb_boxes(predictions: np.ndarray,
+                 annotation_list: np.array,
+                 print: bool = False) -> Dict[str, np.ndarray]:
     """
-    Compute the bounding boxes and perform non maximum supression
+    Computes the bounding boxes and perform non maximum suppression
+
     :param predictions: array of predictions with shape (batch, out_width, out_height, n_cat + 4)
     :param annotation_list: list o samples where:
             - annotation_list[0] = path to image
@@ -75,16 +113,21 @@ def get_bb_boxes(predictions: np.ndarray, annotation_list: np.array, print: bool
             - annotation_list[2] = recommended height split
             - annotation_list[3] = recommended width split
     :param print: whether to show bboxes and iou scores
-    :return: list of boxes, as [image_path,category,score,ymin,xmin,ymax,xmax].
-            Category is always 0 in our case.
+    :return: list of boxes, as [<image_path>, <category>, <score>, <ymin>, <xmin>, <ymax>, <xmax>].
+            Note that <category> is always 0 in our case.
     """
+
     all_boxes = dict()
+
     for i in np.arange(0, predictions.shape[0]):
         image_path = annotation_list[i][0]
         img = Image.open(image_path).convert("RGB")
         width, height = img.size
 
-        box_and_score = boxes_for_image(predictions[i], 1, score_thresh=0.3, iou_thresh=0.4)
+        box_and_score = boxes_for_image(predicts=predictions[i],
+                                        category_n=1,
+                                        score_thresh=0.3,
+                                        iou_thresh=0.4)
         # Bidimensional np.ndarray. Each row is (category,score,ymin,xmin,ymax,xmax)
 
         if len(box_and_score) == 0:
@@ -128,7 +171,7 @@ def boxes_for_image(predicts, category_n, score_thresh, iou_thresh) -> np.ndarra
     width = predicts[..., category_n + 3] * pred_out_w
 
     count = 0
-    # Well, in our case category_n = 1, so category=0 (just one cycle)
+    # In our case category_n = 1, so category=0 (just one cycle)
     for category in range(category_n):
         predict = predicts[..., category]
         mask = (predict > score_thresh)
@@ -166,7 +209,7 @@ def boxes_image_nms(score, y_c, x_c, height, width, iou_thresh, merge_mode=False
         ymax = height
         xmax = width
     else:
-        # flatten
+        # --- Flattening ---
         score = score.reshape(-1)
         y_c = y_c.reshape(-1)
         x_c = x_c.reshape(-1)
@@ -199,15 +242,21 @@ def boxes_image_nms(score, y_c, x_c, height, width, iou_thresh, merge_mode=False
 
     area = ((ymax - ymin) * (xmax - xmin))
 
-    boxes = np.concatenate((score.reshape(-1, 1), ymin.reshape(-1, 1), xmin.reshape(-1, 1),
-                            ymax.reshape(-1, 1), xmax.reshape(-1, 1)), axis=1)
+    boxes = np.concatenate((score.reshape(-1, 1),
+                            ymin.reshape(-1, 1),
+                            xmin.reshape(-1, 1),
+                            ymax.reshape(-1, 1),
+                            xmax.reshape(-1, 1)),
+                           axis=1)
 
-    # Non maximum suppression
+    # --- Non maximum suppression ---
+
     box_idx = np.arange(len(ymin))
     alive_box = []
+
     while len(box_idx) > 0:
 
-        # Take first index (of best bbox)
+        # Take the first index of the best bbox
         alive_box.append(box_idx[0])
 
         y1 = np.maximum(ymin[0], ymin)
@@ -234,7 +283,8 @@ def boxes_image_nms(score, y_c, x_c, height, width, iou_thresh, merge_mode=False
 def annotations_to_bounding_boxes(annotations: List) -> np.array:
     """
     Utility to convert between the annotation format, and the format required by
-    get_crop_characters_train function for character.
+    get_crop_characters_train function for character
+
     :param annotations: List[str, np.array] with image path and image annotations where:
         - ann[:, 0] = class
         - ann[:, 1] = x_center
@@ -281,8 +331,8 @@ def predictions_to_bounding_boxes(predictions: List[np.array]) -> List[np.array]
     pass
 
 
-def create_crop_character_test(images_to_split: Dict[str, np.array], save_dir: str) \
-        -> List[str]:
+def create_crop_character_test(images_to_split: Dict[str, np.array],
+                               save_dir: str) -> List[str]:
     """
     Crop image into all its bounding boxes, saving a different image for each one in save_dir.
     :param images_to_split: dict of {image_path: ndarray([ymin,xmin,ymax,xmax])}
@@ -290,29 +340,7 @@ def create_crop_character_test(images_to_split: Dict[str, np.array], save_dir: s
     """
     # TODO: test
 
-    # ---- Preliminary operations ----
-
-    # If directory already exists and is not empty ask the user what to do
-    if os.path.isdir(save_dir) and len(os.listdir(save_dir)) > 0:
-        user_ok = input('WARNING! There seems to be some files in the folder in which to save cropped '
-                        'characters.\n'
-                        'Do you want to delete all existing files and proceed with the operation?\n'
-                        'Please refuse to abort the execution.\n'
-                        'Confirm? [Y/n]\n')
-        confirmations = ['y', 'Y', 'yes', 'ok']
-        if user_ok in confirmations:
-            # Remove directory and all its files
-            shutil.rmtree(save_dir)
-        else:
-            # Exit and leave files untouched
-            sys.exit(0)
-
-    assert not os.path.isdir(save_dir) or \
-           len(os.listdir(save_dir)) == 0, 'Folder is not empty! Problem with deletion'
-
-    # Create empty directory if there is not one
-    if not os.path.isdir(save_dir):
-        os.mkdir(save_dir)
+    user_check(save_dir)
 
     # ---- Cropping ----
 
@@ -320,7 +348,7 @@ def create_crop_character_test(images_to_split: Dict[str, np.array], save_dir: s
 
     for img_path, boxes in tqdm(images_to_split.items()):
 
-        # Get image name wihout extension, e.g. dataset/img.jpg -> img
+        # Get image name without extension, e.g. dataset/img.jpg -> img
         img_name = img_path.split(str(os.sep))[-1].split('.')[0]
         # Relative path with image name (no extension)
         img_name_path = os.path.join(save_dir, img_name)
@@ -345,39 +373,19 @@ def create_crop_character_test(images_to_split: Dict[str, np.array], save_dir: s
     return cropped_list
 
 
-def create_crop_characters_train(images_to_split: Dict[str, np.array], save_dir: str,
+def create_crop_characters_train(images_to_split: Dict[str, np.array],
+                                 save_dir: str,
                                  save_csv: bool = True) -> List[Tuple[str, int]]:
     """
-    Crop image into all bounding box, saving a different image for each one in save_dir.
+    Crops image into all bounding box, saving a different image for each one in save_dir.
     Additionally save a csv containing all pairs (char_image, char_class) in save_dir folder.
+
     :param save_csv: whether to save (cropped_img_path, char_class) to a cvs file
     :param images_to_split: dict of {image_path: ndarray([char_class,ymin,xmin,ymax,xmax])}
     :param save_dir: directory where to save cropped images
     """
 
-    # ---- Preliminary operations ----
-
-    # If directory already exists and is not empty ask the user what to do
-    if os.path.isdir(save_dir) and len(os.listdir(save_dir)) > 0:
-        user_ok = input('WARNING! There seems to be some files in the folder in which to save cropped '
-                        'characters.\n'
-                        'Do you want to delete all existing files and proceed with the operation?\n'
-                        'Please refuse to abort the execution.\n'
-                        'Confirm? [Y/n]\n')
-        confirmations = ['y', 'Y', 'yes', 'ok']
-        if user_ok in confirmations:
-            # Remove directory and all its files
-            shutil.rmtree(save_dir)
-        else:
-            # Exit and leave files untouched
-            sys.exit(0)
-
-    assert not os.path.isdir(save_dir) or \
-           len(os.listdir(save_dir)) == 0, 'Folder is not empty! Problem with deletion'
-
-    # Create empty directory if there is not one
-    if not os.path.isdir(save_dir):
-        os.mkdir(save_dir)
+    user_check(save_dir)
 
     # ---- Cropping ----
 
@@ -385,7 +393,7 @@ def create_crop_characters_train(images_to_split: Dict[str, np.array], save_dir:
 
     for img_path, boxes in tqdm(images_to_split.items()):
 
-        # Get image name wihout extension, e.g. dataset/img.jpg -> img
+        # Get image name without extension, e.g. dataset/img.jpg -> img
         img_name = img_path.split(str(os.sep))[-1].split('.')[0]
         # Relative path with image name (no extension)
         img_name_path = os.path.join(save_dir, img_name)
@@ -419,39 +427,38 @@ def create_crop_characters_train(images_to_split: Dict[str, np.array], save_dir:
 
 def load_crop_characters(save_dir: str, mode: str) -> Union[List[Tuple[str, int]], List[str]]:
     """
-    Load characters list from file system. Useful to avoid regenerate cropping characters every time.
-    :param mode: string 'train' or 'test'.
-                If 'test' returned list will be a list of filepaths to cropped images.
-                If 'train' returned list will be composed of tuples (img_path, char_class)
-    :param save_dir: filepath in which to search for objects
-    :return: List of character images, format depending on 'mode' param.
+    Loads the list of characters from file system. Useful to avoid regenerating cropped characters every time.
+
+    :param mode: strings 'train' or 'test':
+        - 'test': returned list will be a list of file paths to cropped images.
+        - 'train' returned list will be composed of tuples (img_path, char_class)
+    :param save_dir: file path which to search for objects in
+    :return: list of character images whose format depending on 'mode' param
     """
 
-    assert os.path.isdir(save_dir), 'Error: save_dir doesn\'t exists'
+    assert os.path.isdir(save_dir), "Error: save_dir doesn't exists!"
 
     csv_path = os.path.join(save_dir, 'crop_list.csv')
 
     if mode == 'train':
-        assert os.path.isfile(csv_path), \
-            'Error: csv file \'crop_list.csv\' doesn\'t exists in path {}'.format(csv_path)
+        assert os.path.isfile(csv_path), "Error: csv file 'crop_list.csv' doesn't exists in path {}".format(csv_path)
 
         csv_df = pd.read_csv(csv_path, delimiter=',')
 
         n_rows = len(csv_df.index)
 
-        assert len(os.listdir(save_dir)) - 1 == n_rows, \
-            'Error: csv and save_dir contains different number of items'
+        assert len(os.listdir(save_dir)) - 1 == n_rows, "Error: csv and save_dir contains different number of items"
 
         return [tuple(c) for c in csv_df.values]
 
     if mode == 'test':
-        assert not os.path.isfile(csv_path), \
-            'Error: there is a csv file in save_dir. There should\'t be.'
+        assert not os.path.isfile(csv_path), "Error: there is an unexpected csv file in save_dir at {}." \
+            .format(save_dir)
 
         img = sorted(os.listdir(save_dir))
 
-        assert len(img) > 0, 'Error: provided directory {} is empty'.format(save_dir)
+        assert len(img) > 0, 'Error: provided save directory {} is empty'.format(save_dir)
 
         return img
 
-    raise ValueError('Mode value {} is not valid. Possibilities are \'test\' or \'train\'.'.format(mode))
+    raise ValueError("Mode value {} is not valid. Possibilities are 'test' or 'train'.".format(mode))
