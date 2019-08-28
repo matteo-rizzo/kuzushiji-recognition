@@ -17,15 +17,14 @@ class SizePredictDataset:
         self.__test_images_path = params['test_images_path']
         self.__sample_submission = params['sample_submission']
 
-        self.batch_size = params['batch_size']
-        self.__training_ratio = params['training_ratio']
-
         self.__annotation_list_train: List[List]
         self.__aspect_ratio_pic_all: List[float]
         self.__dataset: Tuple[tf.data.Dataset, int]
 
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
+        self.__training_ratio = params['training_ratio']
+        self.batch_size = params['batch_size']
 
     def get_dataset_labels(self) -> List[float]:
         return [el[1] for el in self.__annotation_list_train_area]
@@ -165,7 +164,7 @@ class SizePredictDataset:
 
     def annotate_split_recommend(self, annotations_w_area: List[float]) -> List[List]:
         """
-        Given a list of bbox sizes for each train image, computes the best size to split the image
+        Given a list of bbox sizes for each train image, computes the best size according to the image must be split
 
         :param annotations_w_area: list of predicted bbox areas for all characters
         :return: extended annotation list with recommended splits in format:
@@ -180,8 +179,10 @@ class SizePredictDataset:
             # __aspect_ratio_pic_all = height / width
             detect_num_h = self.__aspect_ratio_pic_all[i] * exp(-predicted_size / 2)
             detect_num_w = exp(-predicted_size / 2)
+
             h_split_recommend = max([1, detect_num_h / base_detect_num_h])
             w_split_recommend = max([1, detect_num_w / base_detect_num_w])
+
             annotation_list_train_w_split.append(
                 [self.__annotation_list_train[i][0], self.__annotation_list_train[i][1],
                  h_split_recommend,
@@ -209,47 +210,42 @@ class SizePredictDataset:
         :return: image and labels tensors.
         """
         input_width, input_height = self.__input_width, self.__input_height
-
         crop_ratio = np.random.uniform(0.7, 1) if random_crop else 1
 
         # Load image
         image_string = tf.read_file(image)
         image_decoded = tf.image.decode_jpeg(image_string)
 
-        # random crop
         if random_crop and is_train:
 
             # Get image size
-
             pic_height, pic_width, _ = image_decoded.get_shape().as_list()
 
-            # Compute offset
-
-            top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (pic_height
-                                                                                            - 1)
+            # Compute the offsets
+            top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (pic_height - 1)
             left_offset = np.random.randint(0, pic_width - int(crop_ratio * pic_width)) / (pic_width - 1)
             bottom_offset = top_offset + int(crop_ratio * pic_height) / (pic_height - 1)
             right_offset = left_offset + int(crop_ratio * pic_width) / (pic_width - 1)
 
+            # Resize the image
             image_resized = tf.image.crop_and_resize(image=[image_decoded],
                                                      box_ind=[0],
-                                                     boxes=[[top_offset, left_offset, bottom_offset,
+                                                     boxes=[[top_offset,
+                                                             left_offset,
+                                                             bottom_offset,
                                                              right_offset]],
                                                      crop_size=[input_width, input_height])
-
+            # Update average bbox size after cropping
+            label -= np.log(crop_ratio)
         else:
             image_resized = tf.image.resize_images(images=image_decoded,
                                                    size=[input_width, input_height])
 
-        if random_crop and is_train:
-            # Update average bbox size after cropping
-            label -= np.log(crop_ratio)
-
         # Make sure values are in range [0, 255]
         image_resized /= 255
 
+        # Remove 1st dimension if image has been cropped: (1, height, width, 3) -> (height, width, 3)
         if random_crop:
-            # Remove 1st dimension if image has been cropped: (1, height, width, 3) -> (height, width, 3)
             image_resized = tf.reshape(image_resized, image_resized.shape[1:])
 
         return image_resized, label

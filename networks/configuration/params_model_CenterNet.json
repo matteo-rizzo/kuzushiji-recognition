@@ -1,4 +1,5 @@
 {
+  "run_id": "test_centernet",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "train_images_path": "datasets/kaggle/training/images",
@@ -20,11 +21,11 @@
   },
   "model_2": {
     "batch_size": 16,
-    "restore_weights": true,
-    "train": false,
+    "restore_weights": false,
+    "train": true,
     "epochs": 35,
-    "initial_epoch": 32,
-    "learning_rate": 1e-6
+    "initial_epoch": 0,
+    "learning_rate": 1e-5
   },
   "model_3": {
     "batch_size": 32,
@@ -33,11 +34,5 @@
     "epochs": 0,
     "initial_epoch": 0,
     "learning_rate": 1e-5
-  },
-  "run_id": "test_centernet",
-  "n_images": 3881,
-  "n_labels": 2,
-  "in_channels": 1,
-  "out_channels": 32,
-  "dropout_rate": 0.4
+  }
 }

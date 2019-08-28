@@ -9,8 +9,9 @@ from networks.classes.CenterNetDetectionDataset import CenterNetDataset
 from networks.classes.ModelCenterNet import ModelUtilities
 from networks.classes.SizePredictDataset import SizePredictDataset
 from networks.functions import losses
-from networks.functions.utils import get_bb_boxes
-from networks.functions.utils import load_crop_characters
+from networks.functions.bounding_boxes import get_bb_boxes
+from networks.functions.cropping import load_crop_characters, annotations_to_bounding_boxes, \
+    create_crop_characters_train
 
 
 class CenterNetPipeline:
@@ -18,6 +19,20 @@ class CenterNetPipeline:
         self.dataset_params = dataset_params
         self.input_shape = input_shape
         self.logs = logs
+
+    def __resize_fn(self, path):
+        """
+        Utility function for image resizing
+
+        :param path: the path to the image to be resized
+        :return: a resized image
+        """
+
+        image_string = tf.read_file(path)
+        image_decoded = tf.image.decode_jpeg(image_string)
+        image_resized = tf.image.resize(image_decoded, (self.input_shape[1], self.input_shape[0]))
+
+        return image_resized / 255
 
     def run_preprocessing(self, model_params, weights_path) -> SizePredictDataset:
         """
@@ -132,7 +147,7 @@ class CenterNetPipeline:
 
         # Train the model
         if model_params['train']:
-            self.logs['execution'].info('Starting the training procedure for model 2 (CenterNet)...')
+            self.logs['execution'].info('Starting the training procedure for the object detection model...')
 
             # Set up the callbacks
             callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
@@ -166,18 +181,10 @@ class CenterNetPipeline:
                                            metrics[2],
                                            metrics[3]))
 
-        # Utility function for resizing
-        def resize_fn(path):
-            image_string = tf.read_file(path)
-            image_decoded = tf.image.decode_jpeg(image_string)
-            image_resized = tf.image.resize(image_decoded, (self.input_shape[1], self.input_shape[0]))
-
-            return image_resized / 255
-
         # Prepare a test dataset from the validation set taking its first 10 values
         test_path_list = [ann[0] for ann in x_val[:10]]
         test_ds = tf.data.Dataset.from_tensor_slices(test_path_list) \
-            .map(resize_fn,
+            .map(self.__resize_fn,
                  num_parallel_calls=tf.data.experimental.AUTOTUNE) \
             .batch(1) \
             .prefetch(tf.data.experimental.AUTOTUNE)
@@ -185,8 +192,6 @@ class CenterNetPipeline:
         # Perform the prediction on the newly created dataset
         detected_predictions = model_utils.predict(model, self.logs['test'], test_ds, steps=10)
 
-        # get_bb_boxes returns a dict of {image_path: [category,score,ymin,xmin,ymax,xmax]}.
-        # Category is always 0. It is not the character category. It's the center category.
         return train_list, get_bb_boxes(detected_predictions, x_val[:10], print=False)
 
     def run_classification(self, model_params, train_list, bbox_predictions, weights_path):
@@ -225,14 +230,13 @@ class CenterNetPipeline:
 
         # self.logs['execution'].info('Getting bounding boxes from annotations...')
         # crop_format = annotations_to_bounding_boxes(train_list)
-
+        #
         # self.logs['execution'].info('Cropping images to characters...')
-        # char_train_list = create_crop_characters_train(crop_format, crop_char_path)
-
+        # train_list = create_crop_characters_train(crop_format, crop_char_path)
         # self.logs['execution'].info('Cropping done successfully!')
 
-        train_list_3 = load_crop_characters(crop_char_path, mode='train')
-        # train_list_3 is a list[(image_path, char_class)]
+        # train_list is a list[(image_path, char_class)]
+        train_list = load_crop_characters(crop_char_path, mode='train')
 
         # TODO: now create dataset from cropped images (as [image, category])
         # FIXME: below part is not yet completed
@@ -240,11 +244,13 @@ class CenterNetPipeline:
         batch_size = int(model_params['batch_size'])
         self.dataset_params['batch_size'] = batch_size
         dataset_classification = ClassifierDataset(self.dataset_params)
-        x_train, x_val = dataset_classification.generate_dataset(train_list_3)
+        x_train, x_val = dataset_classification.generate_dataset(train_list)
         classification_ts, classification_ts_size = dataset_classification.get_training_set()
         classification_vs, classification_vs_size = dataset_classification.get_validation_set()
 
         if model_params['train']:
+            self.logs['execution'].info('Starting the training procedure for the classification model...')
+
             callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
                                                     batch_size=batch_size)
 
