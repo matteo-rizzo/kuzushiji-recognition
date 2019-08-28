@@ -1,10 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Union
 import os
 import shutil
+import sys
 from tqdm import tqdm
+import pandas as pd
 
 pred_out_w, pred_out_h = 128, 128
 
@@ -63,7 +65,7 @@ def check_iou_score(true_boxes, detected_boxes, iou_thresh):
 
 
 def get_bb_boxes(predictions: np.ndarray, annotation_list: np.array, print: bool = False) \
-        -> List[np.array]:
+        -> Dict[str, np.ndarray]:
     """
     Compute the bounding boxes and perform non maximum supression
     :param predictions: array of predictions with shape (batch, out_width, out_height, n_cat + 4)
@@ -76,12 +78,14 @@ def get_bb_boxes(predictions: np.ndarray, annotation_list: np.array, print: bool
     :return: list of boxes, as [image_path,category,score,ymin,xmin,ymax,xmax].
             Category is always 0 in our case.
     """
-    all_boxes = []
+    all_boxes = dict()
     for i in np.arange(0, predictions.shape[0]):
-        img = Image.open(annotation_list[i][0]).convert("RGB")
+        image_path = annotation_list[i][0]
+        img = Image.open(image_path).convert("RGB")
         width, height = img.size
 
         box_and_score = boxes_for_image(predictions[i], 1, score_thresh=0.3, iou_thresh=0.4)
+        # Bidimensional np.ndarray. Each row is (category,score,ymin,xmin,ymax,xmax)
 
         if len(box_and_score) == 0:
             continue
@@ -100,15 +104,12 @@ def get_bb_boxes(predictions: np.ndarray, annotation_list: np.array, print: bool
         box_and_score = box_and_score * [1, 1, print_h / pred_out_h, print_w / pred_out_w,
                                          print_h / pred_out_h, print_w / pred_out_w]
 
-        # Add a field for image path to each box
-        image_path = np.full((box_and_score.shape[0], 1), annotation_list[i][0])
-        box_and_score = np.concatenate((image_path, box_and_score), axis=1)
-
-        all_boxes.append(box_and_score)
+        # Produce a dictionary { "image_path": np.ndarray([category,score,ymin,xmin,ymax,xmax]) }
+        all_boxes[image_path] = box_and_score
 
         if print:
-            check_iou_score(true_boxes, box_and_score[:, 3:].astype(np.float32), iou_thresh=0.5)
-            img = draw_rectangle(box_and_score[:, 3:].astype(np.float32), img, "red")
+            check_iou_score(true_boxes, box_and_score[:, 2:], iou_thresh=0.5)
+            img = draw_rectangle(box_and_score[:, 2:], img, "red")
             img = draw_rectangle(true_boxes, img, "blue")
 
             fig, axes = plt.subplots(1, 2, figsize=(15, 15))
@@ -120,7 +121,7 @@ def get_bb_boxes(predictions: np.ndarray, annotation_list: np.array, print: bool
 
 
 # Originally NMS_all
-def boxes_for_image(predicts, category_n, score_thresh, iou_thresh):
+def boxes_for_image(predicts, category_n, score_thresh, iou_thresh) -> np.ndarray:
     y_c = predicts[..., category_n] + np.arange(pred_out_h).reshape(-1, 1)
     x_c = predicts[..., category_n + 1] + np.arange(pred_out_w).reshape(1, -1)
     height = predicts[..., category_n + 2] * pred_out_h
@@ -150,6 +151,7 @@ def boxes_for_image(predicts, category_n, score_thresh, iou_thresh):
     box_and_score_all = box_and_score_all[score_sort]
 
     # If there are more than one box starting at same coordinate (ymin) remove it
+    # So it keeps the one with the highest score
     _, unique_idx = np.unique(box_and_score_all[:, 2], return_index=True)
     # Sorted preserves original order of boxes
     return box_and_score_all[sorted(unique_idx)]
@@ -239,14 +241,16 @@ def annotations_to_bounding_boxes(annotations: List) -> np.array:
         - ann[:, 2] = y_center
         - ann[:, 3] = x width
         - ann[:, 4] = y height
-    :return: list of [image_path,char_class,ymin,xmin,ymax,xmax]
+    :return: Dict of {image_path: ndarray([char_class,ymin,xmin,ymax,xmax])}
     """
 
-    all_images_boxes = None
+    all_images_boxes = dict()
 
-    first_iteration = True
+    # Take out unnecessary fields (keep only the first two)
+    if len(annotations[0]) > 2:
+        annotations = [(a[0], a[1]) for a in annotations]
 
-    for img_path, ann, _, _ in tqdm(annotations):
+    for img_path, ann in tqdm(annotations):
         ymin = ann[:, 2:3] - ann[:, 4:5] / 2  # y_center - height / 2
         xmin = ann[:, 1:2] - ann[:, 3:4] / 2  # x_center - width / 2
         ymax = ann[:, 2:3] + ann[:, 4:5] / 2  # y_center + height / 2
@@ -255,15 +259,12 @@ def annotations_to_bounding_boxes(annotations: List) -> np.array:
         assert ymin.shape == xmin.shape == ymax.shape == xmax.shape, 'Shape can\'t be different'
 
         # Create a column long as the number of bounding boxes and fill it with the image path
-        paths = np.full((ymin.shape[0], 1), img_path)
+        # paths = np.full((ymin.shape[0], 1), img_path)
 
-        image_boxes = np.concatenate((paths, ann[:, 0:1], ymin, xmin, ymax, xmax), axis=1)
+        dict_key = img_path
+        dict_value = np.concatenate((ann[:, 0:1], ymin, xmin, ymax, xmax), axis=1)
 
-        if first_iteration:
-            all_images_boxes = image_boxes
-            first_iteration = False
-        else:
-            all_images_boxes = np.concatenate((all_images_boxes, image_boxes), axis=0)
+        all_images_boxes[dict_key] = dict_value
 
     return all_images_boxes
 
@@ -280,185 +281,177 @@ def predictions_to_bounding_boxes(predictions: List[np.array]) -> List[np.array]
     pass
 
 
-def get_crop_characters_train(images_to_split: np.array, save_dir: str) -> List[Tuple[str, int]]:
+def create_crop_character_test(images_to_split: Dict[str, np.array], save_dir: str) \
+        -> List[str]:
     """
-    Crop image into all bounding box, saving a differnt image for each one in crop_dir.
-    :param images_to_split: list of [image_path,char_class,ymin,xmin,ymax,xmax]
+    Crop image into all its bounding boxes, saving a different image for each one in save_dir.
+    :param images_to_split: dict of {image_path: ndarray([ymin,xmin,ymax,xmax])}
     :param save_dir: directory where to save cropped images
     """
+    # TODO: test
 
-    # If directory already exists and is not empty use the existing images
+    # ---- Preliminary operations ----
+
+    # If directory already exists and is not empty ask the user what to do
     if os.path.isdir(save_dir) and len(os.listdir(save_dir)) > 0:
-        shutil.rmtree(save_dir)
+        user_ok = input('WARNING! There seems to be some files in the folder in which to save cropped '
+                        'characters.\n'
+                        'Do you want to delete all existing files and proceed with the operation?\n'
+                        'Please refuse to abort the execution.\n'
+                        'Confirm? [Y/n]\n')
+        confirmations = ['y', 'Y', 'yes', 'ok']
+        if user_ok in confirmations:
+            # Remove directory and all its files
+            shutil.rmtree(save_dir)
+        else:
+            # Exit and leave files untouched
+            sys.exit(0)
 
     assert not os.path.isdir(save_dir) or \
-           len(os.listdir(save_dir)) != 0, 'Folder is not empty! Problem with deletion'
+           len(os.listdir(save_dir)) == 0, 'Folder is not empty! Problem with deletion'
 
-    # Create empty directory
-    os.mkdir(save_dir)
+    # Create empty directory if there is not one
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+
+    # ---- Cropping ----
 
     cropped_list = []
 
-    for image in tqdm(images_to_split):
-        box_n = 0
+    for img_path, boxes in tqdm(images_to_split.items()):
 
-        path = str(image[0])
-        char_class = int(image[1])
-        ymin = float(image[2])  # top
-        xmin = float(image[3])  # left
-        ymax = float(image[4])  # bottom
-        xmax = float(image[5])  # right
+        # Get image name wihout extension, e.g. dataset/img.jpg -> img
+        img_name = img_path.split(str(os.sep))[-1].split('.')[0]
+        # Relative path with image name (no extension)
+        img_name_path = os.path.join(save_dir, img_name)
 
-        filename = path.split(str(os.sep))[-1].split('.')[0] + '_' + str(box_n) + '.jpg'
-        filepath = os.path.join(save_dir, filename)
+        with Image.open(img_path) as img:
+            # Give incremental id to each cropped box in image filename
+            box_n = 0
 
-        with Image.open(path) as img:
-            img.crop((xmin, ymin, xmax, ymax)).save(filepath)
+            for box in boxes:
+                ymin = float(box[0])  # top
+                xmin = float(box[1])  # left
+                ymax = float(box[2])  # bottom
+                xmax = float(box[3])  # right
 
-        cropped_list.append((filepath, char_class))
-        box_n += 1
+                filepath = img_name_path + '_' + str(box_n) + '.jpg'
 
-        # TODO: save 'cropped_list' in a file txt and if images and file are present load from
-        #       there, instead of generating from annotations. Should be faster.
+                img.crop((xmin, ymin, xmax, ymax)).save(filepath)
+
+                cropped_list.append(filepath)
+                box_n += 1
 
     return cropped_list
 
-######################################################
-##############  #THINGS I TRIED ###################
-######################################################
+
+def create_crop_characters_train(images_to_split: Dict[str, np.array], save_dir: str,
+                                 save_csv: bool = True) -> List[Tuple[str, int]]:
+    """
+    Crop image into all bounding box, saving a different image for each one in save_dir.
+    Additionally save a csv containing all pairs (char_image, char_class) in save_dir folder.
+    :param save_csv: whether to save (cropped_img_path, char_class) to a cvs file
+    :param images_to_split: dict of {image_path: ndarray([char_class,ymin,xmin,ymax,xmax])}
+    :param save_dir: directory where to save cropped images
+    """
+
+    # ---- Preliminary operations ----
+
+    # If directory already exists and is not empty ask the user what to do
+    if os.path.isdir(save_dir) and len(os.listdir(save_dir)) > 0:
+        user_ok = input('WARNING! There seems to be some files in the folder in which to save cropped '
+                        'characters.\n'
+                        'Do you want to delete all existing files and proceed with the operation?\n'
+                        'Please refuse to abort the execution.\n'
+                        'Confirm? [Y/n]\n')
+        confirmations = ['y', 'Y', 'yes', 'ok']
+        if user_ok in confirmations:
+            # Remove directory and all its files
+            shutil.rmtree(save_dir)
+        else:
+            # Exit and leave files untouched
+            sys.exit(0)
+
+    assert not os.path.isdir(save_dir) or \
+           len(os.listdir(save_dir)) == 0, 'Folder is not empty! Problem with deletion'
+
+    # Create empty directory if there is not one
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+
+    # ---- Cropping ----
+
+    cropped_list = []
+
+    for img_path, boxes in tqdm(images_to_split.items()):
+
+        # Get image name wihout extension, e.g. dataset/img.jpg -> img
+        img_name = img_path.split(str(os.sep))[-1].split('.')[0]
+        # Relative path with image name (no extension)
+        img_name_path = os.path.join(save_dir, img_name)
+
+        with Image.open(img_path) as img:
+            # Give incremental id to each cropped box in image filename
+            box_n = 0
+
+            for box in boxes:
+                char_class = int(box[0])
+                ymin = float(box[1])  # top
+                xmin = float(box[2])  # left
+                ymax = float(box[3])  # bottom
+                xmax = float(box[4])  # right
+
+                filepath = img_name_path + '_' + str(box_n) + '.jpg'
+
+                img.crop((xmin, ymin, xmax, ymax)).save(filepath)
+
+                cropped_list.append((filepath, char_class))
+                box_n += 1
+
+    # Save list to csv, to rapidly load them
+    if save_csv:
+        csv_path = os.path.join(save_dir, 'crop_list.csv')
+        df = pd.DataFrame(cropped_list, columns=['char_image', 'char_class'])
+        df.to_csv(csv_path, sep=',', index=False)
+
+    return cropped_list
 
 
-# def visualize_heatmap(img: np.array, heatmap: np.array):
-#     gaussian = heatmap[:, :, 0]
-#     centers = heatmap[:, :, 1]
-#     fig, axes = plt.subplots(1, 3, figsize=(15, 15))
-#     axes[0].set_axis_off()
-#     axes[0].imshow(img)
-#     axes[1].set_axis_off()
-#     axes[1].imshow(gaussian)
-#     axes[2].set_axis_off()
-#     axes[2].imshow(centers)
-#     plt.show()
+def load_crop_characters(save_dir: str, mode: str) -> Union[List[Tuple[str, int]], List[str]]:
+    """
+    Load characters list from file system. Useful to avoid regenerate cropping characters every time.
+    :param mode: string 'train' or 'test'.
+                If 'test' returned list will be a list of filepaths to cropped images.
+                If 'train' returned list will be composed of tuples (img_path, char_class)
+    :param save_dir: filepath in which to search for objects
+    :return: List of character images, format depending on 'mode' param.
+    """
 
+    assert os.path.isdir(save_dir), 'Error: save_dir doesn\'t exists'
 
-# def infer_bounding_box(predicts, category_n, score_thresh) -> np.array:
-#     y_c = predicts[..., category_n] + np.arange(pred_out_h).reshape(-1, 1)
-#     x_c = predicts[..., category_n + 1] + np.arange(pred_out_w).reshape(1, -1)
-#     height = predicts[..., category_n + 2] * pred_out_h
-#     width = predicts[..., category_n + 3] * pred_out_w
-#     score = predicts[..., 0]
-#
-#     mask = (score > score_thresh)
-#
-#     y_c = y_c[mask].reshape(-1)
-#     x_c = x_c[mask].reshape(-1)
-#     height = height[mask].reshape(-1)
-#     width = width[mask].reshape(-1)
-#     score = score[mask].reshape(-1)
-#     size = height * width  # ??
-#
-#     xmin = x_c - width / 2  # left
-#     ymin = y_c - height / 2  # top
-#     xmax = x_c + width / 2  # right
-#     ymax = y_c + height / 2  # bottom
-#
-#     inside_pic = (ymin > 0) * (xmin > 0) * (ymax < pred_out_h) * (xmax < pred_out_w)
-#     outside_pic = len(inside_pic) - np.sum(inside_pic)
-#
-#     normal_size = (size < (np.mean(size) * 10)) * (size > (np.mean(size) / 10))
-#     score = score[inside_pic * normal_size]
-#     xmin = xmin[inside_pic * normal_size]
-#     xmax = xmax[inside_pic * normal_size]
-#     ymin = ymin[inside_pic * normal_size]
-#     ymax = ymax[inside_pic * normal_size]
-#
-#     boxes = np.concatenate((
-#         score.reshape(-1, 1),
-#         ymin.reshape(-1, 1),
-#         xmin.reshape(-1, 1),
-#         ymax.reshape(-1, 1),
-#         xmax.reshape(-1, 1)), axis=1)
-#     # box: score, ymin, xmin, ymax, xmax
-#     return boxes
+    csv_path = os.path.join(save_dir, 'crop_list.csv')
 
-# count = 0
-# all_boxes_and_score = []
-# for category in range(category_n):
-#     predict = predicts[..., category]
-#     mask = (predict > score_thresh)
-#     # print("box_num",np.sum(mask))
-#     if not mask.all():
-#         continue
-#
-#     box_and_score = nms(predict[mask], y_c[mask], x_c[mask], height[mask], width[mask])
-#
-#     # Add format: category,score,top,left,bottom,right
-#     box_and_score = np.insert(box_and_score, 0, category, axis=1)
-#
-#     all_boxes_and_score.append(box_and_score)
-#     count += 1
-#
-# all_boxes_and_score = np.array(all_boxes_and_score)
-#
-# # Sort over score, descending order
-# sorted_indexes = np.argsort(all_boxes_and_score[:, 1])[::-1]
-# box_and_score_all = all_boxes_and_score[sorted_indexes]
-#
-# _, unique_idx = np.unique(box_and_score_all[:, 2], return_index=True)
-# # print(unique_idx)
-# return box_and_score_all[sorted(unique_idx)]
+    if mode == 'train':
+        assert os.path.isfile(csv_path), \
+            'Error: csv file \'crop_list.csv\' doesn\'t exists in path {}'.format(csv_path)
 
+        csv_df = pd.read_csv(csv_path, delimiter=',')
 
-# def UpSampling2DBilinear(size):
-#     return Lambda(lambda x: image.resize_bilinear(x, size, align_corners=True))
-#
-#
-# def nms(predicts):
-#     pooled = MaxPooling2D((3, 3), padding='same')(predicts)
-#     upsampled = UpSampling2DBilinear((pred_out_w, pred_out_h))(pooled)
-#     res = upsampled.numpy()
-#     return res
+        n_rows = len(csv_df.index)
 
+        assert len(os.listdir(save_dir)) - 1 == n_rows, \
+            'Error: csv and save_dir contains different number of items'
 
-# def print_bboxes(predictions, ann_list):
-#     nms_predictions = nms(predictions[..., 0])
-#     predictions[..., 0] = nms_predictions
-#
-#     for prediction, ann in zip(predictions, ann_list):
-#         # print(cv_list[i][2:])
-#         img = Image.open(ann[0]).convert("RGB")
-#         width, height = img.size
-#
-#         box_and_score = infer_bounding_box(prediction, 1, score_thresh=0.3)
-#
-#         # print("after NMS",len(box_and_score))
-#         if len(box_and_score) == 0:
-#             continue
-#
-#         true_boxes = ann_list[i][1][:, 1:]  # c_x,c_y,width_height
-#         top = true_boxes[:, 1:2] - true_boxes[:, 3:4] / 2
-#         left = true_boxes[:, 0:1] - true_boxes[:, 2:3] / 2
-#         bottom = top + true_boxes[:, 3:4]
-#         right = left + true_boxes[:, 2:3]
-#         true_boxes = np.concatenate((top, left, bottom, right), axis=1)
-#
-#         heatmap = prediction[:, :, 0]
-#
-#         print_w, print_h = img.size
-#
-#         # resize predicted box to original size
-#         box_and_score = box_and_score * [1, print_h / pred_out_h, print_w / pred_out_w,
-#                                          print_h / pred_out_h, print_w / pred_out_w]
-#
-#         # check_iou_score(true_boxes, box_and_score[:, 2:], iou_thresh=0.5)
-#         img = draw_rectangle(box_and_score[:, 1:], img, "red")
-#         img = draw_rectangle(true_boxes, img, "blue")
-#
-#         fig, axes = plt.subplots(1, 2, figsize=(15, 15))
-#         # axes[0].set_axis_off()
-#         axes[0].imshow(img)
-#         # axes[1].set_axis_off()
-#         axes[1].imshow(heatmap)  # , cmap='gray')
-#         # axes[2].set_axis_off()
-#         # axes[2].imshow(heatmap_1)#, cmap='gray')
-#         plt.show()
+        return [tuple(c) for c in csv_df.values]
+
+    if mode == 'test':
+        assert not os.path.isfile(csv_path), \
+            'Error: there is a csv file in save_dir. There should\'t be.'
+
+        img = sorted(os.listdir(save_dir))
+
+        assert len(img) > 0, 'Error: provided directory {} is empty'.format(save_dir)
+
+        return img
+
+    raise ValueError('Mode value {} is not valid. Possibilities are \'test\' or \'train\'.'.format(mode))

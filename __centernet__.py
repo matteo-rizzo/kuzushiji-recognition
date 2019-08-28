@@ -12,8 +12,8 @@ from networks.classes.ModelUtilities import ModelUtilities
 from networks.classes.Params import Params
 from networks.classes.SizePredictDataset import SizePredictDataset
 from networks.functions import losses
-from networks.functions.utils import get_bb_boxes, get_crop_characters_train, \
-    annotations_to_bounding_boxes
+from networks.functions.utils import get_bb_boxes, create_crop_characters_train, \
+    annotations_to_bounding_boxes, load_crop_characters
 
 
 def main():
@@ -210,7 +210,7 @@ def main():
     # Get predictions of model 2
     detec_predictions = model_utils.predict(model_2, test_log, test_ds, steps=10)
     bbox_predictions = get_bb_boxes(detec_predictions, X_val[:10], print=False)
-    # List of [image_path,category,score,ymin,xmin,ymax,xmax]. Non numeric type!!
+    # Dict of {image_path: [category,score,ymin,xmin,ymax,xmax]}.
     # Category is always 0. It is not the character category. It's the center category.
 
     # --------------------- STEP 3: Classification ---------------------
@@ -227,12 +227,17 @@ def main():
 
     # Generate training set for model 3
     # NOTE: this scripts are only run once to generate the images for training.
-    exe_log.info('Getting bunding boxes from annotations...')
-    crop_format = annotations_to_bounding_boxes(train_list)
-    exe_log.info('Cropping images to characters...')
-    char_train_list = get_crop_characters_train(crop_format,
-                                                os.path.join(os.getcwd(), 'datasets', 'char_crop'))
-    exe_log.info('Cropping done.')
+    # exe_log.info('Getting bunding boxes from annotations...')
+    # crop_format = annotations_to_bounding_boxes(train_list)
+    # exe_log.info('Cropping images to characters...')
+    # char_train_list = create_crop_characters_train(crop_format,
+    #                                               os.path.join(os.getcwd(), 'datasets',
+    #                                               'char_cropped'))
+    # exe_log.info('Cropping done.')
+
+    train_list_3 = load_crop_characters(os.path.join(os.getcwd(), 'datasets', 'char_cropped'),
+                                        mode='train')
+
     # TODO: create dataset from cropped images (as [image, category])
 
     # batch_size_3 = int(model_3_params['batch_size'])
