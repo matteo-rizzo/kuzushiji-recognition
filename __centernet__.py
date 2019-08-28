@@ -17,7 +17,19 @@ from networks.functions.utils import get_bb_boxes, get_crop_characters_train, \
     annotations_to_bounding_boxes
 
 
-def run_preprocessing(dataset_params, model_params, input_shape, weights_path, logs):
+def run_preprocessing(dataset_params, model_params, input_shape, weights_path, logs) -> SizePredictDataset:
+    """
+    Creates and runs a CNN which takes an image/page of manuscript as input and predicts the
+    average dimensional ratio between the characters and the image itself
+
+    :param dataset_params: the parameters related to the dataset
+    :param model_params: the parameters related to the network
+    :param input_shape: the input shape of the images (usually 512x512x3)
+    :param weights_path: the path to the saved weights (if present)
+    :param logs: the loggers (execution, training and test)
+    :return: a ratio predictor
+    """
+
     logs['execution'].info('Preprocessing the data...')
 
     # Build dataset for model 1
@@ -67,8 +79,41 @@ def run_preprocessing(dataset_params, model_params, input_shape, weights_path, l
     return dataset_avg_size
 
 
-def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, weights_path, logs):
-    # Build the CenterNet model
+def run_detection(dataset_params,
+                  model_params,
+                  dataset_avg_size,
+                  input_shape,
+                  weights_path,
+                  logs) -> (List, List):
+    """
+    Creates and runs a CenterNet to perform the image detection
+
+    :param dataset_params: the parameters related to the dataset
+    :param model_params: the parameters related to the network
+    :param dataset_avg_size: a ratio predictor
+    :param input_shape: the input shape of the images (usually 512x512x3)
+    :param weights_path: the path to the saved weights (if present)
+    :param logs: the loggers (execution, training and test)
+    :return: a couple of list with train and bbox data.
+
+    Train list has the following structure:
+        - train_list[0] = path to image
+        - train_list[1] = annotations (ann)
+        - train_list[2] = recommended height split
+        - train_list[3] = recommended width split
+        Where annotations is the bbox data:
+        - ann[:, 1] = xmin
+        - ann[:, 2] = ymin
+        - ann[:, 3] = x width
+        - ann[:, 4] = y height
+
+    The bbox data consists of a list with the following structure (note that all are non numeric types):
+     [<image_path>, <category>, <score>, <ymin>, <xmin>, <ymax>, <xmax>]
+
+    The <category> value is always 0, because it is not the character category but the category of the center.
+    """
+
+    # Generate the CenterNet model
     model_utils = ModelUtilities()
     model = model_utils.generate_model(input_shape=input_shape, mode=2)
     model.compile(optimizer=Adam(lr=model_params['learning_rate']),
@@ -86,19 +131,7 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
 
     # Get labels from dataset and compute the recommended split
     avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
-
-    # flat_predictions = [item for array in predictions for item in array]
     train_list = dataset_avg_size.annotate_split_recommend(avg_sizes)
-
-    # train_list[0] = path to image
-    # train_list[1] = annotations (ann)
-    # train_list[2] = recommended height split
-    # train_list[3] = recommended width split
-    # where annotations is data on bbox:
-    # ann[:, 1] = xmin
-    # ann[:, 2] = ymin
-    # ann[:, 3] = x width
-    # ann[:, 4] = y height
 
     # Generate the dataset for detection
     dataset_params['batch_size'] = model_params['batch_size']
@@ -163,8 +196,6 @@ def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, w
     detected_predictions = model_utils.predict(model, logs['test'], test_ds, steps=10)
 
     return train_list, get_bb_boxes(detected_predictions, x_val[:10], print=True)
-    # List of [image_path,category,score,ymin,xmin,ymax,xmax]. Non numeric type!!
-    # Category is always 0. It is not the character category. It's the center category.
 
 
 def run_classification(dataset_params,
@@ -174,6 +205,19 @@ def run_classification(dataset_params,
                        input_shape,
                        weights_path,
                        logs):
+    """
+    Classifies each character according to the available classes via a CNN
+
+    :param dataset_params: the parameters related to the dataset
+    :param model_params: the parameters related to the network
+    :param train_list: a train data list predicted at the object detection step
+    :param bbox_predictions: the bbox data predicted at the object detection step
+    :param input_shape: the input shape of the images (usually 512x512x3)
+    :param weights_path: the path to the saved weights (if present)
+    :param logs: the loggers (execution, training and test)
+    :return: a couple of list with train and bbox data.
+    """
+
     # Generate a model
     model_utils = ModelUtilities()
     model = model_utils.generate_model(input_shape=input_shape,
