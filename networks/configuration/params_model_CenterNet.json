@@ -12,7 +12,7 @@
   },
   "model_1": {
     "batch_size": 32,
-    "restore_weights": true,
+    "restore_weights": false,
     "train": false,
     "epochs": 20,
     "initial_epoch": 14,
@@ -28,7 +28,7 @@
   },
   "model_3": {
     "batch_size": 32,
-    "restore_weights": false,
+    "restore_weights": true,
     "train": false,
     "epochs": 0,
     "initial_epoch": 0,

@@ -7,6 +7,7 @@ import tensorflow as tf
 from tensorflow.python.keras.optimizers import Adam
 
 from networks.classes.CenterNetDataset import CenterNetDataset
+from networks.classes.ClassifierDataset import ClassifierDataset
 from networks.classes.Logger import Logger
 from networks.classes.ModelUtilities import ModelUtilities
 from networks.classes.Params import Params
@@ -16,8 +17,8 @@ from networks.functions.utils import get_bb_boxes, get_crop_characters_train, \
     annotations_to_bounding_boxes
 
 
-def main():
-    # -- TENSORFLOW BASIC CONFIG ---
+def run_preprocessing(dataset_params, model_params, input_shape, weights_path, logs):
+    logs['execution'].info('Preprocessing the data...')
 
     # Enable eager execution
     tf.compat.v1.enable_eager_execution()
@@ -82,59 +83,61 @@ def main():
     # exe_log.info('Building the model...')
 
     # Build dataset for model 1
-    dataset_params['batch_size'] = model_1_params['batch_size']
+    dataset_params['batch_size'] = model_params['batch_size']
     dataset_avg_size = SizePredictDataset(dataset_params)
 
     dataset_avg_size.generate_dataset()
 
-    sizecheck_ts, sizecheck_ts_size = dataset_avg_size.get_training_set()
-    sizecheck_vs, sizecheck_vs_size = dataset_avg_size.get_validation_set()
-    # sizecheck_ps, sizecheck_ps_size = dataset_avg_size.get_test_set()
-
-    # model_1 = model_utils.generate_model(input_shape=input_shape, mode=1)
-    # model_1.compile(loss='mean_squared_error', optimizer=Adam(lr=model_1_params['learning_rate']))
+    size_check_ts, size_check_ts_size = dataset_avg_size.get_training_set()
+    size_check_vs, size_check_vs_size = dataset_avg_size.get_validation_set()
+    # size_check_ps, size_check_ps_size = dataset_avg_size.get_test_set()
     #
-    # weights_path_1 = os.path.join(base_experiments_path, run_id + '_1', 'weights')
+    # model_utils = ModelUtilities()
+    # model = model_utils.generate_model(input_shape=input_shape, mode=1)
+    # model.compile(loss='mean_squared_error',
+    #               optimizer=Adam(lr=model_params['learning_rate']))
     #
-    # if model_1_params['restore_weights']:
-    #     model_utils.restore_weights(model_1, exe_log, model_1_params['initial_epoch'], weights_path_1)
+    # # Restore the weights, if required
+    # if model_params['restore_weights']:
+    #     model_utils.restore_weights(model,
+    #                                 logs['execution'],
+    #                                 model_params['initial_epoch'],
+    #                                 weights_path)
     #
+    # # Train the model
+    # if model_params['train']:
+    #     logs['execution'].info('Starting the training procedure for model 1...')
     #
-    # if model_1_params['train']:
-    #     # Train the model
-    #     exe_log.info('Starting the training procedure for model 1...')
+    #     callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
+    #                                             batch_size=model_params['batch_size'])
     #
-    #     callbacks = model_utils.setup_callbacks(weights_log_path=weights_path_1,
-    #                                             batch_size=model_1_params['batch_size'])
-    #
-    #     model_utils.train(model_1, train_log, model_1_params['initial_epoch'], model_1_params['epochs'],
-    #                       training_set=sizecheck_ts,
-    #                       validation_set=sizecheck_vs,
-    #                       training_steps=int(sizecheck_ts_size // model_1_params['batch_size'] + 1),
-    #                       validation_steps=int(sizecheck_vs_size // model_1_params['batch_size'] + 1),
+    #     model_utils.train(model, logs['training'], model_params['initial_epoch'], model_params['epochs'],
+    #                       training_set=size_check_ts,
+    #                       validation_set=size_check_vs,
+    #                       training_steps=int(size_check_ts_size // model_params['batch_size'] + 1),
+    #                       validation_steps=int(size_check_vs_size // model_params['batch_size'] + 1),
     #                       callbacks=callbacks)
     #
-    #     model_utils.evaluate(model_1, logger=test_log,
-    #                          evaluation_set=sizecheck_vs,
-    #                          evaluation_steps=int(sizecheck_vs_size // model_1_params['batch_size'] + 1))
+    #     model_utils.evaluate(model, logger=logs['test'],
+    #                          evaluation_set=size_check_vs,
+    #                          evaluation_steps=int(size_check_vs_size // model_params['batch_size'] + 1))
 
     # --------------------- STEP 2: Detection by CenterNet ---------------------
 
+
+def run_detection(dataset_params, model_params, dataset_avg_size, input_shape, weights_path, logs):
     # Build the CenterNet model
     model_utils = ModelUtilities()
-    model_2 = model_utils.generate_model(input_shape=input_shape, mode=2)
-    model_2.compile(optimizer=Adam(lr=model_2_params['learning_rate']),
-                    loss=losses.all_loss,
-                    metrics=[losses.size_loss,
-                             losses.heatmap_loss,
-                             losses.offset_loss])
-
-    # Set up the path to the weights
-    weights_path_2 = os.path.join(base_experiments_path, run_id + '_2', 'weights')
+    model = model_utils.generate_model(input_shape=input_shape, mode=2)
+    model.compile(optimizer=Adam(lr=model_params['learning_rate']),
+                  loss=losses.all_loss,
+                  metrics=[losses.size_loss,
+                           losses.heatmap_loss,
+                           losses.offset_loss])
 
     # Restore the saved weights if required
-    if model_2_params['restore_weights']:
-        model_utils.restore_weights(model_2, exe_log, model_2_params['initial_epoch'], weights_path_2)
+    if model_params['restore_weights']:
+        model_utils.restore_weights(model_2, logs['execution'], model_params['initial_epoch'], weights_path)
 
     # Get labels from dataset and compute the recommended split
     avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
@@ -153,44 +156,44 @@ def main():
 
     # Generate the dataset for model 2
 
-    dataset_params['batch_size'] = model_2_params['batch_size']
+    dataset_params['batch_size'] = model_params['batch_size']
     dataset_detection = CenterNetDataset(dataset_params)
     X_train, X_val = dataset_detection.generate_dataset(train_list)
     detection_ts, detection_ts_size = dataset_detection.get_training_set()
     detection_vs, detection_vs_size = dataset_detection.get_validation_set()
 
     # Train the model
-    if model_2_params['train']:
-        exe_log.info('Starting the training procedure for model 2 (CenterNet)...')
+    if model_params['train']:
+        logs['execution'].info('Starting the training procedure for model 2 (CenterNet)...')
 
-        callbacks = model_utils.setup_callbacks(weights_log_path=weights_path_2,
-                                                batch_size=model_2_params['batch_size'])
+        callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
+                                                batch_size=model_params['batch_size'])
 
-        model_utils.train(model=model_2,
-                          logger=train_log,
-                          init_epoch=model_2_params['initial_epoch'],
-                          epochs=model_2_params['epochs'],
+        model_utils.train(model=model,
+                          logger=logs['training'],
+                          init_epoch=model_params['initial_epoch'],
+                          epochs=model_params['epochs'],
                           training_set=detection_ts,
                           validation_set=detection_vs,
-                          training_steps=int(detection_ts_size // model_2_params['batch_size']) + 1,
-                          validation_steps=int(detection_vs_size // model_2_params['batch_size']) + 1,
+                          training_steps=int(detection_ts_size // model_params['batch_size']) + 1,
+                          validation_steps=int(detection_vs_size // model_params['batch_size']) + 1,
                           callbacks=callbacks)
 
-        metrics = model_utils.evaluate(model=model_2,
-                                       logger=test_log,
+        metrics = model_utils.evaluate(model=model,
+                                       logger=logs['test'],
                                        evaluation_set=detection_vs,
                                        evaluation_steps=int(
-                                           detection_vs_size // model_2_params['batch_size'] + 1))
+                                           detection_vs_size // model_params['batch_size'] + 1))
 
-        test_log.info('Evaluation metrics:\n'
-                      'all_loss     : {}\n'
-                      'size_loss    : {}\n'
-                      'heatmap_loss : {}\n'
-                      'offset_loss  : {}'
-                      .format(metrics[0],
-                              metrics[1],
-                              metrics[2],
-                              metrics[3]))
+        logs['test'].info('Evaluation metrics:\n'
+                          'all_loss     : {}\n'
+                          'size_loss    : {}\n'
+                          'heatmap_loss : {}\n'
+                          'offset_loss  : {}'
+                          .format(metrics[0],
+                                  metrics[1],
+                                  metrics[2],
+                                  metrics[3]))
 
     # Prepare a test dataset from val set. I take the first 10 values of validation set
 
@@ -215,12 +218,23 @@ def main():
 
     # --------------------- STEP 3: Classification ---------------------
 
-    model_3 = model_utils.generate_model(input_shape=input_shape, mode=3)
+def run_classification(dataset_params, model_params, bbox_predictions, input_shape, weights_path, logs):
+    # Generate a model
+    model_utils = ModelUtilities()
+    model = model_utils.generate_model(input_shape=input_shape,
+                                       mode=3)
 
-    weights_path_3 = os.path.join(base_experiments_path, run_id + '_3', 'weights')
+    # Restore the weights, if required
+    if model_params['restore_weights']:
+        model_utils.restore_weights(model=model,
+                                    logger=logs['execution'],
+                                    init_epoch=model_params['initial_epoch'],
+                                    weights_folder_path=weights_path)
 
-    if model_3_params['restore_weights']:
-        model_utils.restore_weights(model_3, exe_log, model_3_params['initial_epoch'], weights_path_3)
+    # Compile the model
+    model.compile(loss="categorical_crossentropy",
+                  optimizer=Adam(lr=model_params['learning_rate']),
+                  metrics=["accuracy"])
 
     lr = model_3_params['learning_rate']
     model_3.compile(loss="categorical_crossentropy", optimizer=Adam(lr=lr), metrics=["accuracy"])
@@ -253,9 +267,109 @@ def main():
     #                       validation_steps=int(classification_vs_size // batch_size_3) + 1,
     #                       callbacks=callbacks)
 
-    # --- TEST ---
+    if model_params['train']:
+        callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
+                                                batch_size=batch_size)
 
-    # Evaluate training against the given test set
+        model_utils.train(model=model,
+                          logger=logs['training'],
+                          init_epoch=model_params['initial_epoch'],
+                          epochs=model_params['epochs'],
+                          training_set=classification_ts,
+                          validation_set=classification_vs,
+                          training_steps=int(classification_ts_size // batch_size) + 1,
+                          validation_steps=int(classification_vs_size // batch_size) + 1,
+                          callbacks=callbacks)
+
+
+def main():
+    # -- TENSORFLOW BASIC CONFIG ---
+
+    # Enable eager execution
+    tf.compat.v1.enable_eager_execution()
+    eager_exec_status = str('Yes') if tf.executing_eagerly() else str('No')
+
+    # Set up the log for tensorflow
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
+    # Remove absl logs
+    logging.root.removeHandler(absl.logging._absl_handler)
+    absl.logging._warn_preinit_stderr = False
+
+    # --- PARAMETERS INITIALIZATION ---
+
+    # Set the path to the configuration folder
+    config_path = os.path.join(os.getcwd(), 'networks', 'configuration')
+
+    # Load the model parameters from json file
+    centernet_params = Params(os.path.join(config_path, 'params_model_CenterNet.json'))
+    dataset_params = centernet_params.dataset
+
+    # Get the info for the current run
+    run_id = centernet_params.run_id
+
+    # Model params
+    model_1_params = centernet_params.model_1
+    model_2_params = centernet_params.model_2
+    model_3_params = centernet_params.model_3
+
+    # --- LOGGERS ---
+
+    log_handler = Logger(run_id)
+
+    exe_log = log_handler.get_logger('execution')
+    train_log = log_handler.get_logger('training')
+    test_log = log_handler.get_logger('testing')
+
+    logs = {
+        'execution': exe_log,
+        'training': train_log,
+        'test': test_log
+    }
+
+    # Log configuration
+    exe_log.info('Software versions:')
+    exe_log.info('* Tensorflow version: ' + tf.__version__)
+    exe_log.info('* Keras version:      ' + tf.__version__)
+    exe_log.info('* Executing eagerly?  ' + eager_exec_status)
+
+    exe_log.info('General parameters:')
+    exe_log.info('* Model:               CenterNet')
+    exe_log.info('* Training dataset:   ' + dataset_params['train_images_path'])
+    exe_log.info('* Test dataset:       ' + dataset_params['test_images_path'] + '\n')
+
+    # Log general and training parameters
+    log_handler.log_configuration(run_id, 'CenterNet', implementation=False)
+
+    input_shape = (dataset_params['input_width'], dataset_params['input_height'], 3)
+
+    base_experiments_path = os.path.join(os.getcwd(), 'networks', 'experiments')
+
+    # --- STEP 1: Pre-processing (Check Object Size) ---
+
+    dataset_avg_size = run_preprocessing(dataset_params=dataset_params,
+                                         model_params=model_1_params,
+                                         input_shape=input_shape,
+                                         weights_path=os.path.join(base_experiments_path, run_id + '_1', 'weights'),
+                                         logs=logs)
+
+    # --- STEP 2: Detection by CenterNet ---
+
+    bbox_predictions = run_detection(dataset_params=dataset_params,
+                                     model_params=model_2_params,
+                                     dataset_avg_size=dataset_avg_size,
+                                     input_shape=input_shape,
+                                     weights_path=os.path.join(base_experiments_path, run_id + '_2', 'weights'),
+                                     logs=logs)
+
+    # --- STEP 3: Classification ---
+
+    run_classification(dataset_params=dataset_params,
+                       model_params=model_3_params,
+                       bbox_predictions=bbox_predictions,
+                       input_shape=input_shape,
+                       weights_path=os.path.join(base_experiments_path, run_id + '_3', 'weights'),
+                       logs=logs)
 
 
 if __name__ == '__main__':
