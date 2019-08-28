@@ -99,9 +99,9 @@ class SizePredictDataset:
             # plt.imshow(img)
             # plt.show()
 
-            # This is a list of list where each row represent an image and the list of the characters within it
-            # (codified as integers) with relative coordinates of bbox
-            self.__annotation_list_train = annotation_list_train
+        # This is a list of list where each row represent an image and the list of the characters within it
+        # (codified as integers) with relative coordinates of bbox
+        self.__annotation_list_train = annotation_list_train
 
     def __annotate_char_area(self) -> List[List]:
         """
@@ -222,7 +222,8 @@ class SizePredictDataset:
             pic_height, pic_width, _ = image_decoded.get_shape().as_list()
 
             # Compute the offsets
-            top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (pic_height - 1)
+            top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (
+                    pic_height - 1)
             left_offset = np.random.randint(0, pic_width - int(crop_ratio * pic_width)) / (pic_width - 1)
             bottom_offset = top_offset + int(crop_ratio * pic_height) / (pic_height - 1)
             right_offset = left_offset + int(crop_ratio * pic_width) / (pic_width - 1)

@@ -77,7 +77,7 @@ class ClassifierDataset:
 
                     yield b_x, b_y
 
-    def generate_dataset(self, input_list) -> Tuple[List[List], List[List]]:
+    def generate_dataset(self, input_list: List[Tuple[str, int]]) -> Tuple[List[List], List[List]]:
         """
         Generate the tf.data.Dataset containing all the objects.
         """
