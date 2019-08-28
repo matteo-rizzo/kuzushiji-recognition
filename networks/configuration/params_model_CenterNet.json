@@ -28,7 +28,7 @@
   },
   "model_3": {
     "batch_size": 32,
-    "restore_weights": true,
+    "restore_weights": false,
     "train": false,
     "epochs": 0,
     "initial_epoch": 0,

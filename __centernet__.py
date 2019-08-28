@@ -239,35 +239,29 @@ def run_classification(dataset_params,
                   metrics=["accuracy"])
 
     # Generate training set for model 3
-    # NOTE: this scripts are only run once to generate the images for training.
-    # exe_log.info('Getting bunding boxes from annotations...')
-    # crop_format = annotations_to_bounding_boxes(train_list)
-    # exe_log.info('Cropping images to characters...')
-    # char_train_list = create_crop_characters_train(crop_format,
-    #                                               os.path.join(os.getcwd(), 'datasets',
-    #                                               'char_cropped'))
-    # exe_log.info('Cropping done.')
 
-    logs['execution'].info('Getting bounding boxes from annotations...')
+    crop_char_path = os.path.join(os.getcwd(), 'datasets', 'char_cropped')
+
+    # NOTE: the following 2 scripts are only run once to generate the images for training.
+
+    # logs['execution'].info('Getting bounding boxes from annotations...')
     # crop_format = annotations_to_bounding_boxes(train_list)
 
-    logs['execution'].info('Cropping images to characters...')
-    # char_train_list = create_crop_characters_train(crop_format,
-    # os.path.join(os.getcwd(), 'datasets',
-    #     #                                               'char_cropped'))                                               os.path.join(os.getcwd(), 'datasets', 'char_crop'))
+    # logs['execution'].info('Cropping images to characters...')
+    # char_train_list = create_crop_characters_train(crop_format, crop_char_path)
 
-    logs['execution'].info('Cropping done successfully!')
+    # logs['execution'].info('Cropping done successfully!')
 
-    train_list_3 = load_crop_characters(os.path.join(os.getcwd(), 'datasets', 'char_cropped'),
+    train_list_3 = load_crop_characters(crop_char_path, mode='train')
+    # train_list_3 is a list[(image_path, char_class)]
 
-                                          mode='train')
-
-    # TODO: create dataset from cropped images (as [image, category])
+    # TODO: now create dataset from cropped images (as [image, category])
+    # FIXME: below part is not yet completed
 
     batch_size = int(model_params['batch_size'])
     dataset_params['batch_size'] = batch_size
     dataset_classification = ClassifierDataset(dataset_params)
-    x_train, x_val = dataset_classification.generate_dataset(bbox_predictions)
+    x_train, x_val = dataset_classification.generate_dataset(train_list_3)
     classification_ts, classification_ts_size = dataset_classification.get_training_set()
     classification_vs, classification_vs_size = dataset_classification.get_validation_set()
 
