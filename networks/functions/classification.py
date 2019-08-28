@@ -2,8 +2,8 @@ import os
 
 from tensorflow.python.keras.optimizers import Adam
 
-from networks.classes.ClassifierDataset import ClassifierDataset
-from networks.classes.ModelUtilities import ModelUtilities
+from networks.classes.CenterNetClassificationDataset import ClassifierDataset
+from networks.classes.ModelCenterNet import ModelUtilities
 from networks.functions.utils import load_crop_characters
 
 

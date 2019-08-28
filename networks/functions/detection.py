@@ -3,8 +3,8 @@ from typing import List
 import tensorflow as tf
 from tensorflow.python.keras.optimizers import Adam
 
-from networks.classes.CenterNetDataset import CenterNetDataset
-from networks.classes.ModelUtilities import ModelUtilities
+from networks.classes.CenterNetDetectionDataset import CenterNetDataset
+from networks.classes.ModelCenterNet import ModelUtilities
 from networks.functions import losses
 from networks.functions.utils import get_bb_boxes
 
