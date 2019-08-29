@@ -2,6 +2,9 @@ import os
 from typing import List
 
 import tensorflow as tf
+import shutil
+import sys
+
 from tensorflow.python.keras.optimizers import Adam
 
 from networks.classes.CenterNetClassificationDataset import ClassifierDataset
@@ -19,6 +22,29 @@ class CenterNetPipeline:
         self.dataset_params = dataset_params
         self.input_shape = input_shape
         self.logs = logs
+
+    def __check_no_weights_in_run_folder(self, folder: str):
+        if os.path.isdir(folder):
+            if len(os.listdir(folder)):
+                user_input = input('WARNING! You want to train the network without restoring weights,\n'
+                                   'but folder {} is not empty.\n'
+                                   'It may contain tensorboard files and checkpoints from previous '
+                                   'runs.\n'
+                                   'Do you wish to delete all existing files in that folder and proceed '
+                                   'with the training?\n'
+                                   'Please refuse to abort the execution.\n'
+                                   'Confirm? [Y/n]\n'.format(folder))
+                confirmations = ['y', 'Y', 'yes', 'ok']
+
+                user_ok = True if user_input in confirmations else False
+
+                if user_ok:
+                    shutil.rmtree(folder)
+                    self.logs['execution'].info('Deleted weights checkpoint folder!')
+                else:
+                    self.logs['execution'].info('Aborting after user command!')
+                    sys.exit(0)
+        # If weights dir doesn't exists, no problem.
 
     def __resize_fn(self, path):
         """
@@ -44,6 +70,10 @@ class CenterNetPipeline:
         :return: a ratio predictor
         """
 
+        # Check weights folder is not full of previous stuff
+        if model_params['train'] and not model_params['restore_weights']:
+            self.__check_no_weights_in_run_folder(weights_path)
+
         self.logs['execution'].info('Preprocessing the data...')
 
         # Build dataset for model 1
@@ -59,8 +89,15 @@ class CenterNetPipeline:
         # # Generate a model
         # model_utils = ModelUtilities()
         # model = model_utils.generate_model(input_shape=self.input_shape, mode=1)
+
+        # try:
+        #     decay = float(model_params['decay'])
+        # except ValueError:
+        #     decay = None
+        #
         # model.compile(loss='mean_squared_error',
-        #               optimizer=Adam(lr=model_params['learning_rate']))
+        #               optimizer=Adam(lr=model_params['learning_rate'],
+        #                              decay=decay if decay else 0.0))
         #
         # # Restore the weights, if required
         # if model_params['restore_weights']:
@@ -78,17 +115,20 @@ class CenterNetPipeline:
         #                                             batch_size=model_params['batch_size'])
         #
         #     # Start the training procedure
-        #     model_utils.train(model, self.logs['training'], model_params['initial_epoch'], model_params['epochs'],
+        #     model_utils.train(model, self.logs['training'], model_params['initial_epoch'],
+        #                       model_params['epochs'],
         #                       training_set=size_check_ts,
         #                       validation_set=size_check_vs,
         #                       training_steps=int(size_check_ts_size // model_params['batch_size'] + 1),
-        #                       validation_steps=int(size_check_vs_size // model_params['batch_size'] + 1),
+        #                       validation_steps=
+        #                           int(size_check_vs_size // model_params['batch_size'] + 1),
         #                       callbacks=callbacks)
         #
         #     # Evaluate the model
         #     model_utils.evaluate(model, logger=self.logs['test'],
         #                          evaluation_set=size_check_vs,
-        #                          evaluation_steps=int(size_check_vs_size // model_params['batch_size'] + 1))
+        #                          evaluation_steps=
+        #                               int(size_check_vs_size // model_params['batch_size'] + 1))
 
         return dataset_avg_size
 
@@ -118,10 +158,21 @@ class CenterNetPipeline:
         The <category> value is always 0, because it is not the character category but the category of the center.
         """
 
+        # Check weights folder is not full of previous stuff
+        if model_params['train'] and not model_params['restore_weights']:
+            self.__check_no_weights_in_run_folder(weights_path)
+
         # Generate the CenterNet model
         model_utils = ModelUtilities()
         model = model_utils.generate_model(input_shape=self.input_shape, mode=2)
-        model.compile(optimizer=Adam(lr=model_params['learning_rate']),
+
+        try:
+            decay = float(model_params['decay'])
+        except ValueError:
+            decay = None
+
+        model.compile(optimizer=Adam(lr=model_params['learning_rate'],
+                                     decay=decay if decay else 0.0),
                       loss=losses.all_loss,
                       metrics=[losses.size_loss,
                                losses.heatmap_loss,
@@ -147,7 +198,8 @@ class CenterNetPipeline:
 
         # Train the model
         if model_params['train']:
-            self.logs['execution'].info('Starting the training procedure for the object detection model...')
+            self.logs['execution'].info(
+                'Starting the training procedure for the object detection model...')
 
             # Set up the callbacks
             callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
@@ -204,6 +256,9 @@ class CenterNetPipeline:
         :param weights_path: the path to the saved weights (if present)
         :return: a couple of list with train and bbox data.
         """
+        # Check weights folder is not full of previous stuff
+        if model_params['train'] and not model_params['restore_weights']:
+            self.__check_no_weights_in_run_folder(weights_path)
 
         # Generate a model
         model_utils = ModelUtilities()
@@ -217,9 +272,15 @@ class CenterNetPipeline:
                                         init_epoch=model_params['initial_epoch'],
                                         weights_folder_path=weights_path)
 
+        try:
+            decay = float(model_params['decay'])
+        except ValueError:
+            decay = None
+
         # Compile the model
         model.compile(loss="categorical_crossentropy",
-                      optimizer=Adam(lr=model_params['learning_rate']),
+                      optimizer=Adam(lr=model_params['learning_rate'],
+                                     decay=decay if decay else 0.0),
                       metrics=["accuracy"])
 
         # Generate training set for model 3
@@ -249,7 +310,8 @@ class CenterNetPipeline:
         classification_vs, classification_vs_size = dataset_classification.get_validation_set()
 
         if model_params['train']:
-            self.logs['execution'].info('Starting the training procedure for the classification model...')
+            self.logs['execution'].info(
+                'Starting the training procedure for the classification model...')
 
             callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
                                                     batch_size=batch_size)

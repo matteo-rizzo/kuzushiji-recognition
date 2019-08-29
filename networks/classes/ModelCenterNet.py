@@ -233,6 +233,7 @@ class ModelUtilities:
               training_steps: int,
               validation_steps: int,
               callbacks: List[tf.keras.callbacks.Callback]):
+
         """
         Compile and train the model for the specified number of epochs.
         """
@@ -261,7 +262,7 @@ class ModelUtilities:
 
     @staticmethod
     def evaluate(model: tf.keras.Model, logger: logging.Logger, evaluation_set: tf.data.Dataset,
-                 evaluation_steps: int, ) -> Union[float, List[float]]:
+                 evaluation_steps: int) -> Union[float, List[float]]:
         """
         Evaluate the model on provided set.
         :return: the loss value if model has no other metrics, otw returns array with loss and metrics
