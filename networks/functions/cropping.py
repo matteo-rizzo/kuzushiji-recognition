@@ -16,15 +16,14 @@ def user_check(save_dir):
     :param save_dir: the path to the save dir
     """
 
-    dir_exists = os.path.isdir(save_dir)
-
     # If a directory already exists and it is not empty, ask the user what to do
-    if dir_exists and len(os.listdir(save_dir)) > 0:
+    if os.path.isdir(save_dir) and len(os.listdir(save_dir)) > 0:
         user_input = input('WARNING! There seems to be some files in the folder in which '
                            'to save cropped characters.\n'
+                           'The folder is {}\n'
                            'Do you wish to delete all existing files and proceed with the operation?\n'
                            'Please refuse to abort the execution.\n'
-                           'Confirm? [Y/n]\n')
+                           'Confirm? [Y/n]\n'.format(save_dir))
         confirmations = ['y', 'Y', 'yes', 'ok']
 
         user_ok = True if user_input in confirmations else False
@@ -36,10 +35,11 @@ def user_check(save_dir):
             # Exit and leave files untouched
             sys.exit(0)
 
-    assert not dir_exists or len(os.listdir(save_dir)) == 0, 'Folder is not empty! Problem with deletion'
+    assert not os.path.isdir(save_dir) or len(os.listdir(save_dir)) == 0, \
+        'Folder is not empty! Problem with deletion'
 
     # Create empty directory if there is not one
-    if not dir_exists:
+    if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
 
 
@@ -226,6 +226,9 @@ def load_crop_characters(save_dir: str, mode: str) -> Union[List[Tuple[str, int]
             .format(save_dir)
 
         img = sorted(os.listdir(save_dir))
+
+        # Add relative path to image name
+        img = [str(os.path.join(save_dir, name)) for name in img]
 
         assert len(img) > 0, 'Error: provided save directory {} is empty'.format(save_dir)
 

@@ -268,6 +268,7 @@ class CenterNetPipeline:
         predicted_test_bboxes: Dict[str, np.ndarray] = None
 
         if model_params['predict_on_test']:
+            self.logs['execution'].info('Predicting test bounding boxes (takes time)...')
             test_predictions = model_utils.predict(model=model,
                                                    logger=self.logs['test'],
                                                    dataset=detection_ps)
@@ -302,8 +303,9 @@ class CenterNetPipeline:
 
         # Generate a model
         model_utils = ModelUtilities()
-        model = model_utils.generate_model(input_shape=self.input_shape,
-                                           mode=3)
+        model = model_utils.generate_model(input_shape=(64, 64, 3),
+                                           mode=3,
+                                           n_category=4000)
 
         # Restore the weights, if required
         if model_params['restore_weights']:
@@ -344,6 +346,7 @@ class CenterNetPipeline:
             train_list = load_crop_characters(crop_char_path_train, mode='train')
 
         # Test mode
+        # FIXME: check why test list has just only 55 images
         if model_params['regenerate_crops_test']:
             self.logs['execution'].info(
                 'Starting procedure to regenerate cropped test character images')
@@ -390,10 +393,12 @@ class CenterNetPipeline:
 
         if model_params['predict_on_test']:
             self.logs['execution'].info(
-                'Starting the predict procedure...')
+                'Starting the predict procedure of char class (takes much time)...')
             predictions = model_utils.predict(model=model,
-                                              logger=self.logs['testing'],
+                                              logger=self.logs['test'],
                                               dataset=classification_ps)
             self.logs['execution'].info('Completed.')
 
-        return predictions
+            return predictions
+
+        return None

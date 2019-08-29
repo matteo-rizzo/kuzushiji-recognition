@@ -29,7 +29,7 @@
     "epochs": 32,
     "learning_rate": 1e-5,
     "decay": 0.001,
-    "predict_on_test": true,
+    "predict_on_test": false,
     "show_prediction_examples": false
   },
   "model_3": {
@@ -41,7 +41,7 @@
     "epochs": 0,
     "learning_rate": 1e-5,
     "decay": "",
-    "predict_on_test": false,
+    "predict_on_test": true,
     "regenerate_crops_train": false,
     "regenerate_crops_test": true
   }

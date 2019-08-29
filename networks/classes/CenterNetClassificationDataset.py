@@ -79,6 +79,20 @@ class ClassifierDataset:
 
                     yield b_x, b_y
 
+    def __test_resize_fn(self, path):
+        """
+        Utility function for image resizing
+
+        :param path: the path to the image to be resized
+        :return: a resized image
+        """
+
+        image_string = tf.read_file(path)
+        image_decoded = tf.image.decode_jpeg(image_string)
+        image_resized = tf.image.resize(image_decoded, (64, 64))
+
+        return image_resized / 255
+
     def generate_dataset(self, train_list: List[Tuple[str, int]], test_list: List[str]) \
             -> Tuple[List[List], List[List]]:
 
@@ -120,6 +134,7 @@ class ClassifierDataset:
 
         self.__test_set = (
             tf.data.Dataset.from_tensor_slices(test_list)
+                .map(self.__test_resize_fn, num_parallel_calls=AUTOTUNE)
                 .batch(self.__batch_size_predict)
                 .prefetch(AUTOTUNE),
             len(test_list)
