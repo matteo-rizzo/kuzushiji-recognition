@@ -11,6 +11,7 @@ from tensorflow.python.keras.layers import UpSampling2D, Concatenate, Conv2D, In
     GlobalAveragePooling2D, Dense, Dropout, Activation
 
 from networks.functions.blocks import cbr, aggregation_block, resblock
+from tensorflow.python.keras import backend as K
 
 
 class ModelUtilities:
@@ -292,10 +293,10 @@ class ModelUtilities:
         # plt.show()
 
     @staticmethod
-    def predict(model: tf.keras.Model, logger: logging.Logger, dataset: tf.data.Dataset, steps: int) \
+    def predict(model: tf.keras.Model, logger: logging.Logger, dataset: tf.data.Dataset) \
             -> Union[np.ndarray, List[np.ndarray]]:
         logger.info("Predicting...")
 
-        result = model.predict(dataset, steps=steps)
+        result = model.predict(dataset)
 
         return result

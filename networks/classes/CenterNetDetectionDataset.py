@@ -22,6 +22,7 @@ class CenterNetDataset:
 
         self.__training_ratio = params['training_ratio']
         self.__batch_size = params['batch_size']
+        self.__batch_size_predict = params['batch_size_predict']
 
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
@@ -153,6 +154,20 @@ class CenterNetDataset:
 
                     yield inputs, targets
 
+    def __test_resize_fn(self, path):
+        """
+        Utility function for image resizing
+
+        :param path: the path to the image to be resized
+        :return: a resized image
+        """
+
+        image_string = tf.read_file(path)
+        image_decoded = tf.image.decode_jpeg(image_string)
+        image_resized = tf.image.resize(image_decoded, (self.__input_height, self.__input_width))
+
+        return image_resized / 255
+
     def generate_dataset(self, input_list, test_list: List[str]) -> Tuple[List[List], List[List]]:
         """
         Generate the tf.data.Dataset containing all the objects.
@@ -181,11 +196,10 @@ class CenterNetDataset:
 
         self.__test_set = (
             tf.data.Dataset.from_tensor_slices(test_list)
-                .batch(self.__batch_size)
+                .map(self.__test_resize_fn, num_parallel_calls=AUTOTUNE)
+                .batch(self.__batch_size_predict)
                 .prefetch(AUTOTUNE),
             len(test_list))
-
-        # TODO: return test set
 
         return X_train, X_test
 
@@ -196,5 +210,4 @@ class CenterNetDataset:
         return self.__validation_set
 
     def get_test_set(self) -> Tuple[tf.data.Dataset, int]:
-        # TODO
-        return (None, 0)
+        return self.__test_set

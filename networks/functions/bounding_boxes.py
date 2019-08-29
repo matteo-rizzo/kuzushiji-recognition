@@ -3,6 +3,7 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from tqdm import tqdm
 
 from networks.functions.utils import check_iou_score, draw_rectangle
 
@@ -30,13 +31,13 @@ def get_bb_boxes(predictions: np.ndarray,
             - annotation_list[3] = recommended width split
     :param test_images_path: list of filepaths to test images
     :param print: whether to show bboxes and iou scores. Iou scores are available only in train mode.
-    :return: list of boxes, as [<image_path>, <category>, <score>, <ymin>, <xmin>, <ymax>, <xmax>].
+    :return: dict of boxes, as {<image_path>: [<category>, <score>, <ymin>, <xmin>, <ymax>, <xmax>]}.
             Note that <category> is always 0 in our case.
     """
 
     all_boxes = dict()
 
-    for i in np.arange(0, predictions.shape[0]):
+    for i in tqdm(np.arange(0, predictions.shape[0])):
 
         if mode == 'train':
             image_path = annotation_list[i][0]

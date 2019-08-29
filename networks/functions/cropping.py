@@ -82,20 +82,23 @@ def annotations_to_bounding_boxes(annotations: List) -> Dict[str, np.array]:
     return all_images_boxes
 
 
-def predictions_to_bounding_boxes(predictions: List[np.array]) -> List[np.array]:
+def predictions_to_bounding_boxes(predictions: Dict[str, np.array]) -> Dict[str, np.array]:
     """
     Utility to convert from prediction output to input array of get_crop_characters_train
 
-    :param predictions: list of boxes as predicted by the detection model:
-            So list of [image_path,category,score,ymin,xmin,ymax,xmax]
-    :return:
+    :param predictions: list of boxes as predicted by the detection model. So a dict
+                        {image: np.array[(category, score, xmin, ymin, xmax, ymax)]}
+    :return: dict {image: np.array[xmin, ymin, xmax, ymax]}
     """
-    # FIXME: probably useless. We'll see.
-    pass
+    result = dict()
+    for k, v in tqdm(predictions.items()):
+        result[k] = v[:, 2:]
+
+    return result
 
 
-def create_crop_character_test(images_to_split: Dict[str, np.array],
-                               save_dir: str) -> List[str]:
+def create_crop_characters_test(images_to_split: Dict[str, np.array],
+                                save_dir: str) -> List[str]:
     """
     Crop image into all its bounding boxes, saving a different image for each one in save_dir.
 

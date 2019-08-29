@@ -1,4 +1,4 @@
-from typing import Dict, Generator, Tuple, List
+from typing import Dict, Generator, Tuple, List, Union
 
 import cv2
 import numpy as np
@@ -17,6 +17,7 @@ class ClassifierDataset:
         self.__sample_submission = params['sample_submission']
         self.__training_ratio = params['training_ratio']
         self.__batch_size = params['batch_size']
+        self.__batch_size_predict = params['batch_size_predict']
         self.__annotation_list_train: List[List]
         self.__aspect_ratio_pic_all: List[float]
         self.__input_height = params['input_height']
@@ -25,6 +26,7 @@ class ClassifierDataset:
         self.__output_width = params['output_width']
         self.__validation_set: Tuple[tf.data.Dataset, int] = None
         self.__training_set: Tuple[tf.data.Dataset, int] = None
+        self.__test_set: Tuple[tf.data.Dataset, int] = None
 
     def __dataset_generator(self, data_list: np.array, batch_size: int, is_train: bool = True,
                             random_crop: bool = True) \
@@ -77,18 +79,24 @@ class ClassifierDataset:
 
                     yield b_x, b_y
 
-    def generate_dataset(self, input_list: List[Tuple[str, int]]) -> Tuple[List[List], List[List]]:
+    def generate_dataset(self, train_list: List[Tuple[str, int]], test_list: List[str]) \
+            -> Tuple[List[List], List[List]]:
+
         """
         Generate the tf.data.Dataset containing all the objects.
+
+        :param train_list: training list with samples as list of tuples (image, class)
+        :param test_list: an
+        :return:
         """
 
-        X_train, X_test = train_test_split(input_list,
-                                           train_size=int(self.__training_ratio * len(input_list)),
-                                           shuffle=True)
+        train_xy, val_xy = train_test_split(train_list,
+                                            train_size=int(self.__training_ratio * len(train_list)),
+                                            shuffle=True)
 
         self.__training_set = (
             tf.data.Dataset.from_generator(
-                lambda: self.__dataset_generator(X_train,
+                lambda: self.__dataset_generator(train_xy,
                                                  batch_size=self.__batch_size,
                                                  is_train=True,
                                                  random_crop=True),
@@ -96,11 +104,11 @@ class ClassifierDataset:
                               np.float32))
                 .repeat()
                 .prefetch(AUTOTUNE),
-            len(X_train))
+            len(train_xy))
 
         self.__validation_set = (
             tf.data.Dataset.from_generator(
-                lambda: self.__dataset_generator(X_test,
+                lambda: self.__dataset_generator(val_xy,
                                                  batch_size=self.__batch_size,
                                                  is_train=False,
                                                  random_crop=False),
@@ -108,9 +116,16 @@ class ClassifierDataset:
                               np.float32))
                 .repeat()
                 .prefetch(AUTOTUNE),
-            len(X_test))
+            len(val_xy))
 
-        return X_train, X_test
+        self.__test_set = (
+            tf.data.Dataset.from_tensor_slices(test_list)
+                .batch(self.__batch_size_predict)
+                .prefetch(AUTOTUNE),
+            len(test_list)
+        )
+
+        return train_xy, val_xy
 
     def get_training_set(self) -> Tuple[tf.data.Dataset, int]:
         return self.__training_set
@@ -118,8 +133,5 @@ class ClassifierDataset:
     def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
         return self.__validation_set
 
-    def get_test_set(self, bbox_predictions: Dict[str, np.ndarray]):
-        self.__test_set = (
-            # Generate test set,
-            len(bbox_predictions)
-        )
+    def get_test_set(self) -> Tuple[tf.data.Dataset, int]:
+        return self.__test_set

@@ -1,5 +1,5 @@
 import os
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import tensorflow as tf
 import numpy as np
@@ -16,7 +16,7 @@ from networks.classes.SizePredictDataset import SizePredictDataset
 from networks.functions import losses
 from networks.functions.bounding_boxes import get_bb_boxes
 from networks.functions.cropping import load_crop_characters, annotations_to_bounding_boxes, \
-    create_crop_characters_train
+    create_crop_characters_train, create_crop_characters_test, predictions_to_bounding_boxes
 from tensorflow.python.keras.utils import plot_model
 
 
@@ -25,6 +25,9 @@ class CenterNetPipeline:
         self.dataset_params = dataset_params
         self.input_shape = input_shape
         self.logs = logs
+        test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
+        base_path = os.path.join(os.getcwd(), 'datasets', 'kaggle', 'testing', 'images')
+        self.__test_list = [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list]
 
     def __check_no_weights_in_run_folder(self, folder: str):
         if os.path.isdir(folder):
@@ -197,11 +200,10 @@ class CenterNetPipeline:
 
         # Generate the dataset for detection
         self.dataset_params['batch_size'] = model_params['batch_size']
+        self.dataset_params['batch_size_predict'] = model_params['batch_size_predict']
         dataset_detection = CenterNetDataset(self.dataset_params)
-        # get dataframe with test images names
-        test_list = pd.read_csv(self.dataset_params['sample_submission']).to_list()
 
-        xy_train, xy_val = dataset_detection.generate_dataset(train_list, test_list)
+        xy_train, xy_val = dataset_detection.generate_dataset(train_list, self.__test_list)
         detection_ts, detection_ts_size = dataset_detection.get_training_set()
         detection_vs, detection_vs_size = dataset_detection.get_validation_set()
         detection_ps, detection_ps_size = dataset_detection.get_test_set()
@@ -255,7 +257,7 @@ class CenterNetPipeline:
                 .prefetch(tf.data.experimental.AUTOTUNE)
 
             # Perform the prediction on the newly created dataset and show images
-            detected_predictions = model_utils.predict(model, self.logs['test'], mini_test, steps=10)
+            detected_predictions = model_utils.predict(model, self.logs['test'], mini_test)
             get_bb_boxes(detected_predictions,
                          mode='train',
                          annotation_list=xy_val[:10],
@@ -266,25 +268,31 @@ class CenterNetPipeline:
         predicted_test_bboxes: Dict[str, np.ndarray] = None
 
         if model_params['predict_on_test']:
-            n_batches = int(detection_ps_size // model_params['batch_size']) + 1
-            test_predictions = model_utils.predict(model, self.logs['test'], detection_ps,
-                                                   steps=n_batches)
+            test_predictions = model_utils.predict(model=model,
+                                                   logger=self.logs['test'],
+                                                   dataset=detection_ps)
 
+            self.logs['execution'].info('Completed.')
+
+            self.logs['execution'].info('Converting into bounding boxes...')
             predicted_test_bboxes = get_bb_boxes(test_predictions,
                                                  mode='test',
-                                                 test_images_path=test_list,
+                                                 test_images_path=self.__test_list,
                                                  print=False)
+            self.logs['execution'].info('Completed.')
 
         return train_list, predicted_test_bboxes
 
-    def run_classification(self, model_params, train_list, bbox_predictions: Dict[str, np.ndarray],
+    def run_classification(self, model_params, train_list,
+                           bbox_predictions: Union[Dict[str, np.ndarray], None],
                            weights_path):
         """
         Classifies each character according to the available classes via a CNN
 
         :param model_params: the parameters related to the network
         :param train_list: a train data list predicted at the object detection step
-        :param bbox_predictions: the bbox data predicted at the object detection step
+        :param bbox_predictions: the bbox data predicted at the object detection step or None if
+                                predictions were not done.
         :param weights_path: the path to the saved weights (if present)
         :return: a couple of list with train and bbox data.
         """
@@ -315,39 +323,55 @@ class CenterNetPipeline:
                                      decay=decay if decay else 0.0),
                       metrics=["accuracy"])
 
-        # TODO: now create dataset from cropped images (as [image, category])
-        # FIXME: below part is not yet completed
+        # Generate dataset object for model 3
+
+        crop_char_path_train = os.path.join(os.getcwd(), 'datasets', 'char_cropped_train')
+        crop_char_path_test = os.path.join(os.getcwd(), 'datasets', 'char_cropped_test')
+
+        # Train mode
+        if model_params['regenerate_crops_train']:
+            # NOTE: the following 2 scripts are only run once to generate the images for training.
+            self.logs['execution'].info(
+                'Starting procedure to regenerate cropped train character images')
+
+            self.logs['execution'].info('Getting bounding boxes from annotations...')
+            crop_formatted_list = annotations_to_bounding_boxes(train_list)
+
+            self.logs['execution'].info('Cropping images to characters...')
+            train_list = create_crop_characters_train(crop_formatted_list, crop_char_path_train)
+            self.logs['execution'].info('Cropping done successfully!')
+        else:  # load from folder
+            train_list = load_crop_characters(crop_char_path_train, mode='train')
+
+        # Test mode
+        if model_params['regenerate_crops_test']:
+            self.logs['execution'].info(
+                'Starting procedure to regenerate cropped test character images')
+            # bbox_predictions is a dict: {image: [list(category, score, xmin, ymin, sxmax, ymax)]}
+            nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(bbox_predictions)
+            self.logs['execution'].info('Cropping test images to characters...')
+            test_list = create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
+            self.logs['execution'].info('Cropping done successfully!')
+        else:  # load from folder
+            test_list = load_crop_characters(crop_char_path_test, mode='test')
+
+        # Now 'train_list' is a list[(image_path, char_class)]
+        # Now 'test_list' is a list[image_path] to cropped test images
+        # Now that we have the list in the correct format, let's generate together the tf.data.Dataset
 
         batch_size = int(model_params['batch_size'])
         self.dataset_params['batch_size'] = batch_size
+        self.dataset_params['batch_size_predict'] = model_params['batch_size_predict']
         dataset_classification = ClassifierDataset(self.dataset_params)
 
+        # We need to pass it the training list, and the predictions.
+        # The predictions are used only in test mode, but nevermind.
+        x_train, x_val = dataset_classification.generate_dataset(train_list, test_list)
+        classification_ts, classification_ts_size = dataset_classification.get_training_set()
+        classification_vs, classification_vs_size = dataset_classification.get_validation_set()
+        classification_ps, classification_ps_size = dataset_classification.get_test_set()
+
         if model_params['train']:
-
-            # Generate dataset object for model 3
-
-            crop_char_path = os.path.join(os.getcwd(), 'datasets', 'char_cropped')
-
-            if model_params['regenerate_crops']:
-                # NOTE: the following 2 scripts are only run once to generate the images for training.
-                self.logs['execution'].info(
-                    'Starting procedure to regenerate cropped character images')
-
-                self.logs['execution'].info('Getting bounding boxes from annotations...')
-                crop_formatted_list = annotations_to_bounding_boxes(train_list)
-
-                self.logs['execution'].info('Cropping images to characters...')
-                train_list = create_crop_characters_train(crop_formatted_list, crop_char_path)
-                self.logs['execution'].info('Cropping done successfully!')
-            else:  # load from folder
-                train_list = load_crop_characters(crop_char_path, mode='train')
-
-            # Now 'train_list' is a list[(image_path, char_class)]
-
-            x_train, x_val = dataset_classification.generate_dataset(train_list)
-            classification_ts, classification_ts_size = dataset_classification.get_training_set()
-            classification_vs, classification_vs_size = dataset_classification.get_validation_set()
-
             self.logs['execution'].info(
                 'Starting the training procedure for the classification model...')
 
@@ -365,14 +389,11 @@ class CenterNetPipeline:
                               callbacks=callbacks)
 
         if model_params['predict_on_test']:
-            # Generate test set
-
-            classification_ps, classification_ps_size = dataset_classification \
-                .get_test_set(bbox_predictions)
-
+            self.logs['execution'].info(
+                'Starting the predict procedure...')
             predictions = model_utils.predict(model=model,
                                               logger=self.logs['testing'],
-                                              dataset=classification_ps,
-                                              steps=int(classification_ps_size // batch_size) + 1)
+                                              dataset=classification_ps)
+            self.logs['execution'].info('Completed.')
 
         return predictions
