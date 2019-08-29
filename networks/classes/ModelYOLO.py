@@ -49,7 +49,6 @@ class ModelYOLO(Model):
         Builds the YOLO network.
         """
 
-        # Build the network with the given parameters
         self._model = TFNet(self._network_params)
 
     def train(self):

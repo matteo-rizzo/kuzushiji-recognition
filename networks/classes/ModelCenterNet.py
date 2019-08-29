@@ -104,14 +104,14 @@ class ModelUtilities:
         x_4 = cbr(x_4, output_layer_n, 1, 1)
 
         x = cbr(x, output_layer_n, 1, 1)
-        x = UpSampling2D(size=(2, 2))(x)  # 8->16 tconv
+        x = UpSampling2D(size=(2, 2))(x)  # 8->16
         x = Concatenate()([x, x_4])
         x = cbr(x, output_layer_n, 3, 1)
         x = UpSampling2D(size=(2, 2))(x)  # 16->32
         x = Concatenate()([x, x_3])
 
         x = cbr(x, output_layer_n, 3, 1)
-        x = UpSampling2D(size=(2, 2))(x)  # 32->64   128
+        x = UpSampling2D(size=(2, 2))(x)  # 32->64
         x = Concatenate()([x, x_2])
         x = cbr(x, output_layer_n, 3, 1)
         x = UpSampling2D(size=(2, 2))(x)  # 64->128
