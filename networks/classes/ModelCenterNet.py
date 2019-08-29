@@ -129,10 +129,10 @@ class ModelUtilities:
         x = cbr(input_layer, 64, 3, 1)
         x = resblock(x, 64)
         x = resblock(x, 64)
-        x = cbr(input_layer, 128, 3, 2)  # 16
+        x = cbr(x, 128, 3, 2)  # 16
         x = resblock(x, 128)
         x = resblock(x, 128)
-        x = cbr(input_layer, 256, 3, 2)  # 8
+        x = cbr(x, 256, 3, 2)  # 8
         x = resblock(x, 256)
         x = resblock(x, 256)
         x = GlobalAveragePooling2D()(x)
@@ -181,7 +181,8 @@ class ModelUtilities:
 
         tensorboard_log_dir = os.path.join(weights_log_path, 'tensorboard')
 
-        # Note that update_freq is set to batch_size * 10 because the epoch takes too long and batch size too short
+        # Note that update_freq is set to batch_size * 10 because the epoch takes too long and batch
+        # size too short
         tensorboard = TensorBoard(log_dir=tensorboard_log_dir,
                                   write_graph=True,
                                   histogram_freq=0,

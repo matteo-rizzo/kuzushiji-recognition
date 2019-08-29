@@ -46,7 +46,7 @@ def user_check(save_dir):
 def annotations_to_bounding_boxes(annotations: List) -> Dict[str, np.array]:
     """
     Utility to convert between the annotation format, and the format required by
-    get_crop_characters_train function for character
+    create_crop_characters_train function for character
 
     :param annotations: List[str, np.array] with image path and image annotations where:
         - ann[:, 0] = class
@@ -206,13 +206,15 @@ def load_crop_characters(save_dir: str, mode: str) -> Union[List[Tuple[str, int]
     csv_path = os.path.join(save_dir, 'crop_list.csv')
 
     if mode == 'train':
-        assert os.path.isfile(csv_path), "Error: csv file 'crop_list.csv' doesn't exists in path {}".format(csv_path)
+        assert os.path.isfile(
+            csv_path), "Error: csv file 'crop_list.csv' doesn't exists in path {}".format(csv_path)
 
         csv_df = pd.read_csv(csv_path, delimiter=',')
 
         n_rows = len(csv_df.index)
 
-        assert len(os.listdir(save_dir)) - 1 == n_rows, "Error: csv and save_dir contains different number of items"
+        assert len(os.listdir(
+            save_dir)) - 1 == n_rows, "Error: csv and save_dir contains different number of items"
 
         return [tuple(c) for c in csv_df.values]
 

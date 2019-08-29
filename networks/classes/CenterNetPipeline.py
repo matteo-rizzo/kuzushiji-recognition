@@ -1,7 +1,9 @@
 import os
-from typing import List
+from typing import List, Dict
 
 import tensorflow as tf
+import numpy as np
+import pandas as pd
 import shutil
 import sys
 
@@ -15,6 +17,7 @@ from networks.functions import losses
 from networks.functions.bounding_boxes import get_bb_boxes
 from networks.functions.cropping import load_crop_characters, annotations_to_bounding_boxes, \
     create_crop_characters_train
+from tensorflow.python.keras.utils import plot_model
 
 
 class CenterNetPipeline:
@@ -139,7 +142,8 @@ class CenterNetPipeline:
         :param model_params: the parameters related to the network
         :param dataset_avg_size: a ratio predictor
         :param weights_path: the path to the saved weights (if present)
-        :return: a couple of list with train and bbox data.
+        :return: a couple of list with train and bbox data. Bbox data are available only if
+                 model_params['predict_on_test] is true. Otherwise return None
 
         Train list has the following structure:
             - train_list[0] = path to image
@@ -185,6 +189,8 @@ class CenterNetPipeline:
                                         init_epoch=model_params['initial_epoch'],
                                         weights_folder_path=weights_path)
 
+        # plot_model(model, os.path.join(weights_path, os.pardir, 'plot.png'), show_shapes=True)
+
         # Get labels from dataset and compute the recommended split
         avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
         train_list = dataset_avg_size.annotate_split_recommend(avg_sizes)
@@ -192,9 +198,13 @@ class CenterNetPipeline:
         # Generate the dataset for detection
         self.dataset_params['batch_size'] = model_params['batch_size']
         dataset_detection = CenterNetDataset(self.dataset_params)
-        x_train, x_val = dataset_detection.generate_dataset(train_list)
+        # get dataframe with test images names
+        test_list = pd.read_csv(self.dataset_params['sample_submission']).to_list()
+
+        xy_train, xy_val = dataset_detection.generate_dataset(train_list, test_list)
         detection_ts, detection_ts_size = dataset_detection.get_training_set()
         detection_vs, detection_vs_size = dataset_detection.get_validation_set()
+        detection_ps, detection_ps_size = dataset_detection.get_test_set()
 
         # Train the model
         if model_params['train']:
@@ -233,20 +243,42 @@ class CenterNetPipeline:
                                            metrics[2],
                                            metrics[3]))
 
-        # Prepare a test dataset from the validation set taking its first 10 values
-        test_path_list = [ann[0] for ann in x_val[:10]]
-        test_ds = tf.data.Dataset.from_tensor_slices(test_path_list) \
-            .map(self.__resize_fn,
-                 num_parallel_calls=tf.data.experimental.AUTOTUNE) \
-            .batch(1) \
-            .prefetch(tf.data.experimental.AUTOTUNE)
+        # ---- MINI TEST ON VALIDATION SET ----
 
-        # Perform the prediction on the newly created dataset
-        detected_predictions = model_utils.predict(model, self.logs['test'], test_ds, steps=10)
+        if model_params['show_prediction_examples']:
+            # Prepare a test dataset from the validation set taking its first 10 values
+            test_path_list = [ann[0] for ann in xy_val[:10]]
+            mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
+                .map(self.__resize_fn,
+                     num_parallel_calls=tf.data.experimental.AUTOTUNE) \
+                .batch(1) \
+                .prefetch(tf.data.experimental.AUTOTUNE)
 
-        return train_list, get_bb_boxes(detected_predictions, x_val[:10], print=False)
+            # Perform the prediction on the newly created dataset and show images
+            detected_predictions = model_utils.predict(model, self.logs['test'], mini_test, steps=10)
+            get_bb_boxes(detected_predictions,
+                         mode='train',
+                         annotation_list=xy_val[:10],
+                         print=True)
 
-    def run_classification(self, model_params, train_list, bbox_predictions, weights_path):
+        # ---- END MINI TEST ----
+
+        predicted_test_bboxes: Dict[str, np.ndarray] = None
+
+        if model_params['predict_on_test']:
+            n_batches = int(detection_ps_size // model_params['batch_size']) + 1
+            test_predictions = model_utils.predict(model, self.logs['test'], detection_ps,
+                                                   steps=n_batches)
+
+            predicted_test_bboxes = get_bb_boxes(test_predictions,
+                                                 mode='test',
+                                                 test_images_path=test_list,
+                                                 print=False)
+
+        return train_list, predicted_test_bboxes
+
+    def run_classification(self, model_params, train_list, bbox_predictions: Dict[str, np.ndarray],
+                           weights_path):
         """
         Classifies each character according to the available classes via a CNN
 
@@ -283,33 +315,39 @@ class CenterNetPipeline:
                                      decay=decay if decay else 0.0),
                       metrics=["accuracy"])
 
-        # Generate training set for model 3
-
-        crop_char_path = os.path.join(os.getcwd(), 'datasets', 'char_cropped')
-
-        # NOTE: the following 2 scripts are only run once to generate the images for training.
-
-        # self.logs['execution'].info('Getting bounding boxes from annotations...')
-        # crop_format = annotations_to_bounding_boxes(train_list)
-        #
-        # self.logs['execution'].info('Cropping images to characters...')
-        # train_list = create_crop_characters_train(crop_format, crop_char_path)
-        # self.logs['execution'].info('Cropping done successfully!')
-
-        # train_list is a list[(image_path, char_class)]
-        train_list = load_crop_characters(crop_char_path, mode='train')
-
         # TODO: now create dataset from cropped images (as [image, category])
         # FIXME: below part is not yet completed
 
         batch_size = int(model_params['batch_size'])
         self.dataset_params['batch_size'] = batch_size
         dataset_classification = ClassifierDataset(self.dataset_params)
-        x_train, x_val = dataset_classification.generate_dataset(train_list)
-        classification_ts, classification_ts_size = dataset_classification.get_training_set()
-        classification_vs, classification_vs_size = dataset_classification.get_validation_set()
 
         if model_params['train']:
+
+            # Generate dataset object for model 3
+
+            crop_char_path = os.path.join(os.getcwd(), 'datasets', 'char_cropped')
+
+            if model_params['regenerate_crops']:
+                # NOTE: the following 2 scripts are only run once to generate the images for training.
+                self.logs['execution'].info(
+                    'Starting procedure to regenerate cropped character images')
+
+                self.logs['execution'].info('Getting bounding boxes from annotations...')
+                crop_formatted_list = annotations_to_bounding_boxes(train_list)
+
+                self.logs['execution'].info('Cropping images to characters...')
+                train_list = create_crop_characters_train(crop_formatted_list, crop_char_path)
+                self.logs['execution'].info('Cropping done successfully!')
+            else:  # load from folder
+                train_list = load_crop_characters(crop_char_path, mode='train')
+
+            # Now 'train_list' is a list[(image_path, char_class)]
+
+            x_train, x_val = dataset_classification.generate_dataset(train_list)
+            classification_ts, classification_ts_size = dataset_classification.get_training_set()
+            classification_vs, classification_vs_size = dataset_classification.get_validation_set()
+
             self.logs['execution'].info(
                 'Starting the training procedure for the classification model...')
 
@@ -325,3 +363,16 @@ class CenterNetPipeline:
                               training_steps=int(classification_ts_size // batch_size) + 1,
                               validation_steps=int(classification_vs_size // batch_size) + 1,
                               callbacks=callbacks)
+
+        if model_params['predict_on_test']:
+            # Generate test set
+
+            classification_ps, classification_ps_size = dataset_classification \
+                .get_test_set(bbox_predictions)
+
+            predictions = model_utils.predict(model=model,
+                                              logger=self.logs['testing'],
+                                              dataset=classification_ps,
+                                              steps=int(classification_ps_size // batch_size) + 1)
+
+        return predictions

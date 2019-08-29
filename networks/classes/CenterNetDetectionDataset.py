@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple
 
 import cv2
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from PIL import Image
 from sklearn.model_selection import train_test_split
@@ -30,6 +31,7 @@ class CenterNetDataset:
 
         self.__validation_set: Tuple[tf.data.Dataset, int] = None
         self.__training_set: Tuple[tf.data.Dataset, int] = None
+        self.__test_set: Tuple[tf.data.Dataset, int] = None
 
     def __dataset_generator(self, list_samples, batch_size) -> (np.float32, np.float32):
         """
@@ -151,7 +153,7 @@ class CenterNetDataset:
 
                     yield inputs, targets
 
-    def generate_dataset(self, input_list) -> Tuple[List[List], List[List]]:
+    def generate_dataset(self, input_list, test_list: List[str]) -> Tuple[List[List], List[List]]:
         """
         Generate the tf.data.Dataset containing all the objects.
         """
@@ -176,6 +178,14 @@ class CenterNetDataset:
                 .repeat()
                 .prefetch(AUTOTUNE),
             len(X_test))
+
+        self.__test_set = (
+            tf.data.Dataset.from_tensor_slices(test_list)
+                .batch(self.__batch_size)
+                .prefetch(AUTOTUNE),
+            len(test_list))
+
+        # TODO: return test set
 
         return X_train, X_test
 

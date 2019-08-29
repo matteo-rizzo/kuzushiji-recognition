@@ -117,3 +117,9 @@ class ClassifierDataset:
 
     def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
         return self.__validation_set
+
+    def get_test_set(self, bbox_predictions: Dict[str, np.ndarray]):
+        self.__test_set = (
+            # Generate test set,
+            len(bbox_predictions)
+        )

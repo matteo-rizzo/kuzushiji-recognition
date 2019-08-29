@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,18 +10,26 @@ pred_out_w, pred_out_h = 128, 128
 
 
 def get_bb_boxes(predictions: np.ndarray,
-                 annotation_list: np.array,
+                 mode: str,
+                 annotation_list: np.array = None,
+                 test_images_path: List[str] = None,
                  print: bool = False) -> Dict[str, np.ndarray]:
     """
     Computes the bounding boxes and perform non maximum suppression
 
+    :param mode: a string between 'test' and 'train'.
+                In test mode no 'annotation_list' is provided, but instead must be provided
+                'test_images_path'.
+                In train mode the 'annotation_list' must be provided, but no 'test_images_path' will
+                be considered.
     :param predictions: array of predictions with shape (batch, out_width, out_height, n_cat + 4)
     :param annotation_list: list o samples where:
             - annotation_list[0] = path to image
             - annotation_list[1] = annotations, as np.array
             - annotation_list[2] = recommended height split
             - annotation_list[3] = recommended width split
-    :param print: whether to show bboxes and iou scores
+    :param test_images_path: list of filepaths to test images
+    :param print: whether to show bboxes and iou scores. Iou scores are available only in train mode.
     :return: list of boxes, as [<image_path>, <category>, <score>, <ymin>, <xmin>, <ymax>, <xmax>].
             Note that <category> is always 0 in our case.
     """
@@ -29,7 +37,14 @@ def get_bb_boxes(predictions: np.ndarray,
     all_boxes = dict()
 
     for i in np.arange(0, predictions.shape[0]):
-        image_path = annotation_list[i][0]
+
+        if mode == 'train':
+            image_path = annotation_list[i][0]
+        elif mode == 'test':
+            image_path = test_images_path[0]
+        else:
+            raise ValueError('Error: unsupported mode {}'.format(mode))
+
         img = Image.open(image_path).convert("RGB")
         width, height = img.size
 
@@ -42,13 +57,6 @@ def get_bb_boxes(predictions: np.ndarray,
         if len(box_and_score) == 0:
             continue
 
-        true_boxes = annotation_list[i][1][:, 1:]  # c_x,c_y,width,height
-        top = true_boxes[:, 1:2] - true_boxes[:, 3:4] / 2
-        left = true_boxes[:, 0:1] - true_boxes[:, 2:3] / 2
-        bottom = top + true_boxes[:, 3:4]
-        right = left + true_boxes[:, 2:3]
-        true_boxes = np.concatenate((top, left, bottom, right), axis=1)
-
         heatmap = predictions[i, :, :, 0]
 
         print_w, print_h = img.size
@@ -59,11 +67,25 @@ def get_bb_boxes(predictions: np.ndarray,
         # Produce a dictionary { "image_path": np.ndarray([category,score,ymin,xmin,ymax,xmax]) }
         all_boxes[image_path] = box_and_score
 
-        if print:
+        if mode == 'train' and print:
+            true_boxes = annotation_list[i][1][:, 1:]  # c_x,c_y,width,height
+            top = true_boxes[:, 1:2] - true_boxes[:, 3:4] / 2
+            left = true_boxes[:, 0:1] - true_boxes[:, 2:3] / 2
+            bottom = top + true_boxes[:, 3:4]
+            right = left + true_boxes[:, 2:3]
+            true_boxes = np.concatenate((top, left, bottom, right), axis=1)
+
             check_iou_score(true_boxes, box_and_score[:, 2:], iou_thresh=0.5)
             img = draw_rectangle(box_and_score[:, 2:], img, "red")
             img = draw_rectangle(true_boxes, img, "blue")
 
+            fig, axes = plt.subplots(1, 2, figsize=(15, 15))
+            axes[0].imshow(img)
+            axes[1].imshow(heatmap)
+            plt.show()
+
+        if mode == 'test' and print:
+            img = draw_rectangle(box_and_score[:, 2:], img, "red")
             fig, axes = plt.subplots(1, 2, figsize=(15, 15))
             axes[0].imshow(img)
             axes[1].imshow(heatmap)
