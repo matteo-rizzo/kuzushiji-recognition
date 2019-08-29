@@ -2,7 +2,7 @@ import datetime
 import os
 
 import keras
-import scipy.misc
+from PIL import Image
 from data_process import normalize
 from eval_heatmap import cal_heatmap_acc
 from keras.callbacks import CSVLogger
@@ -51,7 +51,7 @@ class HourglassNetwork:
                                    epochs=epochs,
                                    callbacks=x_callbacks)
 
-    def resume_train(self, batch_size, model_json, model_weights, init_epoch, epochs):
+    def resume_training(self, batch_size, model_json, model_weights, init_epoch, epochs):
 
         self.load_model(model_json, model_weights)
         self.__model.compile(optimizer=RMSprop(lr=5e-4),
@@ -92,31 +92,52 @@ class HourglassNetwork:
 
         self.__model.load_weights(model_file)
 
-    def inference_rgb(self, rgb_data, org_shape, mean=None):
+    def display_summary(self):
+        """
+        Displays the architecture of the model
+        """
+        self.__model.summary()
 
-        scale = (org_shape[0] * 1.0 / self.__in_res[0], org_shape[1] * 1.0 / self.__in_res[1])
-        img_data = scipy.misc.imresize(rgb_data, self.__in_res)
+    def inference_file(self, img_file, mean=None):
+        """
+        Performs inference on an image file
+
+        :param img_file: the image file which the inference must be performed on
+        :param mean:
+        :return:
+        """
+
+        img_data = Image.open(img_file)
+
+        return self.__inference_rgb(rgb_data=img_data,
+                                    org_shape=img_data.shape,
+                                    mean=mean)
+
+    def __inference_rgb(self, rgb_data, org_shape, mean=None):
+        """
+        Performs inference on RGB data
+        
+        :param rgb_data: the RGB data which the inference must be performed on
+        :param org_shape: the original shape of the image
+        :param mean: 
+        :return: 
+        """
+
+        scale = (org_shape[0] * 1.0 / self.__in_res[0],
+                 org_shape[1] * 1.0 / self.__in_res[1])
+
+        img_data = rgb_data.resize(self.__in_res)
 
         if mean is None:
             mean = np.array([0.4404, 0.4440, 0.4327], dtype=np.float)
 
         img_data = normalize(img_data, mean)
 
-        input = img_data[np.newaxis, :, :, :]
+        input_img = img_data[np.newaxis, :, :, :]
 
-        out = self.__model.predict(input)
+        out = self.__model.predict(input_img)
+
         return out[-1], scale
-
-    def inference_file(self, img_file, mean=None):
-        img_data = scipy.misc.imread(img_file)
-
-        return self.inference_rgb(img_data, img_data.shape, mean)
-
-    def display_summary(self):
-        """
-        Displays the architecture of the model
-        """
-        self.__model.summary()
 
     def __build(self, mobile=False):
         """
@@ -138,22 +159,27 @@ class HourglassNetwork:
         :return: 
         """
 
+        # Create an input layer for the network
         input_layer = Input(shape=(self.__in_res[0], self.__in_res[1], 3))
 
-        front_features = self.__create_front_module(input_layer, bottleneck)
+        # Create the front module of the network
+        head_next_stage = self.__create_front_module(input_layer, bottleneck)
 
-        head_next_stage = front_features
-
+        # Initialize a list of output layers
         outputs = []
+
+        # Stack the desired number of hourglass modules
         for i in range(self.__num_stacks):
             head_next_stage, head_to_loss = self.__hourglass_module(bottom=head_next_stage,
                                                                     bottleneck=bottleneck,
                                                                     hg_id=i)
             outputs.append(head_to_loss)
 
+        # Create the model
         model = Model(inputs=input_layer, outputs=outputs)
-        rms = RMSprop(lr=5e-4)
-        model.compile(optimizer=rms,
+
+        # Compile the model
+        model.compile(optimizer=RMSprop(lr=5e-4),
                       loss=mean_squared_error,
                       metrics=["accuracy"])
 
@@ -237,32 +263,6 @@ class HourglassNetwork:
         f8 = bottleneck(x, self.__num_channels, hg_name + '_l8')
 
         return f1, f2, f4, f8
-
-    def __connect_left_to_right(self, left, right, bottleneck, name):
-        """
-        Connect the left block to the right ones
-
-        :param left: connect left feature to right feature
-        :param name: layer name
-        :return: the connection layer between a left and right block
-        
-        Note that:
-        - left  -> 1 bottleneck
-        - right -> upsampling
-        - Add   -> left + right
-        """
-
-        x_left = bottleneck(bottom=left,
-                            block_name=name + '_connect')
-
-        x_right = UpSampling2D()(right)
-
-        add = Add()([x_left, x_right])
-
-        out = bottleneck(bottom=add,
-                         block_name=name + '_connect_conv')
-
-        return out
 
     def __bottom_layer(self, lf8, bottleneck, hg_id):
         """
@@ -446,6 +446,33 @@ class HourglassNetwork:
         return x
 
     @staticmethod
+    def __connect_left_to_right(left, right, bottleneck, name):
+        """
+        Connect the left block to the right ones
+
+        :param left: connect left feature to right feature
+        :param name: layer name
+        :return: the connection layer between a left and right block
+
+        Note that:
+        - left  -> 1 bottleneck
+        - right -> upsampling
+        - Add   -> left + right
+        """
+
+        x_left = bottleneck(bottom=left,
+                            block_name=name + '_connect')
+
+        x_right = UpSampling2D()(right)
+
+        add = Add()([x_left, x_right])
+
+        out = bottleneck(bottom=add,
+                         block_name=name + '_connect_conv')
+
+        return out
+
+    @staticmethod
     def euclidean_loss(x, y):
         return K.sqrt(K.sum(K.square(x - y)))
 
@@ -473,6 +500,7 @@ class HourglassNetwork:
 
             count = 0
             batch_size = 8
+
             for img, gth_map, meta in validation_data.generator(batch_size,
                                                                 8,
                                                                 sigma=2,
@@ -480,6 +508,7 @@ class HourglassNetwork:
                                                                 with_meta=True):
 
                 count += batch_size
+
                 if count > validation_data.get_dataset_size():
                     break
 
@@ -494,20 +523,20 @@ class HourglassNetwork:
 
             print('Eval Accuracy ', acc, '@ Epoch ', epoch)
 
-            with open(os.path.join(self.get_folder_path(), 'val.txt'), 'a+') as xfile:
-                xfile.write('Epoch ' + str(epoch) + ':' + str(acc) + '\n')
+            with open(os.path.join(self.get_folder_path(), 'val.txt'), 'a+') as x_file:
+                x_file.write('Epoch ' + str(epoch) + ':' + str(acc) + '\n')
 
         def on_epoch_end(self, epoch, logs=None):
             # This is a walk around to solve model.save() issue
             # in which large network can't be saved due to size.
 
-            # save model to json
+            # Save model to json
             if epoch == 0:
-                jsonfile = os.path.join(self.folder_path, "net_arch.json")
-                with open(jsonfile, 'w') as f:
+                json_file = os.path.join(self.folder_path, "net_arch.json")
+                with open(json_file, 'w') as f:
                     f.write(self.model.to_json())
 
-            # save weights
+            # Save weights
             model_name = os.path.join(self.folder_path, "weights_epoch" + str(epoch) + ".h5")
             self.model.save_weights(model_name)
 
