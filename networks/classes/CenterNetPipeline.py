@@ -136,7 +136,8 @@ class CenterNetPipeline:
 
         return dataset_avg_size
 
-    def run_detection(self, model_params, dataset_avg_size, weights_path) -> (List, List):
+    def run_detection(self, model_params, dataset_avg_size, weights_path) \
+            -> (List[List], Union[Dict[str, np.ndarray], None]):
         """
         Creates and runs a CenterNet to perform the image detection
 
@@ -194,14 +195,18 @@ class CenterNetPipeline:
 
         # Get labels from dataset and compute the recommended split
         avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
-        train_list = dataset_avg_size.annotate_split_recommend(avg_sizes)
+        train_list: List[List] = dataset_avg_size.annotate_split_recommend(avg_sizes)
+        # format: [ [image path, annotations, height split, width split] ]
 
         # Generate the dataset for detection
         self.dataset_params['batch_size'] = model_params['batch_size']
         self.dataset_params['batch_size_predict'] = model_params['batch_size_predict']
         dataset_detection = CenterNetDataset(self.dataset_params)
 
-        xy_train, xy_val = dataset_detection.generate_dataset(train_list, self.__test_list)
+        # Pass the list of test images if we are in test mode, otw pass None, so that the test set
+        # will not be generated.
+        test_list = self.__test_list if model_params['predict_on_test'] else None
+        xy_train, xy_val = dataset_detection.generate_dataset(train_list, test_list)
         detection_ts, detection_ts_size = dataset_detection.get_training_set()
         detection_vs, detection_vs_size = dataset_detection.get_validation_set()
         detection_ps, detection_ps_size = dataset_detection.get_test_set()
@@ -263,7 +268,7 @@ class CenterNetPipeline:
 
         # ---- END MINI TEST ----
 
-        predicted_test_bboxes: Dict[str, np.ndarray] = None
+        predicted_test_bboxes: Union[Dict[str, np.ndarray], None] = None
 
         if model_params['predict_on_test']:
             self.logs['execution'].info('Predicting test bounding boxes (takes time)...')
@@ -282,9 +287,9 @@ class CenterNetPipeline:
 
         return train_list, predicted_test_bboxes
 
-    def run_classification(self, model_params, train_list,
+    def run_classification(self, model_params, train_list: List[List],
                            bbox_predictions: Union[Dict[str, np.ndarray], None],
-                           weights_path):
+                           weights_path: str):
         """
         Classifies each character according to the available classes via a CNN
 
@@ -345,21 +350,26 @@ class CenterNetPipeline:
 
         # Test mode
         # FIXME: check why test list has just only 55 images
-        if model_params['regenerate_crops_test']:
-            self.logs['execution'].info('Starting procedure to regenerate cropped test character images')
+        test_list: Union[List[str], None] = None
+        if model_params['predict_on_test']:
+            if model_params['regenerate_crops_test']:
+                self.logs['execution'].info(
+                    'Starting procedure to regenerate cropped test character images')
 
-            # bbox_predictions is a dict: {image: [list(category, score, xmin, ymin, sxmax, ymax)]}
-            nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(bbox_predictions)
+                # bbox_predictions is a dict: {image: [list(category, score, xmin, ymin, sxmax, ymax)]}
+                nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(
+                    bbox_predictions)
 
-            self.logs['execution'].info('Cropping test images to characters...')
-            test_list = create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
-            self.logs['execution'].info('Cropping done successfully!')
+                self.logs['execution'].info('Cropping test images to characters...')
+                test_list = create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
+                self.logs['execution'].info('Cropping done successfully!')
 
-        else:  # load from folder
-            test_list = load_crop_characters(crop_char_path_test, mode='test')
+            else:  # load from folder
+                test_list = load_crop_characters(crop_char_path_test, mode='test')
 
         # Now 'train_list' is a list[(image_path, char_class)]
-        # Now 'test_list' is a list[image_path] to cropped test images
+        # Now 'test_list' is a list[image_path] to cropped test images, or None if we are not in
+        # predict mode.
         # Now that we have the list in the correct format, let's generate together the tf.data.Dataset
 
         batch_size = int(model_params['batch_size'])
@@ -367,15 +377,16 @@ class CenterNetPipeline:
         self.dataset_params['batch_size_predict'] = model_params['batch_size_predict']
         dataset_classification = ClassifierDataset(self.dataset_params)
 
-        # We need to pass it the training list, and the predictions.
-        # The predictions are used only in test mode, but nevermind.
+        # We need to pass it the training list, and the list of cropped images from test set if we are
+        # in predict mode (otw pass we pass test_list=None).
         x_train, x_val = dataset_classification.generate_dataset(train_list, test_list)
         classification_ts, classification_ts_size = dataset_classification.get_training_set()
         classification_vs, classification_vs_size = dataset_classification.get_validation_set()
         classification_ps, classification_ps_size = dataset_classification.get_test_set()
 
         if model_params['train']:
-            self.logs['execution'].info('Starting the training procedure for the classification model...')
+            self.logs['execution'].info(
+                'Starting the training procedure for the classification model...')
 
             callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
                                                     batch_size=batch_size)
@@ -391,7 +402,8 @@ class CenterNetPipeline:
                               callbacks=callbacks)
 
         if model_params['predict_on_test']:
-            self.logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+            self.logs['execution'].info(
+                'Starting the predict procedure of char class (takes much time)...')
 
             predictions = model_utils.predict(model=model,
                                               logger=self.logs['test'],

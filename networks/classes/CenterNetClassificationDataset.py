@@ -26,7 +26,7 @@ class ClassifierDataset:
         self.__output_width = params['output_width']
         self.__validation_set: Tuple[tf.data.Dataset, int] = None
         self.__training_set: Tuple[tf.data.Dataset, int] = None
-        self.__test_set: Tuple[tf.data.Dataset, int] = None
+        self.__test_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
 
     def __dataset_generator(self, data_list: np.array, batch_size: int, is_train: bool = True,
                             random_crop: bool = True) \
@@ -93,7 +93,7 @@ class ClassifierDataset:
 
         return image_resized / 255
 
-    def generate_dataset(self, train_list: List[Tuple[str, int]], test_list: List[str]) \
+    def generate_dataset(self, train_list: List[Tuple[str, int]], test_list: Union[List[str], None]) \
             -> Tuple[List[List], List[List]]:
 
         """
@@ -132,13 +132,15 @@ class ClassifierDataset:
                 .prefetch(AUTOTUNE),
             len(val_xy))
 
-        self.__test_set = (
-            tf.data.Dataset.from_tensor_slices(test_list)
-                .map(self.__test_resize_fn, num_parallel_calls=AUTOTUNE)
-                .batch(self.__batch_size_predict)
-                .prefetch(AUTOTUNE),
-            len(test_list)
-        )
+        if test_list is not None:
+            self.__test_set = (
+                tf.data.Dataset.from_tensor_slices(test_list)
+                    .map(self.__test_resize_fn, num_parallel_calls=AUTOTUNE)
+                    .batch(self.__batch_size_predict)
+                    .prefetch(AUTOTUNE),
+                len(test_list)
+            )
+        # else: it remains (None, 0)
 
         return train_xy, val_xy
 
@@ -148,5 +150,5 @@ class ClassifierDataset:
     def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
         return self.__validation_set
 
-    def get_test_set(self) -> Tuple[tf.data.Dataset, int]:
+    def get_test_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__test_set

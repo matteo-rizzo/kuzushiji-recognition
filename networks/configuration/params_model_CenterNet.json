@@ -38,11 +38,11 @@
     "restore_weights": false,
     "initial_epoch": 0,
     "train": true,
+    "regenerate_crops_train": false,
     "epochs": 0,
     "learning_rate": 1e-5,
     "decay": "",
     "predict_on_test": false,
-    "regenerate_crops_train": false,
     "regenerate_crops_test": false
   }
 }
