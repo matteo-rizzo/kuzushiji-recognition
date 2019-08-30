@@ -1,12 +1,11 @@
 import os
-from typing import List, Dict, Union
-
-import tensorflow as tf
-import numpy as np
-import pandas as pd
 import shutil
 import sys
+from typing import List, Dict, Union
 
+import numpy as np
+import pandas as pd
+import tensorflow as tf
 from tensorflow.python.keras.optimizers import Adam
 
 from networks.classes.CenterNetClassificationDataset import ClassifierDataset
@@ -17,7 +16,6 @@ from networks.functions import losses
 from networks.functions.bounding_boxes import get_bb_boxes
 from networks.functions.cropping import load_crop_characters, annotations_to_bounding_boxes, \
     create_crop_characters_train, create_crop_characters_test, predictions_to_bounding_boxes
-from tensorflow.python.keras.utils import plot_model
 
 
 class CenterNetPipeline:
@@ -348,13 +346,15 @@ class CenterNetPipeline:
         # Test mode
         # FIXME: check why test list has just only 55 images
         if model_params['regenerate_crops_test']:
-            self.logs['execution'].info(
-                'Starting procedure to regenerate cropped test character images')
+            self.logs['execution'].info('Starting procedure to regenerate cropped test character images')
+
             # bbox_predictions is a dict: {image: [list(category, score, xmin, ymin, sxmax, ymax)]}
             nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(bbox_predictions)
+
             self.logs['execution'].info('Cropping test images to characters...')
             test_list = create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
             self.logs['execution'].info('Cropping done successfully!')
+
         else:  # load from folder
             test_list = load_crop_characters(crop_char_path_test, mode='test')
 
@@ -375,8 +375,7 @@ class CenterNetPipeline:
         classification_ps, classification_ps_size = dataset_classification.get_test_set()
 
         if model_params['train']:
-            self.logs['execution'].info(
-                'Starting the training procedure for the classification model...')
+            self.logs['execution'].info('Starting the training procedure for the classification model...')
 
             callbacks = model_utils.setup_callbacks(weights_log_path=weights_path,
                                                     batch_size=batch_size)
@@ -392,11 +391,12 @@ class CenterNetPipeline:
                               callbacks=callbacks)
 
         if model_params['predict_on_test']:
-            self.logs['execution'].info(
-                'Starting the predict procedure of char class (takes much time)...')
+            self.logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+
             predictions = model_utils.predict(model=model,
                                               logger=self.logs['test'],
                                               dataset=classification_ps)
+
             self.logs['execution'].info('Completed.')
 
             return predictions
