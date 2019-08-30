@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import cv2
 import numpy as np
@@ -31,7 +31,7 @@ class CenterNetDetectionDataset:
 
         self.__validation_set: Tuple[tf.data.Dataset, int] = None
         self.__training_set: Tuple[tf.data.Dataset, int] = None
-        self.__test_set: Tuple[tf.data.Dataset, int] = None
+        self.__test_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
 
     def __dataset_generator(self, list_samples, batch_size) -> (np.float32, np.float32):
         """
@@ -167,40 +167,49 @@ class CenterNetDetectionDataset:
 
         return image_resized / 255
 
-    def generate_dataset(self, input_list, test_list: List[str]) -> Tuple[List[List], List[List]]:
+    def generate_dataset(self, input_list: List[List], test_list: Union[List[str], None]) \
+            -> Tuple[List[List], List[List]]:
         """
-        Generate the tf.data.Dataset containing all the objects.
+        Generate the tf.data.Dataset with train, validation and test set.
+
+        :param input_list: list with format [ [image path, annotations, height split, width split] ]
+        :param test_list: list of test images filepaths, or None if we don't want to generate the
+                        test set (i.e. not in predict mode).
+        :return: the train and validation sets in the same format as the input_list, after splitting
+                and shuffling operations.
         """
 
-        X_train, X_test = train_test_split(input_list,
-                                           train_size=int(self.__training_ratio * len(input_list)))
+        xy_train, xy_val = train_test_split(input_list,
+                                            train_size=int(self.__training_ratio * len(input_list)))
 
         self.__training_set = (
             tf.data.Dataset.from_generator(
-                lambda: self.__dataset_generator(X_train, self.__batch_size),
+                lambda: self.__dataset_generator(xy_train, self.__batch_size),
                 output_types=(np.float32,
                               np.float32))
                 .repeat()
                 .prefetch(AUTOTUNE),
-            len(X_train))
+            len(xy_train))
 
         self.__validation_set = (
             tf.data.Dataset.from_generator(
-                lambda: self.__dataset_generator(X_test, self.__batch_size),
+                lambda: self.__dataset_generator(xy_val, self.__batch_size),
                 output_types=(np.float32,
                               np.float32))
                 .repeat()
                 .prefetch(AUTOTUNE),
-            len(X_test))
+            len(xy_val))
 
-        self.__test_set = (
-            tf.data.Dataset.from_tensor_slices(test_list)
-                .map(self.__test_resize_fn, num_parallel_calls=AUTOTUNE)
-                .batch(self.__batch_size_predict)
-                .prefetch(AUTOTUNE),
-            len(test_list))
+        if test_list is not None:
+            self.__test_set = (
+                tf.data.Dataset.from_tensor_slices(test_list)
+                    .map(self.__test_resize_fn, num_parallel_calls=AUTOTUNE)
+                    .batch(self.__batch_size_predict)
+                    .prefetch(AUTOTUNE),
+                len(test_list))
+        # else: it's (None, 0)
 
-        return X_train, X_test
+        return xy_train, xy_val
 
     def get_training_set(self) -> Tuple[tf.data.Dataset, int]:
         return self.__training_set
@@ -208,5 +217,5 @@ class CenterNetDetectionDataset:
     def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
         return self.__validation_set
 
-    def get_test_set(self) -> Tuple[tf.data.Dataset, int]:
+    def get_test_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__test_set

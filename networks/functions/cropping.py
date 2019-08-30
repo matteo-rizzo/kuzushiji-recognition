@@ -43,12 +43,12 @@ def user_check(save_dir):
         os.mkdir(save_dir)
 
 
-def annotations_to_bounding_boxes(annotations: List) -> Dict[str, np.array]:
+def annotations_to_bounding_boxes(annotations: List[List]) -> Dict[str, np.array]:
     """
     Utility to convert between the annotation format, and the format required by
     create_crop_characters_train function for character
 
-    :param annotations: List[str, np.array] with image path and image annotations where:
+    :param annotations: List[str, np.array, ...] with image path and image annotations where:
         - ann[:, 0] = class
         - ann[:, 1] = x_center
         - ann[:, 2] = y_center
@@ -90,6 +90,10 @@ def predictions_to_bounding_boxes(predictions: Dict[str, np.array]) -> Dict[str,
                         {image: np.array[(category, score, xmin, ymin, xmax, ymax)]}
     :return: dict {image: np.array[xmin, ymin, xmax, ymax]}
     """
+
+    assert predictions is not None, 'Predicted bounding box dictionary is None!\n Probably you forgot ' \
+                                    'to set \'predict_on_test\' param to true for detection model.'
+
     result = dict()
     for k, v in tqdm(predictions.items()):
         result[k] = v[:, 2:]
