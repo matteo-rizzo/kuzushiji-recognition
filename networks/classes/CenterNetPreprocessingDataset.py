@@ -10,7 +10,7 @@ from PIL import Image
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-class SizePredictDataset:
+class CenterNetPreprocessingDataset:
     def __init__(self, params: Dict):
         self.__train_csv_path = params['train_csv_path']
         self.__train_images_path = params['train_images_path']
@@ -20,6 +20,7 @@ class SizePredictDataset:
         self.__annotation_list_train: List[List]
         self.__aspect_ratio_pic_all: List[float]
         self.__dataset: Tuple[tf.data.Dataset, int]
+        self.__dict_cat: Dict[str, int]
 
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
@@ -29,7 +30,7 @@ class SizePredictDataset:
     def get_dataset_labels(self) -> List[float]:
         return [el[1] for el in self.__annotation_list_train_area]
 
-    def generate_dataset(self):
+    def generate_dataset(self) -> Dict[str, int]:
         # Generate a list of list where each row represent an image and the list of the characters within it
         # (codified as integers) with relative coordinates of bbox
         self.__annotate()
@@ -39,6 +40,8 @@ class SizePredictDataset:
 
         # Generate the tf.data.Dataset containing all the objects
         self.__compose_dataset_object()
+
+        return self.__dict_cat
 
     def __annotate(self):
         df_train = pd.read_csv(self.__train_csv_path)
@@ -61,7 +64,7 @@ class SizePredictDataset:
         category_names = sorted(category_names)
 
         # Make a dict assigning an integer to each category
-        dict_cat = {list(category_names)[j]: str(j) for j in range(len(category_names))}
+        self.__dict_cat = {list(category_names)[j]: j for j in range(len(category_names))}
         # inv_dict_cat = {str(j): list(category_names)[j] for j in range(len(category_names))}
 
         for i in range(len(df_train)):
@@ -71,7 +74,7 @@ class SizePredictDataset:
             # Iterate over categories in first column of ann (characters)
             for j, category_name in enumerate(ann[:, 0]):
                 # Change categories in integer values
-                ann[j, 0] = int(dict_cat[category_name])
+                ann[j, 0] = int(self.__dict_cat[category_name])
 
             # Calculate the center of each bbox
             # ann[:, 0] = class
