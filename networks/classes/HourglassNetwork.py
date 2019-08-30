@@ -1,10 +1,10 @@
 import os
 
-from PIL import Image
-from keras.layers import *
-from keras.losses import mean_squared_error
-from keras.models import *
-from keras.optimizers import RMSprop
+import keras.backend as kb
+from tensorflow.keras.layers import *
+from tensorflow.keras.losses import mean_squared_error
+from tensorflow.keras.models import *
+from tensorflow.keras.optimizers import RMSprop
 
 from networks.classes.CenterNetDetectionDataset import CenterNetDetectionDataset
 from networks.classes.ModelCenterNet import ModelCenterNet
@@ -26,6 +26,12 @@ class HourglassNetwork:
 
         self.__model = None
         self.__build()
+
+    def load_model(self, model_json, model_file):
+        with open(model_json) as f:
+            self.__model = model_from_json(f.read())
+
+        self.__model.load_weights(model_file)
 
     def train(self, dataset_params, train_list, test_list, weights_path):
 
@@ -105,52 +111,46 @@ class HourglassNetwork:
     #                                epochs=epochs,
     #                                callbacks=callbacks)
 
-    def load_model(self, model_json, model_file):
-        with open(model_json) as f:
-            self.__model = model_from_json(f.read())
-
-        self.__model.load_weights(model_file)
-
-    def inference_file(self, img_file, mean=None):
-        """
-        Performs inference on an image file
-
-        :param img_file: the image file which the inference must be performed on
-        :param mean:
-        :return:
-        """
-
-        img_data = Image.open(img_file)
-
-        return self.__inference_rgb(rgb_data=img_data,
-                                    org_shape=img_data.shape,
-                                    mean=mean)
-
-    def __inference_rgb(self, rgb_data, org_shape, mean=None):
-        """
-        Performs inference on RGB data
-        
-        :param rgb_data: the RGB data which the inference must be performed on
-        :param org_shape: the original shape of the image
-        :param mean: 
-        :return: 
-        """
-
-        scale = (org_shape[0] * 1.0 / self.__in_res[0],
-                 org_shape[1] * 1.0 / self.__in_res[1])
-
-        img_data = rgb_data.resize(self.__in_res)
-
-        if mean is None:
-            mean = np.array([0.4404, 0.4440, 0.4327], dtype=np.float)
-
-        img_data = normalize(img_data, mean)
-
-        input_img = img_data[np.newaxis, :, :, :]
-
-        out = self.__model.predict(input_img)
-
-        return out[-1], scale
+    # def inference_file(self, img_file, mean=None):
+    #     """
+    #     Performs inference on an image file
+    #
+    #     :param img_file: the image file which the inference must be performed on
+    #     :param mean:
+    #     :return:
+    #     """
+    #
+    #     img_data = Image.open(img_file)
+    #
+    #     return self.__inference_rgb(rgb_data=img_data,
+    #                                 org_shape=img_data.shape,
+    #                                 mean=mean)
+    #
+    # def __inference_rgb(self, rgb_data, org_shape, mean=None):
+    #     """
+    #     Performs inference on RGB data
+    #
+    #     :param rgb_data: the RGB data which the inference must be performed on
+    #     :param org_shape: the original shape of the image
+    #     :param mean:
+    #     :return:
+    #     """
+    #
+    #     scale = (org_shape[0] * 1.0 / self.__in_res[0],
+    #              org_shape[1] * 1.0 / self.__in_res[1])
+    #
+    #     img_data = rgb_data.resize(self.__in_res)
+    #
+    #     if mean is None:
+    #         mean = np.array([0.4404, 0.4440, 0.4327], dtype=np.float)
+    #
+    #     img_data = normalize(img_data, mean)
+    #
+    #     input_img = img_data[np.newaxis, :, :, :]
+    #
+    #     out = self.__model.predict(input_img)
+    #
+    #     return out[-1], scale
 
     def __build(self, mobile=False):
         """
@@ -384,7 +384,7 @@ class HourglassNetwork:
     def __bottleneck_block(bottom, num_channels, block_name):
 
         # Skip layer
-        if K.int_shape(bottom)[-1] == num_channels:
+        if kb.int_shape(bottom)[-1] == num_channels:
             skip = bottom
         else:
             skip = Conv2D(num_channels,
@@ -425,7 +425,7 @@ class HourglassNetwork:
     @staticmethod
     def __bottleneck_mobile(bottom, num_channels, block_name):
         # Skip layer
-        if K.int_shape(bottom)[-1] == num_channels:
+        if kb.int_shape(bottom)[-1] == num_channels:
             skip = bottom
         else:
             skip = SeparableConv2D(num_channels,
@@ -494,4 +494,4 @@ class HourglassNetwork:
 
     @staticmethod
     def euclidean_loss(x, y):
-        return K.sqrt(K.sum(K.square(x - y)))
+        return kb.sqrt(kb.sum(kb.square(x - y)))

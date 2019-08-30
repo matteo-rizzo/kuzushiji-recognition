@@ -146,11 +146,11 @@ class CenterNetPipeline:
         model = HourglassNetwork(run_id=run_id,
                                  log=self.logs['training'],
                                  model_params=model_params,
-                                 num_classes=16,
-                                 num_stacks=2,
-                                 num_channels=256,
-                                 in_res=(256, 256),
-                                 out_res=(64, 64))
+                                 num_classes=4787,
+                                 num_stacks=1,
+                                 num_channels=7,
+                                 in_res=(512, 512),
+                                 out_res=(128, 128))
 
         model.train(dataset_params=self.dataset_params,
                     train_list=train_list,
