@@ -12,7 +12,7 @@ from networks.classes.CenterNetClassificationDataset import CenterNetClassificat
 from networks.classes.CenterNetDetectionDataset import CenterNetDetectionDataset
 from networks.classes.HourglassNetwork import HourglassNetwork
 from networks.classes.ModelCenterNet import ModelCenterNet
-from networks.classes.CenterNetPreprocessingDataset import PreprocessingDataset
+from networks.classes.CenterNetPreprocessingDataset import CenterNetPreprocessingDataset
 from networks.functions import losses
 from networks.functions.bounding_boxes import get_bb_boxes
 from networks.functions.cropping import load_crop_characters, annotations_to_bounding_boxes, \
@@ -67,7 +67,7 @@ class CenterNetPipeline:
 
         return image_resized / 255
 
-    def run_preprocessing(self, model_params: Dict, weights_path: str) -> PreprocessingDataset:
+    def run_preprocessing(self, model_params: Dict, weights_path: str) -> CenterNetPreprocessingDataset:
         """
         Creates and runs a CNN which takes an image/page of manuscript as input and predicts the
         average dimensional ratio between the characters and the image itself
@@ -87,7 +87,7 @@ class CenterNetPipeline:
         self.logs['execution'].info('Preprocessing the data...')
 
         # Build dataset for model 1
-        dataset_avg_size = PreprocessingDataset(model_params)
+        dataset_avg_size = CenterNetPreprocessingDataset(model_params)
 
         self.__dict_cat = dataset_avg_size.generate_dataset()
         # Dictionary that map each char category into an integer value
@@ -146,6 +146,9 @@ class CenterNetPipeline:
 
     def run_hourglass_detection(self, model_params, dataset_avg_size, weights_path, run_id):
 
+        # Add dataset params to model params for simplicity
+        model_params.update(self.dataset_params)
+
         avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
         train_list: List[List] = dataset_avg_size.annotate_split_recommend(avg_sizes)
 
@@ -158,7 +161,7 @@ class CenterNetPipeline:
                                  in_res=(256, 256),
                                  out_res=(64, 64))
 
-        model.train(dataset_params=self.dataset_params,
+        model.train(dataset_params=model_params,
                     train_list=train_list,
                     test_list=self.__test_list,
                     weights_path=weights_path)
@@ -205,7 +208,7 @@ class CenterNetPipeline:
             self.__check_no_weights_in_run_folder(weights_path)
 
         # Generate the CenterNet model
-        model_utils = ModelUtilities()
+        model_utils = ModelCenterNet()
         model = model_utils.generate_model(input_shape=input_shape, mode=2)
 
         try:
@@ -237,7 +240,7 @@ class CenterNetPipeline:
         # Generate the dataset for detection
         self.dataset_params['batch_size'] = model_params['batch_size']
         self.dataset_params['batch_size_predict'] = model_params['batch_size_predict']
-        dataset_detection = CenterNetDataset(model_params)
+        dataset_detection = CenterNetDetectionDataset(model_params)
 
         # Pass the list of test images if we are in test mode, otw pass None, so that the test set
         # will not be generated.
@@ -349,7 +352,7 @@ class CenterNetPipeline:
             self.__check_no_weights_in_run_folder(weights_path)
 
         # Generate a model
-        model_utils = ModelUtilities()
+        model_utils = ModelCenterNet()
         model = model_utils.generate_model(input_shape=input_shape,
                                            mode=3,
                                            n_category=len(self.__dict_cat))
@@ -418,7 +421,7 @@ class CenterNetPipeline:
         # Now that we have the list in the correct format, let's generate together the tf.data.Dataset
 
         batch_size = int(model_params['batch_size'])
-        dataset_classification = ClassifierDataset(model_params)
+        dataset_classification = CenterNetClassificationDataset(model_params)
 
         # We need to pass it the training list, and the list of cropped images from test set if we are
         # in predict mode (otw pass we pass test_list=None).
