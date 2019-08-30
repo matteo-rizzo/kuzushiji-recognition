@@ -397,7 +397,6 @@ class CenterNetPipeline:
             train_list: List[Tuple[str, int]] = load_crop_characters(crop_char_path_train, mode='train')
 
         # Test mode
-        # FIXME: check why test list has just only 55 images
         test_list: Union[List[str], None] = None
         if model_params['predict_on_test']:
             if model_params['regenerate_crops_test']:
