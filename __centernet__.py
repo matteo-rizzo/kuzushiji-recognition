@@ -46,9 +46,6 @@ def main():
     model_2_params = centernet_params.model_2
     model_3_params = centernet_params.model_3
 
-    # Get the shape of the input images
-    input_shape = (dataset_params['input_width'], dataset_params['input_height'], 3)
-
     # Get the info for the current run
     run_id = centernet_params.run_id
 
@@ -84,7 +81,6 @@ def main():
 
     # Initialize a learning pipeline for CenterNet
     pipeline = CenterNetPipeline(dataset_params=dataset_params,
-                                 input_shape=input_shape,
                                  logs=logs)
 
     # --- STEP 1: Pre-processing (Check Object Size) ---

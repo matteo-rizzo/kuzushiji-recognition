@@ -89,7 +89,7 @@ class ClassifierDataset:
 
         image_string = tf.read_file(path)
         image_decoded = tf.image.decode_jpeg(image_string)
-        image_resized = tf.image.resize(image_decoded, (64, 64))
+        image_resized = tf.image.resize(image_decoded, (self.__input_height, self.__input_width))
 
         return image_resized / 255
 

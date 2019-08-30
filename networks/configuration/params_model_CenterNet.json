@@ -5,7 +5,7 @@
     "train_images_path": "datasets/kaggle/training/images",
     "test_images_path": "datasets/kaggle/testing/images",
     "sample_submission": "datasets/kaggle/sample_submission.csv",
-    "training_ratio": 0.7
+    "training_ratio": 0.75
   },
   "model_1": {
     "batch_size": 32,
@@ -15,9 +15,9 @@
     "initial_epoch": 14,
     "learning_rate": 1e-4,
     "decay": "",
-
     "input_width": 512,
     "input_height": 512,
+    "input_channels": 3,
     "output_width": 128,
     "output_height": 128
   },
@@ -32,9 +32,9 @@
     "decay": 0.001,
     "predict_on_test": true,
     "show_prediction_examples": false,
-
     "input_width": 512,
     "input_height": 512,
+    "input_channels": 3,
     "output_width": 128,
     "output_height": 128
   },
@@ -49,10 +49,10 @@
     "learning_rate": 1e-5,
     "decay": "",
     "predict_on_test": true,
-    "regenerate_crops_test": true,
-
+    "regenerate_crops_test": false,
     "input_width": 32,
     "input_height": 32,
+    "input_channels": 3,
     "output_width": 8,
     "output_height": 8
   }
