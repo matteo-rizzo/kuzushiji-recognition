@@ -1,4 +1,4 @@
-from typing import Dict, Generator, Tuple, List, Union
+from typing import Dict, Generator, Tuple, List
 
 import cv2
 import numpy as np
@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-class ClassifierDataset:
+class CenterNetClassificationDataset:
     def __init__(self, params: Dict):
         self.__train_csv_path = params['train_csv_path']
         self.__train_images_path = params['train_images_path']

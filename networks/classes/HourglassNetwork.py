@@ -1,21 +1,24 @@
-import datetime
 import os
 
-import keras
 from PIL import Image
 from data_process import normalize
-from eval_heatmap import cal_heatmap_acc
-from keras.callbacks import CSVLogger
 from keras.layers import *
 from keras.losses import mean_squared_error
 from keras.models import *
 from keras.optimizers import RMSprop
-from mpii_datagen import MPIIDataGen
+
+from networks.classes.CenterNetDetectionDataset import CenterNetDetectionDataset
+from networks.classes.ModelCenterNet import ModelCenterNet
 
 
 class HourglassNetwork:
 
-    def __init__(self, num_classes, num_stacks, num_channels, in_res, out_res):
+    def __init__(self, run_id, log, model_params, num_classes, num_stacks, num_channels, in_res, out_res):
+
+        self.__experiment_path = os.path.join(os.getcwd(), 'network', 'experiments', run_id + '_2')
+        self.__log = log
+        self.__model_params = model_params
+
         self.__num_classes = num_classes
         self.__num_stacks = num_stacks
         self.__num_channels = num_channels
@@ -25,78 +28,86 @@ class HourglassNetwork:
         self.__model = None
         self.__build()
 
-    def train(self, batch_size, model_path, epochs):
-        train_dataset = MPIIDataGen("../../data/mpii/mpii_annotations.json", "../../data/mpii/images",
-                                    in_res=self.__in_res,
-                                    out_res=self.__out_res,
-                                    is_train=True)
-        train_gen = train_dataset.generator(batch_size,
-                                            self.__num_stacks,
-                                            sigma=1,
-                                            is_shuffle=True,
-                                            rot_flag=True,
-                                            scale_flag=True,
-                                            flip_flag=True)
+    def train(self, dataset_params, train_list, test_list, weights_path):
 
-        csv_logger = CSVLogger(os.path.join(model_path,
-                                            "csv_train_" + str(datetime.datetime.now().strftime('%H:%M')) + ".csv"))
-        model_file = os.path.join(model_path, 'weights_{epoch:02d}_{loss:.2f}.hdf5')
+        batch_size = dataset_params['batch_size']
+        epochs = dataset_params['epochs']
+        init_epoch = dataset_params['initial_epoch']
 
-        checkpoint = self.EvalCallBack(model_path, self.__in_res, self.__out_res)
+        # Generate the dataset for detection
+        dataset_detection = CenterNetDetectionDataset(dataset_params)
 
-        x_callbacks = [csv_logger, checkpoint]
+        _, _ = dataset_detection.generate_dataset(train_list, test_list)
+        training_set, detection_ts_size = dataset_detection.get_training_set()
+        validation_set, detection_vs_size = dataset_detection.get_validation_set()
 
-        self.__model.fit_generator(generator=train_gen,
-                                   steps_per_epoch=train_dataset.get_dataset_size() // batch_size,
-                                   epochs=epochs,
-                                   callbacks=x_callbacks)
+        model_file = os.path.join(self.__experiment_path, 'weights_{epoch:02d}_{loss:.2f}.hdf5')
 
-    def resume_training(self, batch_size, model_json, model_weights, init_epoch, epochs):
+        # Set up the callbacks
+        callbacks = ModelCenterNet.setup_callbacks(weights_log_path=weights_path,
+                                                   batch_size=batch_size)
 
-        self.load_model(model_json, model_weights)
-        self.__model.compile(optimizer=RMSprop(lr=5e-4),
-                             loss=mean_squared_error,
-                             metrics=["accuracy"])
+        self.__log.info('Training the model...\n')
 
-        train_dataset = MPIIDataGen("../../data/mpii/mpii_annotations.json", "../../data/mpii/images",
-                                    in_res=self.__in_res,
-                                    out_res=self.__out_res,
-                                    is_train=True)
+        # Display the architecture of the model
+        self.__log.info('Architecture of the model:')
+        self.__model.summary()
 
-        train_gen = train_dataset.generator(batch_size,
-                                            self.__num_stacks,
-                                            sigma=1,
-                                            is_shuffle=True,
-                                            rot_flag=True,
-                                            scale_flag=True,
-                                            flip_flag=True)
+        # Train the model
+        self.__log.info('Starting the fitting procedure:')
+        self.__log.info('* Total number of epochs:   ' + str(epochs))
+        self.__log.info('* Initial epoch:            ' + str(init_epoch) + '\n')
 
-        model_dir = os.path.dirname(os.path.abspath(model_json))
-        print(model_dir, model_json)
-        csv_logger = CSVLogger(os.path.join(model_dir,
-                                            "csv_train_" + str(datetime.datetime.now().strftime('%H:%M')) + ".csv"))
+        self.__model.fit(training_set,
+                         epochs=epochs,
+                         steps_per_epoch=int(detection_ts_size // batch_size) + 1,
+                         validation_data=validation_set,
+                         validation_steps=int(detection_vs_size // batch_size) + 1,
+                         callbacks=callbacks,
+                         initial_epoch=init_epoch)
 
-        checkpoint = self.EvalCallBack(model_dir, self.__in_res, self.__out_res)
+        self.__log.info('Training procedure performed successfully!\n')
 
-        x_callbacks = [csv_logger, checkpoint]
-
-        self.__model.fit_generator(generator=train_gen,
-                                   steps_per_epoch=train_dataset.get_dataset_size() // batch_size,
-                                   initial_epoch=init_epoch,
-                                   epochs=epochs,
-                                   callbacks=x_callbacks)
+    # def resume_training(self, batch_size, model_json, model_weights, init_epoch, epochs):
+    #
+    #     self.load_model(model_json, model_weights)
+    #     self.__model.compile(optimizer=RMSprop(lr=5e-4),
+    #                          loss=mean_squared_error,
+    #                          metrics=["accuracy"])
+    #
+    #     train_dataset = MPIIDataGen("../../data/mpii/mpii_annotations.json", "../../data/mpii/images",
+    #                                 in_res=self.__in_res,
+    #                                 out_res=self.__out_res,
+    #                                 is_train=True)
+    #
+    #     train_gen = train_dataset.generator(batch_size,
+    #                                         self.__num_stacks,
+    #                                         sigma=1,
+    #                                         is_shuffle=True,
+    #                                         rot_flag=True,
+    #                                         scale_flag=True,
+    #                                         flip_flag=True)
+    #
+    #     model_dir = os.path.dirname(os.path.abspath(model_json))
+    #     print(model_dir, model_json)
+    #     csv_logger = CSVLogger(os.path.join(model_dir,
+    #                                         "csv_train_" + str(datetime.datetime.now().strftime('%H:%M')) + ".csv"))
+    #
+    #     checkpoint = self.EvalCallBack(model_dir, self.__in_res, self.__out_res)
+    #
+    #     callbacks = [csv_logger, checkpoint]
+    #
+    #     self.__model.fit_generator(generator=train_gen,
+    #                                steps_per_epoch=train_dataset.get_dataset_size() // batch_size,
+    #                                initial_epoch=init_epoch,
+    #                                epochs=epochs,
+    #                                callbacks=callbacks)
 
     def load_model(self, model_json, model_file):
         with open(model_json) as f:
             self.__model = model_from_json(f.read())
 
         self.__model.load_weights(model_file)
-
-    def display_summary(self):
-        """
-        Displays the architecture of the model
-        """
-        self.__model.summary()
 
     def inference_file(self, img_file, mean=None):
         """
@@ -475,71 +486,3 @@ class HourglassNetwork:
     @staticmethod
     def euclidean_loss(x, y):
         return K.sqrt(K.sum(K.square(x - y)))
-
-    class EvalCallBack(keras.callbacks.Callback):
-
-        def __init__(self, folder_path, in_res, out_res):
-            super().__init__()
-
-            self.folder_path = folder_path
-            self.in_res = in_res
-            self.out_res = out_res
-
-        def get_folder_path(self):
-            return self.folder_path
-
-        def run_eval(self, epoch):
-            validation_data = MPIIDataGen("../../data/mpii/mpii_annotations.json",
-                                          "../../data/mpii/images",
-                                          in_res=self.in_res,
-                                          out_res=self.out_res,
-                                          is_train=False)
-
-            total_suc, total_fail = 0, 0
-            threshold = 0.5
-
-            count = 0
-            batch_size = 8
-
-            for img, gth_map, meta in validation_data.generator(batch_size,
-                                                                8,
-                                                                sigma=2,
-                                                                is_shuffle=False,
-                                                                with_meta=True):
-
-                count += batch_size
-
-                if count > validation_data.get_dataset_size():
-                    break
-
-                out = self.model.predict(img)
-
-                suc, bad = cal_heatmap_acc(out[-1], meta, threshold)
-
-                total_suc += suc
-                total_fail += bad
-
-            acc = total_suc * 1.0 / (total_fail + total_suc)
-
-            print('Eval Accuracy ', acc, '@ Epoch ', epoch)
-
-            with open(os.path.join(self.get_folder_path(), 'val.txt'), 'a+') as x_file:
-                x_file.write('Epoch ' + str(epoch) + ':' + str(acc) + '\n')
-
-        def on_epoch_end(self, epoch, logs=None):
-            # This is a walk around to solve model.save() issue
-            # in which large network can't be saved due to size.
-
-            # Save model to json
-            if epoch == 0:
-                json_file = os.path.join(self.folder_path, "net_arch.json")
-                with open(json_file, 'w') as f:
-                    f.write(self.model.to_json())
-
-            # Save weights
-            model_name = os.path.join(self.folder_path, "weights_epoch" + str(epoch) + ".h5")
-            self.model.save_weights(model_name)
-
-            print("Saving model to ", model_name)
-
-            self.run_eval(epoch)

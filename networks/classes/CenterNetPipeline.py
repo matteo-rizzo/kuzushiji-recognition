@@ -8,9 +8,9 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.python.keras.optimizers import Adam
 
-from networks.classes.CenterNetClassificationDataset import ClassifierDataset
-from networks.classes.CenterNetDetectionDataset import CenterNetDataset
-from networks.classes.ModelCenterNet import ModelUtilities
+from networks.classes.CenterNetClassificationDataset import CenterNetClassificationDataset
+from networks.classes.CenterNetDetectionDataset import CenterNetDetectionDataset
+from networks.classes.ModelCenterNet import ModelCenterNet
 from networks.classes.SizePredictDataset import SizePredictDataset
 from networks.functions import losses
 from networks.functions.bounding_boxes import get_bb_boxes
@@ -23,6 +23,7 @@ class CenterNetPipeline:
         self.dataset_params = dataset_params
         self.input_shape = input_shape
         self.logs = logs
+
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = os.path.join(os.getcwd(), 'datasets', 'kaggle', 'testing', 'images')
         self.__test_list = [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list]
@@ -91,7 +92,7 @@ class CenterNetPipeline:
         # size_check_ps, size_check_ps_size = dataset_avg_size.get_test_set()
         #
         # # Generate a model
-        # model_utils = ModelUtilities()
+        # model_utils = ModelCenterNet()
         # model = model_utils.generate_model(input_shape=self.input_shape, mode=1)
 
         # try:
@@ -168,7 +169,7 @@ class CenterNetPipeline:
             self.__check_no_weights_in_run_folder(weights_path)
 
         # Generate the CenterNet model
-        model_utils = ModelUtilities()
+        model_utils = ModelCenterNet()
         model = model_utils.generate_model(input_shape=self.input_shape, mode=2)
 
         try:
@@ -199,7 +200,7 @@ class CenterNetPipeline:
         # Generate the dataset for detection
         self.dataset_params['batch_size'] = model_params['batch_size']
         self.dataset_params['batch_size_predict'] = model_params['batch_size_predict']
-        dataset_detection = CenterNetDataset(self.dataset_params)
+        dataset_detection = CenterNetDetectionDataset(self.dataset_params)
 
         xy_train, xy_val = dataset_detection.generate_dataset(train_list, self.__test_list)
         detection_ts, detection_ts_size = dataset_detection.get_training_set()
@@ -300,7 +301,7 @@ class CenterNetPipeline:
             self.__check_no_weights_in_run_folder(weights_path)
 
         # Generate a model
-        model_utils = ModelUtilities()
+        model_utils = ModelCenterNet()
         model = model_utils.generate_model(input_shape=(64, 64, 3),
                                            mode=3,
                                            n_category=4000)
@@ -365,7 +366,7 @@ class CenterNetPipeline:
         batch_size = int(model_params['batch_size'])
         self.dataset_params['batch_size'] = batch_size
         self.dataset_params['batch_size_predict'] = model_params['batch_size_predict']
-        dataset_classification = ClassifierDataset(self.dataset_params)
+        dataset_classification = CenterNetClassificationDataset(self.dataset_params)
 
         # We need to pass it the training list, and the predictions.
         # The predictions are used only in test mode, but nevermind.
