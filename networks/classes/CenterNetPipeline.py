@@ -1,7 +1,7 @@
 import os
 import shutil
 import sys
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ from tensorflow.python.keras.optimizers import Adam
 from networks.classes.CenterNetClassificationDataset import ClassifierDataset
 from networks.classes.CenterNetDetectionDataset import CenterNetDataset
 from networks.classes.ModelCenterNet import ModelUtilities
-from networks.classes.SizePredictDataset import SizePredictDataset
+from networks.classes.CenterNetPreprocessingDataset import PreprocessingDataset
 from networks.functions import losses
 from networks.functions.bounding_boxes import get_bb_boxes
 from networks.functions.cropping import load_crop_characters, annotations_to_bounding_boxes, \
@@ -19,6 +19,8 @@ from networks.functions.cropping import load_crop_characters, annotations_to_bou
 
 
 class CenterNetPipeline:
+    __dict_cat: Dict[str, int]
+
     def __init__(self, dataset_params, input_shape, logs):
         self.dataset_params = dataset_params
         self.input_shape = input_shape
@@ -64,7 +66,7 @@ class CenterNetPipeline:
 
         return image_resized / 255
 
-    def run_preprocessing(self, model_params, weights_path) -> SizePredictDataset:
+    def run_preprocessing(self, model_params, weights_path) -> PreprocessingDataset:
         """
         Creates and runs a CNN which takes an image/page of manuscript as input and predicts the
         average dimensional ratio between the characters and the image itself
@@ -82,9 +84,10 @@ class CenterNetPipeline:
 
         # Build dataset for model 1
         self.dataset_params['batch_size'] = model_params['batch_size']
-        dataset_avg_size = SizePredictDataset(self.dataset_params)
+        dataset_avg_size = PreprocessingDataset(self.dataset_params)
 
-        dataset_avg_size.generate_dataset()
+        self.__dict_cat = dataset_avg_size.generate_dataset()
+        # Dictionary that map each char category into an integer value
 
         size_check_ts, size_check_ts_size = dataset_avg_size.get_training_set()
         size_check_vs, size_check_vs_size = dataset_avg_size.get_validation_set()
@@ -278,7 +281,7 @@ class CenterNetPipeline:
 
             self.logs['execution'].info('Completed.')
 
-            self.logs['execution'].info('Converting into bounding boxes...')
+            self.logs['execution'].info('Converting test predictions into bounding boxes...')
             predicted_test_bboxes = get_bb_boxes(test_predictions,
                                                  mode='test',
                                                  test_images_path=self.__test_list,
@@ -308,7 +311,7 @@ class CenterNetPipeline:
         model_utils = ModelUtilities()
         model = model_utils.generate_model(input_shape=(64, 64, 3),
                                            mode=3,
-                                           n_category=4000)
+                                           n_category=len(self.__dict_cat))
 
         # Restore the weights, if required
         if model_params['restore_weights']:
@@ -343,10 +346,11 @@ class CenterNetPipeline:
             crop_formatted_list = annotations_to_bounding_boxes(train_list)
 
             self.logs['execution'].info('Cropping images to characters...')
-            train_list = create_crop_characters_train(crop_formatted_list, crop_char_path_train)
+            train_list: List[Tuple[str, int]] \
+                = create_crop_characters_train(crop_formatted_list, crop_char_path_train)
             self.logs['execution'].info('Cropping done successfully!')
         else:  # load from folder
-            train_list = load_crop_characters(crop_char_path_train, mode='train')
+            train_list: List[Tuple[str, int]] = load_crop_characters(crop_char_path_train, mode='train')
 
         # Test mode
         # FIXME: check why test list has just only 55 images
@@ -356,9 +360,9 @@ class CenterNetPipeline:
                 self.logs['execution'].info(
                     'Starting procedure to regenerate cropped test character images')
 
-                # bbox_predictions is a dict: {image: [list(category, score, xmin, ymin, sxmax, ymax)]}
-                nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(
-                    bbox_predictions)
+                # bbox_predictions is a dict: {image: np.arr[category, score, xmin, ymin, sxmax, ymax]}
+                nice_formatted_dict: Dict[str, np.array] \
+                    = predictions_to_bounding_boxes(bbox_predictions)
 
                 self.logs['execution'].info('Cropping test images to characters...')
                 test_list = create_crop_characters_test(nice_formatted_dict, crop_char_path_test)

@@ -11,7 +11,6 @@ from tensorflow.python.keras.layers import UpSampling2D, Concatenate, Conv2D, In
     GlobalAveragePooling2D, Dense, Dropout, Activation
 
 from networks.functions.blocks import cbr, aggregation_block, resblock
-from tensorflow.python.keras import backend as K
 
 
 class ModelUtilities:

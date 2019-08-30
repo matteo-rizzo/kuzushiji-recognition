@@ -36,18 +36,18 @@ def get_bb_boxes(predictions: np.ndarray,
     """
 
     all_boxes = dict()
+    c = 0
 
     for i in tqdm(np.arange(0, predictions.shape[0])):
 
         if mode == 'train':
             image_path = annotation_list[i][0]
         elif mode == 'test':
-            image_path = test_images_path[0]
+            image_path = test_images_path[i]
         else:
             raise ValueError('Error: unsupported mode {}'.format(mode))
 
         img = Image.open(image_path).convert("RGB")
-        width, height = img.size
 
         box_and_score = boxes_for_image(predicts=predictions[i],
                                         category_n=1,
@@ -56,6 +56,7 @@ def get_bb_boxes(predictions: np.ndarray,
         # Bidimensional np.ndarray. Each row is (category,score,ymin,xmin,ymax,xmax)
 
         if len(box_and_score) == 0:
+            c += 1
             continue
 
         heatmap = predictions[i, :, :, 0]
@@ -129,7 +130,8 @@ def boxes_for_image(predicts, category_n, score_thresh, iou_thresh) -> np.ndarra
                                         width[mask],
                                         iou_thresh)
 
-        # Insert <category> into box_and_score (which has the structure <score> <ymin> <xmin> <ymax> <xmax>)
+        # Insert <category> into box_and_score
+        # (which has the structure <score> <ymin> <xmin> <ymax> <xmax>)
         box_and_score = np.insert(box_and_score,
                                   0,
                                   category,
