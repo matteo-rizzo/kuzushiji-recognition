@@ -1,7 +1,6 @@
 import os
 
 from PIL import Image
-from data_process import normalize
 from keras.layers import *
 from keras.losses import mean_squared_error
 from keras.models import *
@@ -30,9 +29,12 @@ class HourglassNetwork:
 
     def train(self, dataset_params, train_list, test_list, weights_path):
 
-        batch_size = dataset_params['batch_size']
-        epochs = dataset_params['epochs']
-        init_epoch = dataset_params['initial_epoch']
+        batch_size = self.__model_params['batch_size']
+        epochs = self.__model_params['epochs']
+        init_epoch = self.__model_params['initial_epoch']
+
+        dataset_params['batch_size'] = self.__model_params['batch_size']
+        dataset_params['batch_size_predict'] = self.__model_params['batch_size_predict']
 
         # Generate the dataset for detection
         dataset_detection = CenterNetDetectionDataset(dataset_params)
@@ -317,16 +319,19 @@ class HourglassNetwork:
 
         rf4 = self.__connect_left_to_right(left=lf4,
                                            right=rf8,
+                                           num_channels=self.__num_channels,
                                            bottleneck=bottleneck,
                                            name='hg' + str(hg_layer) + '_rf4')
 
         rf2 = self.__connect_left_to_right(left=lf2,
                                            right=rf4,
+                                           num_channels=self.__num_channels,
                                            bottleneck=bottleneck,
                                            name='hg' + str(hg_layer) + '_rf2')
 
         rf1 = self.__connect_left_to_right(left=lf1,
                                            right=rf2,
+                                           num_channels=self.__num_channels,
                                            bottleneck=bottleneck,
                                            name='hg' + str(hg_layer) + '_rf1')
 
@@ -342,7 +347,7 @@ class HourglassNetwork:
         :return:
         """
 
-        head = Conv2D(filter=self.__num_channels,
+        head = Conv2D(filters=self.__num_channels,
                       kernel_size=(1, 1),
                       activation='relu',
                       padding='same',
@@ -375,20 +380,21 @@ class HourglassNetwork:
 
         return head_next_stage, head_parts
 
-    def __bottleneck_block(self, bottom, block_name):
+    @staticmethod
+    def __bottleneck_block(bottom, num_channels, block_name):
 
         # Skip layer
-        if K.int_shape(bottom)[-1] == self.__num_channels:
+        if K.int_shape(bottom)[-1] == num_channels:
             skip = bottom
         else:
-            skip = Conv2D(self.__num_channels,
+            skip = Conv2D(num_channels,
                           kernel_size=(1, 1),
                           activation='relu',
                           padding='same',
                           name=block_name + 'skip')(bottom)
 
         # Residual: 3 conv blocks as [num_out_channels/2  -> num_out_channels/2 -> num_out_channels]
-        x = Conv2D(self.__num_channels / 2,
+        x = Conv2D(num_channels // 2,
                    kernel_size=(1, 1),
                    activation='relu',
                    padding='same',
@@ -396,7 +402,7 @@ class HourglassNetwork:
 
         x = BatchNormalization()(x)
 
-        x = Conv2D(self.__num_channels / 2,
+        x = Conv2D(num_channels // 2,
                    kernel_size=(3, 3),
                    activation='relu',
                    padding='same',
@@ -404,7 +410,7 @@ class HourglassNetwork:
 
         x = BatchNormalization()(x)
 
-        x = Conv2D(self.__num_channels,
+        x = Conv2D(num_channels,
                    kernel_size=(1, 1),
                    activation='relu',
                    padding='same',
@@ -416,19 +422,20 @@ class HourglassNetwork:
 
         return x
 
-    def __bottleneck_mobile(self, bottom, block_name):
+    @staticmethod
+    def __bottleneck_mobile(bottom, num_channels, block_name):
         # Skip layer
-        if K.int_shape(bottom)[-1] == self.__num_channels:
+        if K.int_shape(bottom)[-1] == num_channels:
             skip = bottom
         else:
-            skip = SeparableConv2D(self.__num_channels,
+            skip = SeparableConv2D(num_channels,
                                    kernel_size=(1, 1),
                                    activation='relu',
                                    padding='same',
                                    name=block_name + 'skip')(bottom)
 
         # Residual: 3 conv blocks as [num_out_channels/2  -> num_out_channels/2 -> num_out_channels]
-        x = SeparableConv2D(self.__num_channels / 2,
+        x = SeparableConv2D(num_channels // 2,
                             kernel_size=(1, 1),
                             activation='relu',
                             padding='same',
@@ -436,7 +443,7 @@ class HourglassNetwork:
 
         x = BatchNormalization()(x)
 
-        x = SeparableConv2D(self.__num_channels / 2,
+        x = SeparableConv2D(num_channels // 2,
                             kernel_size=(3, 3),
                             activation='relu',
                             padding='same',
@@ -444,7 +451,7 @@ class HourglassNetwork:
 
         x = BatchNormalization()(x)
 
-        x = SeparableConv2D(self.__num_channels,
+        x = SeparableConv2D(num_channels,
                             kernel_size=(1, 1),
                             activation='relu',
                             padding='same',
@@ -457,7 +464,7 @@ class HourglassNetwork:
         return x
 
     @staticmethod
-    def __connect_left_to_right(left, right, bottleneck, name):
+    def __connect_left_to_right(left, right, num_channels, bottleneck, name):
         """
         Connect the left block to the right ones
 
@@ -472,6 +479,7 @@ class HourglassNetwork:
         """
 
         x_left = bottleneck(bottom=left,
+                            num_channels=num_channels,
                             block_name=name + '_connect')
 
         x_right = UpSampling2D()(right)
@@ -479,6 +487,7 @@ class HourglassNetwork:
         add = Add()([x_left, x_right])
 
         out = bottleneck(bottom=add,
+                         num_channels=num_channels,
                          block_name=name + '_connect_conv')
 
         return out
