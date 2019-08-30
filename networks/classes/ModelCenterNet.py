@@ -13,7 +13,7 @@ from tensorflow.python.keras.layers import UpSampling2D, Concatenate, Conv2D, In
 from networks.functions.blocks import cbr, aggregation_block, resblock
 
 
-class ModelUtilities:
+class ModelCenterNet:
 
     @staticmethod
     def __resize_input_layers(input_layer):
@@ -258,7 +258,6 @@ class ModelUtilities:
                   callbacks=callbacks,
                   initial_epoch=init_epoch)
 
-        # Set up a flag which states that the network is now trained and can be evaluated
         logger.info('Training procedure performed successfully!\n')
 
     @staticmethod

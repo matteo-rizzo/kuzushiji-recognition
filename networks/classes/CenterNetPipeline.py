@@ -8,9 +8,10 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.python.keras.optimizers import Adam
 
-from networks.classes.CenterNetClassificationDataset import ClassifierDataset
-from networks.classes.CenterNetDetectionDataset import CenterNetDataset
-from networks.classes.ModelCenterNet import ModelUtilities
+from networks.classes.CenterNetClassificationDataset import CenterNetClassificationDataset
+from networks.classes.CenterNetDetectionDataset import CenterNetDetectionDataset
+from networks.classes.HourglassNetwork import HourglassNetwork
+from networks.classes.ModelCenterNet import ModelCenterNet
 from networks.classes.CenterNetPreprocessingDataset import PreprocessingDataset
 from networks.functions import losses
 from networks.functions.bounding_boxes import get_bb_boxes
@@ -24,6 +25,7 @@ class CenterNetPipeline:
     def __init__(self, dataset_params: Dict, logs):
         self.dataset_params = dataset_params
         self.logs = logs
+
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = os.path.join(os.getcwd(), 'datasets', 'kaggle', 'testing', 'images')
         self.__test_list = [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list]
@@ -142,8 +144,29 @@ class CenterNetPipeline:
 
         return dataset_avg_size
 
-    def run_detection(self, model_params: Dict, dataset_avg_size, weights_path: str) \
-            -> (List[List], Union[Dict[str, np.ndarray], None]):
+    def run_hourglass_detection(self, model_params, dataset_avg_size, weights_path, run_id):
+
+        avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
+        train_list: List[List] = dataset_avg_size.annotate_split_recommend(avg_sizes)
+
+        model = HourglassNetwork(run_id=run_id,
+                                 log=self.logs['training'],
+                                 model_params=model_params,
+                                 num_classes=16,
+                                 num_stacks=2,
+                                 num_channels=256,
+                                 in_res=(256, 256),
+                                 out_res=(64, 64))
+
+        model.train(dataset_params=self.dataset_params,
+                    train_list=train_list,
+                    test_list=self.__test_list,
+                    weights_path=weights_path)
+
+    def run_detection(self,
+                      model_params: Dict,
+                      dataset_avg_size,
+                      weights_path: str) -> (List[List], Union[Dict[str, np.ndarray], None]):
         """
         Creates and runs a CenterNet to perform the image detection
 
