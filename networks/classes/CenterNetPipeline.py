@@ -10,9 +10,9 @@ from tensorflow.python.keras.optimizers import Adam
 
 from networks.classes.CenterNetClassificationDataset import CenterNetClassificationDataset
 from networks.classes.CenterNetDetectionDataset import CenterNetDetectionDataset
+from networks.classes.CenterNetPreprocessingDataset import CenterNetPreprocessingDataset
 from networks.classes.HourglassNetwork import HourglassNetwork
 from networks.classes.ModelCenterNet import ModelCenterNet
-from networks.classes.CenterNetPreprocessingDataset import CenterNetPreprocessingDataset
 from networks.functions import losses
 from networks.functions.bounding_boxes import get_bb_boxes
 from networks.functions.cropping import load_crop_characters, annotations_to_bounding_boxes, \
@@ -146,6 +146,8 @@ class CenterNetPipeline:
 
     def run_hourglass_detection(self, model_params, dataset_avg_size, weights_path, run_id):
 
+        self.logs['execution'].info('Initializing Hourglass model...')
+
         # Add dataset params to model params for simplicity
         model_params.update(self.dataset_params)
 
@@ -155,11 +157,15 @@ class CenterNetPipeline:
         model = HourglassNetwork(run_id=run_id,
                                  log=self.logs['training'],
                                  model_params=model_params,
-                                 num_classes=4787,
+                                 num_classes=6,
                                  num_stacks=1,
-                                 num_channels=7,
-                                 in_res=(512, 512),
-                                 out_res=(128, 128))
+                                 num_channels=256,
+                                 in_res=(int(model_params['input_width']),
+                                         int(model_params['input_height'])),
+                                 out_res=(int(model_params['output_width']),
+                                          int(model_params['output_height'])))
+
+        self.logs['execution'].info('Hourglass model successfully initialized!')
 
         model.train(dataset_params=model_params,
                     train_list=train_list,

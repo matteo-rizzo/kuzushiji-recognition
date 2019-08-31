@@ -22,11 +22,11 @@
     "output_height": 128
   },
   "model_2": {
-    "batch_size": 16,
+    "batch_size": 8,
     "batch_size_predict": 64,
-    "restore_weights": true,
-    "initial_epoch": 32,
-    "train": false,
+    "restore_weights": false,
+    "initial_epoch": 0,
+    "train": true,
     "epochs": 32,
     "learning_rate": 1e-5,
     "decay": 0.001,

@@ -39,6 +39,18 @@ class CenterNetDetectionDataset:
 
         :param list_samples: the list of samples the dataset will contain
         :param batch_size:
+
+
+        Note that in the original paper, the heatmap is computed as:
+        * exp(-((x_distance_from_center) ^ 2 + (y_distance_from_center) ^ 2) / (2 * sig ^ 2))
+
+        Here:
+        - x_distance_from_center = np.arange(output_width) - x_c
+        - y_distance_from_center = np.arange(output_height) - y_c
+        - sigma = (width / 10) and (height / 10).
+
+        Multiplying allows to consider the shape of characters as ellipses, instead of circles.
+        The result is a 2D array
         """
 
         input_height, input_width = self.__input_height, self.__input_width
@@ -118,14 +130,6 @@ class CenterNetDetectionDataset:
                     )
                     # Center points will have value closer to 1 (close to 0 otherwise)
 
-                    # In original paper heatmap is computed:
-                    # exp(-((x_distance_from_center) ^ 2 + (y_distance_from_center) ^ 2) / (2 * sig ^ 2))
-                    # Here x_distance_from_center = np.arange(output_width) - x_c
-                    # and y_distance_from_center = np.arange(output_height) - y_c
-                    # sigma = (width / 10) and (height / 10).
-                    # Multiplying allows to consider the shape of characters as ellipses, instead of
-                    # circles. Result is 2D array
-
                     # category heatmap
                     output_layer[:, :, 0] = np.maximum(output_layer[:, :, 0], heatmap[:, :])
                     output_layer[int(y_c // 1), int(x_c // 1), 1] = 1
@@ -167,16 +171,17 @@ class CenterNetDetectionDataset:
 
         return image_resized / 255
 
-    def generate_dataset(self, input_list: List[List], test_list: Union[List[str], None]) \
-            -> Tuple[List[List], List[List]]:
+    def generate_dataset(self,
+                         input_list: List[List],
+                         test_list: Union[List[str], None]) -> Tuple[List[List], List[List]]:
         """
         Generate the tf.data.Dataset with train, validation and test set.
 
-        :param input_list: list with format [ [image path, annotations, height split, width split] ]
-        :param test_list: list of test images filepaths, or None if we don't want to generate the
-                        test set (i.e. not in predict mode).
+        :param input_list: list with format [[image path, annotations, height split, width split]]
+        :param test_list: list of test images file paths, or None if we don't want to generate the
+            test set (i.e. not in predict mode).
         :return: the train and validation sets in the same format as the input_list, after splitting
-                and shuffling operations.
+            and shuffling operations.
         """
 
         xy_train, xy_val = train_test_split(input_list,

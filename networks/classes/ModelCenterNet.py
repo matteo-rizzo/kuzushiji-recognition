@@ -164,8 +164,7 @@ class ModelCenterNet:
         return modes[str(mode)](input_layer, n_category)
 
     @staticmethod
-    def setup_callbacks(weights_log_path: str, batch_size: int) \
-            -> List[tf.keras.callbacks.Callback]:
+    def setup_callbacks(weights_log_path: str, batch_size: int) -> List[tf.keras.callbacks.Callback]:
         """
         Sets up the callbacks for the training of the model.
         """
@@ -181,8 +180,8 @@ class ModelCenterNet:
 
         tensorboard_log_dir = os.path.join(weights_log_path, 'tensorboard')
 
-        # Note that update_freq is set to batch_size * 10 because the epoch takes too long and batch
-        # size too short
+        # Note that update_freq is set to batch_size * 10,
+        # because the epoch takes too long and batch size too short
         tensorboard = TensorBoard(log_dir=tensorboard_log_dir,
                                   write_graph=True,
                                   histogram_freq=0,
@@ -201,8 +200,11 @@ class ModelCenterNet:
         return [tensorboard, checkpointer]
 
     @staticmethod
-    def restore_weights(model: tf.keras.Model, logger: logging.Logger, init_epoch: int,
+    def restore_weights(model: tf.keras.Model,
+                        logger: logging.Logger,
+                        init_epoch: int,
                         weights_folder_path: str) -> None:
+
         if init_epoch < 10:
             init_epoch_str = '0' + str(init_epoch)
         else:
@@ -236,7 +238,7 @@ class ModelCenterNet:
               callbacks: List[tf.keras.callbacks.Callback]):
 
         """
-        Compile and train the model for the specified number of epochs.
+        Compiles and trains the model for the specified number of epochs.
         """
 
         logger.info('Training the model...\n')
@@ -261,7 +263,9 @@ class ModelCenterNet:
         logger.info('Training procedure performed successfully!\n')
 
     @staticmethod
-    def evaluate(model: tf.keras.Model, logger: logging.Logger, evaluation_set: tf.data.Dataset,
+    def evaluate(model: tf.keras.Model,
+                 logger: logging.Logger,
+                 evaluation_set: tf.data.Dataset,
                  evaluation_steps: int) -> Union[float, List[float]]:
         """
         Evaluate the model on provided set.
@@ -291,8 +295,10 @@ class ModelCenterNet:
         # plt.show()
 
     @staticmethod
-    def predict(model: tf.keras.Model, logger: logging.Logger, dataset: tf.data.Dataset) \
-            -> Union[np.ndarray, List[np.ndarray]]:
+    def predict(model: tf.keras.Model,
+                logger: logging.Logger,
+                dataset: tf.data.Dataset) -> Union[np.ndarray, List[np.ndarray]]:
+
         logger.info("Predicting...")
 
         result = model.predict(dataset)

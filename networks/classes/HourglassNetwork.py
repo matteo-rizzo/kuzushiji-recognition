@@ -14,8 +14,8 @@ class HourglassNetwork:
 
     def __init__(self, run_id, log, model_params, num_classes, num_stacks, num_channels, in_res, out_res):
 
-        self.__experiment_path = os.path.join(os.getcwd(), 'network', 'experiments', run_id + '_2')
         self.__log = log
+        self.__experiment_path = os.path.join(os.getcwd(), 'network', 'experiments', run_id + '_2')
         self.__model_params = model_params
 
         self.__num_classes = num_classes
@@ -25,6 +25,7 @@ class HourglassNetwork:
         self.__out_res = out_res
 
         self.__model = None
+
         self.__build()
 
     def load_model(self, model_json, model_file):
@@ -44,7 +45,6 @@ class HourglassNetwork:
 
         # Generate the dataset for detection
         dataset_detection = CenterNetDetectionDataset(dataset_params)
-
         _, _ = dataset_detection.generate_dataset(train_list, test_list)
         training_set, detection_ts_size = dataset_detection.get_training_set()
         validation_set, detection_vs_size = dataset_detection.get_validation_set()
@@ -158,6 +158,8 @@ class HourglassNetwork:
 
         :param mobile: specifies if the network is mobile type
         """
+
+        self.__log.info('Building the model...')
 
         if mobile:
             self.__model = self.__create_hourglass_network(self.__bottleneck_mobile)
@@ -491,7 +493,3 @@ class HourglassNetwork:
                          block_name=name + '_connect_conv')
 
         return out
-
-    @staticmethod
-    def euclidean_loss(x, y):
-        return kb.sqrt(kb.sum(kb.square(x - y)))
