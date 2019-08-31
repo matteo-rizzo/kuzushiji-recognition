@@ -49,8 +49,6 @@ class HourglassNetwork:
         training_set, detection_ts_size = dataset_detection.get_training_set()
         validation_set, detection_vs_size = dataset_detection.get_validation_set()
 
-        model_file = os.path.join(self.__experiment_path, 'weights_{epoch:02d}_{loss:.2f}.hdf5')
-
         # Set up the callbacks
         callbacks = ModelCenterNet.setup_callbacks(weights_log_path=weights_path,
                                                    batch_size=batch_size)

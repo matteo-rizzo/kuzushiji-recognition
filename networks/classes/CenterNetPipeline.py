@@ -332,7 +332,8 @@ class CenterNetPipeline:
 
         return train_list, predicted_test_bboxes
 
-    def run_classification(self, model_params: Dict, train_list: List[List],
+    def run_classification(self, model_params: Dict,
+                           train_list: List[List],
                            bbox_predictions: Union[Dict[str, np.ndarray], None],
                            weights_path: str):
         """
@@ -349,9 +350,9 @@ class CenterNetPipeline:
         # Add dataset params to model params for simplicity
         model_params.update(self.dataset_params)
 
-        input_shape = (
-            model_params['input_width'], model_params['input_height'], model_params['input_channels']
-        )
+        input_shape = (model_params['input_width'],
+                       model_params['input_height'],
+                       model_params['input_channels'])
 
         # Check weights folder is not full of previous stuff
         if model_params['train'] and not model_params['restore_weights']:
@@ -382,7 +383,6 @@ class CenterNetPipeline:
                       metrics=["accuracy"])
 
         # Generate dataset object for model 3
-
         crop_char_path_train = os.path.join(os.getcwd(), 'datasets', 'char_cropped_train')
         crop_char_path_test = os.path.join(os.getcwd(), 'datasets', 'char_cropped_test')
 
@@ -399,30 +399,31 @@ class CenterNetPipeline:
             train_list: List[Tuple[str, int]] \
                 = create_crop_characters_train(crop_formatted_list, crop_char_path_train)
             self.logs['execution'].info('Cropping done successfully!')
-        else:  # load from folder
+
+        else:
+            # Load from folder
             train_list: List[Tuple[str, int]] = load_crop_characters(crop_char_path_train, mode='train')
 
         # Test mode
         test_list: Union[List[str], None] = None
         if model_params['predict_on_test']:
             if model_params['regenerate_crops_test']:
-                self.logs['execution'].info(
-                    'Starting procedure to regenerate cropped test character images')
+                self.logs['execution'].info('Starting procedure to regenerate cropped test character images')
 
                 # bbox_predictions is a dict: {image: np.arr[category, score, xmin, ymin, sxmax, ymax]}
-                nice_formatted_dict: Dict[str, np.array] \
-                    = predictions_to_bounding_boxes(bbox_predictions)
+                nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(bbox_predictions)
 
                 self.logs['execution'].info('Cropping test images to characters...')
                 test_list = create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
                 self.logs['execution'].info('Cropping done successfully!')
 
-            else:  # load from folder
+            else:
+                # Load from folder
                 test_list = load_crop_characters(crop_char_path_test, mode='test')
 
         # Now 'train_list' is a list[(image_path, char_class)]
-        # Now 'test_list' is a list[image_path] to cropped test images, or None if we are not in
-        # predict mode.
+        # Now 'test_list' is a list[image_path] to cropped test images, or
+        # None if we are not in predict mode.
         # Now that we have the list in the correct format, let's generate together the tf.data.Dataset
 
         batch_size = int(model_params['batch_size'])
@@ -463,8 +464,6 @@ class CenterNetPipeline:
             self.logs['execution'].info('Prediction completed.')
 
             # predictions.shape = (batch, out_height, out_width, n_category)
-
-
 
             return predictions
 

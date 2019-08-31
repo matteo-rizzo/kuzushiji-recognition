@@ -66,10 +66,12 @@ class CenterNetDetectionDataset:
 
         while True:
             for i in range(len(list_samples)):
-                h_split = list_samples[i][2]  # recommended height split
+                h_split = list_samples[i][2]
                 w_split = list_samples[i][3]
+
                 max_crop_ratio_h = 1 / h_split
                 max_crop_ratio_w = 1 / w_split
+
                 crop_ratio = np.random.uniform(0.5, 1)
                 crop_ratio_h = max_crop_ratio_h * crop_ratio
                 crop_ratio_w = max_crop_ratio_w * crop_ratio
@@ -79,12 +81,15 @@ class CenterNetDetectionDataset:
                     # random crop
                     pic_width, pic_height = f.size
                     f = np.asarray(f.convert('RGB'), dtype=np.uint8)
+
                     top_offset = np.random.randint(0, pic_height - int(crop_ratio_h * pic_height))
                     left_offset = np.random.randint(0, pic_width - int(crop_ratio_w * pic_width))
                     bottom_offset = top_offset + int(crop_ratio_h * pic_height)
                     right_offset = left_offset + int(crop_ratio_w * pic_width)
+
                     f = cv2.resize(f[top_offset:bottom_offset, left_offset:right_offset, :],
                                    (input_height, input_width))
+
                     x.append(f)
 
                 output_layer = np.zeros((output_height, output_width, (output_layer_n + category_n)))
@@ -102,18 +107,23 @@ class CenterNetDetectionDataset:
                 for annotation in list_samples[i][1]:
                     x_c = (annotation[1] - left_offset) * (output_width / int(crop_ratio_w * pic_width))
                     y_c = (annotation[2] - top_offset) * (output_height / int(crop_ratio_h * pic_height))
+
                     width = annotation[3] * (output_width / int(crop_ratio_w * pic_width))
                     height = annotation[4] * (output_height / int(crop_ratio_h * pic_height))
+
                     top = np.maximum(0, y_c - height / 2)
                     left = np.maximum(0, x_c - width / 2)
                     bottom = np.minimum(output_height, y_c + height / 2)
                     right = np.minimum(output_width, x_c + width / 2)
 
+                    # Random crop (out of picture)
                     if top >= (output_height - 0.1) or left >= (output_width - 0.1) \
-                            or bottom <= 0.1 or right <= 0.1:  # random crop (out of picture)
+                            or bottom <= 0.1 or right <= 0.1:
                         continue
+
                     width = right - left
                     height = bottom - top
+
                     x_c = (right + left) / 2
                     y_c = (top + bottom) / 2
 
@@ -151,8 +161,10 @@ class CenterNetDetectionDataset:
 
                     inputs = x / 255
                     targets = y
+
                     x = []
                     y = []
+
                     count = 0
 
                     yield inputs, targets
