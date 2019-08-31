@@ -81,7 +81,7 @@ class ModelCenterNet:
 
     def __generate_centernet_model(self, input_layer, n_category=None):
 
-        output_layer_n = 1 + 4
+        output_layer_n = n_category + 4
 
         input_layer_1, input_layer_2 = self.__resize_input_layers(input_layer)
 

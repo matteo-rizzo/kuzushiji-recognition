@@ -54,7 +54,7 @@ class CenterNetClassificationDataset:
                         left_offset = np.random.randint(0, img_width - int(crop_ratio * img_width))
                         bottom_offset = top_offset + int(crop_ratio * img_height)
                         right_offset = left_offset + int(crop_ratio * img_width)
-                        img = cv2.resize(img[top_offset:bottom_offset, left_offset, right_offset, :],
+                        img = cv2.resize(img[top_offset:bottom_offset, left_offset:right_offset, :],
                                          (input_height, input_width))
 
                     else:
@@ -100,8 +100,9 @@ class CenterNetClassificationDataset:
         Generate the tf.data.Dataset containing all the objects.
 
         :param train_list: training list with samples as list of tuples (image, class)
-        :param test_list: an
-        :return:
+        :param test_list: a list of test image paths, ore None if test set must not be generated.
+        :return: the splitted and shuffled train and validation set, in the same shape as 'train_list'
+                param.
         """
 
         train_xy, val_xy = train_test_split(train_list,

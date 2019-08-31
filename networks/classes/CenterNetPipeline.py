@@ -215,7 +215,7 @@ class CenterNetPipeline:
 
         # Generate the CenterNet model
         model_utils = ModelCenterNet()
-        model = model_utils.generate_model(input_shape=input_shape, mode=2)
+        model = model_utils.generate_model(input_shape=input_shape, n_category=1, mode=2)
 
         try:
             decay = float(model_params['decay'])
@@ -460,7 +460,11 @@ class CenterNetPipeline:
                                               logger=self.logs['test'],
                                               dataset=classification_ps)
 
-            self.logs['execution'].info('Completed.')
+            self.logs['execution'].info('Prediction completed.')
+
+            # predictions.shape = (batch, out_height, out_width, n_category)
+
+
 
             return predictions
 
