@@ -375,10 +375,10 @@ class CenterNetPipeline:
             decay = None
 
         # Compile the model
-        model.compile(loss="categorical_crossentropy",
+        model.compile(loss="sparse_categorical_crossentropy",
                       optimizer=Adam(lr=model_params['learning_rate'],
                                      decay=decay if decay else 0.0),
-                      metrics=["categorical_accuracy"])
+                      metrics=["sparse_categorical_accuracy"])
 
         # Generate dataset object for model 3
         crop_char_path_train = os.path.join(os.getcwd(), 'datasets', 'char_cropped_train')
@@ -463,7 +463,7 @@ class CenterNetPipeline:
 
             self.logs['execution'].info('Prediction completed.')
 
-            # predictions.shape = (batch, out_height, out_width, n_category) CREDO
+            # predictions.shape = (n_sample, n_category)
 
             return predictions
 
