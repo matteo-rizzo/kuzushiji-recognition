@@ -244,8 +244,6 @@ class CenterNetPipeline:
         # format: [ [image path, annotations, height split, width split] ]
 
         # Generate the dataset for detection
-        self.dataset_params['batch_size'] = model_params['batch_size']
-        self.dataset_params['batch_size_predict'] = model_params['batch_size_predict']
         dataset_detection = CenterNetDetectionDataset(model_params)
 
         # Pass the list of test images if we are in test mode, otw pass None, so that the test set
@@ -380,7 +378,7 @@ class CenterNetPipeline:
         model.compile(loss="categorical_crossentropy",
                       optimizer=Adam(lr=model_params['learning_rate'],
                                      decay=decay if decay else 0.0),
-                      metrics=["accuracy"])
+                      metrics=["categorical_accuracy"])
 
         # Generate dataset object for model 3
         crop_char_path_train = os.path.join(os.getcwd(), 'datasets', 'char_cropped_train')
@@ -408,10 +406,12 @@ class CenterNetPipeline:
         test_list: Union[List[str], None] = None
         if model_params['predict_on_test']:
             if model_params['regenerate_crops_test']:
-                self.logs['execution'].info('Starting procedure to regenerate cropped test character images')
+                self.logs['execution'].info(
+                    'Starting procedure to regenerate cropped test character images')
 
                 # bbox_predictions is a dict: {image: np.arr[category, score, xmin, ymin, sxmax, ymax]}
-                nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(bbox_predictions)
+                nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(
+                    bbox_predictions)
 
                 self.logs['execution'].info('Cropping test images to characters...')
                 test_list = create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
@@ -463,7 +463,7 @@ class CenterNetPipeline:
 
             self.logs['execution'].info('Prediction completed.')
 
-            # predictions.shape = (batch, out_height, out_width, n_category)
+            # predictions.shape = (batch, out_height, out_width, n_category) CREDO
 
             return predictions
 

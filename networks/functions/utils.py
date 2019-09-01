@@ -1,3 +1,5 @@
+from typing import List, Any
+
 import numpy as np
 from PIL import ImageDraw
 
@@ -56,3 +58,8 @@ def check_iou_score(true_boxes, detected_boxes, iou_thresh):
     print("score:{}".format(np.round(score, 3)))
 
     return score
+
+
+def detection_to_csv(test_list: List[str], predictions: Any, path_to_csv: str):
+    # TODO
+    pass
