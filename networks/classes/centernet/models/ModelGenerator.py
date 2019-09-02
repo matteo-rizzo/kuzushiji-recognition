@@ -22,25 +22,16 @@ class ModelGenerator:
 
         return x
 
-    def __res_block(self, x_in, layer_n):
-        x = self.__cbr(x_in, layer_n, 3, 1)
-        x = self.__cbr(x, layer_n, 3, 1)
-        x = Add()([x, x_in])
-
-        return x
-
-    def __new_res_block(self, x_in, layer_n):
-        x = BatchNormalization()(x_in)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = self.__cbr(x, layer_n, 3, 1)
-        x = Conv2D(layer_n, kernel_size=3, strides=1, padding="same")(x)
+    def __alt_res_block(self, x_in, filter_n):
+        x = self.__cbr(x_in, filter_n, 3, 1)
+        x = self.__cbr(x, filter_n, 3, 1)
         x = Add()([x, x_in])
 
         return x
 
     @staticmethod
-    def __cbr(x, out_layer, kernel, stride):
-        x = Conv2D(out_layer, kernel_size=kernel, strides=stride, padding="same")(x)
+    def __cbr(x, filter_n, kernel, strides):
+        x = Conv2D(filter_n, kernel_size=kernel, strides=strides, padding='same')(x)
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
 
@@ -66,32 +57,32 @@ class ModelGenerator:
         x_2 = self.__cbr(concat_2, 64, 3, 2)
 
         x = self.__cbr(x_2, 64, 3, 1)
-        x = self.__res_block(x, 64)
-        x = self.__res_block(x, 64)
+        x = self.__alt_res_block(x, 64)
+        x = self.__alt_res_block(x, 64)
 
         # 64->32
         x_3 = self.__cbr(x, 128, 3, 2)
         x = self.__cbr(x_3, 128, 3, 1)
-        x = self.__res_block(x, 128)
-        x = self.__res_block(x, 128)
-        x = self.__res_block(x, 128)
+        x = self.__alt_res_block(x, 128)
+        x = self.__alt_res_block(x, 128)
+        x = self.__alt_res_block(x, 128)
 
         # 32->16
         x_4 = self.__cbr(x, 256, 3, 2)
         x = self.__cbr(x_4, 256, 3, 1)
-        x = self.__res_block(x, 256)
-        x = self.__res_block(x, 256)
-        x = self.__res_block(x, 256)
-        x = self.__res_block(x, 256)
-        x = self.__res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
 
         # 16->8
         x_5 = self.__cbr(x, 512, 3, 2)
         x = self.__cbr(x_5, 512, 3, 1)
 
-        x = self.__res_block(x, 512)
-        x = self.__res_block(x, 512)
-        x = self.__res_block(x, 512)
+        x = self.__alt_res_block(x, 512)
+        x = self.__alt_res_block(x, 512)
+        x = self.__alt_res_block(x, 512)
 
         return x_1, x_2, x_3, x_4, x
 
@@ -150,16 +141,16 @@ class ModelGenerator:
 
     def __generate_classification_model(self, input_layer, n_category):
         x = self.__cbr(input_layer, 64, 3, 1)
-        x = self.__res_block(x, 64)
-        x = self.__res_block(x, 64)
+        x = self.__alt_res_block(x, 64)
+        x = self.__alt_res_block(x, 64)
 
         x = self.__cbr(x, 128, 3, 2)  # 16
-        x = self.__res_block(x, 128)
-        x = self.__res_block(x, 128)
+        x = self.__alt_res_block(x, 128)
+        x = self.__alt_res_block(x, 128)
 
         x = self.__cbr(x, 256, 3, 2)  # 8
-        x = self.__res_block(x, 256)
-        x = self.__res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
 
         x = GlobalAveragePooling2D()(x)
         x = Dropout(0.2)(x)
