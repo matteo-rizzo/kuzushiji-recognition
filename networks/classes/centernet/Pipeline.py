@@ -13,10 +13,9 @@ from networks.classes.centernet.datasets.DetectionDataset import DetectionDatase
 from networks.classes.centernet.datasets.PreprocessingDataset import PreprocessingDataset
 from networks.classes.centernet.models.HourglassNetwork import HourglassNetwork
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
-from networks.functions import losses
-from networks.functions.bounding_boxes import get_bb_boxes
-from networks.functions.cropping import load_crop_characters, annotations_to_bounding_boxes, \
-    create_crop_characters_train, create_crop_characters_test, predictions_to_bounding_boxes
+from networks.classes.centernet.utils.BoundingBoxesHandler import BoundingBoxesHandler
+from networks.classes.centernet.utils.ImageCropper import ImageCropper
+from networks.classes.centernet.utils.LossFunctionsGenerator import LossFunctionsGenerator
 
 
 class CenterNetPipeline:
@@ -24,6 +23,10 @@ class CenterNetPipeline:
     def __init__(self, dataset_params: Dict, logs):
         self.__logs = logs
         self.__model_utils = ModelCenterNet(logs=self.__logs)
+        self.__img_cropper = ImageCropper(log=self.__logs['execution'])
+        self.__bb_handler = BoundingBoxesHandler()
+        self.__loss = LossFunctionsGenerator()
+
         self.__dataset_params = dataset_params
         self.__input_shape = (None, None, None)
         self.__dict_cat: Dict[str, int] = {}
@@ -178,10 +181,10 @@ class CenterNetPipeline:
 
         model.compile(optimizer=Adam(lr=model_params['learning_rate'],
                                      decay=decay if decay else 0.0),
-                      loss=losses.all_loss,
-                      metrics=[losses.size_loss,
-                               losses.heatmap_loss,
-                               losses.offset_loss])
+                      loss=self.__loss.all_loss,
+                      metrics=[self.__loss.size_loss,
+                               self.__loss.heatmap_loss,
+                               self.__loss.offset_loss])
 
         # Restore the saved weights, if required
         if model_params['restore_weights']:
@@ -252,10 +255,10 @@ class CenterNetPipeline:
 
             # Perform the prediction on the newly created dataset and show images
             detected_predictions = self.__model_utils.predict(model, mini_test)
-            get_bb_boxes(detected_predictions,
-                         mode='train',
-                         annotation_list=xy_val[:10],
-                         print=True)
+            self.__bb_handler.get_bb_boxes(detected_predictions,
+                                           mode='train',
+                                           annotation_list=xy_val[:10],
+                                           show=True)
 
         # ---- END MINI TEST ----
 
@@ -268,10 +271,10 @@ class CenterNetPipeline:
             self.__logs['execution'].info('Completed.')
 
             self.__logs['execution'].info('Converting test predictions into bounding boxes...')
-            predicted_test_bboxes = get_bb_boxes(test_predictions,
-                                                 mode='test',
-                                                 test_images_path=self.__test_list,
-                                                 print=False)
+            predicted_test_bboxes = self.__bb_handler.get_bb_boxes(test_predictions,
+                                                                   mode='test',
+                                                                   test_images_path=self.__test_list,
+                                                                   show=False)
             self.__logs['execution'].info('Completed.')
 
         return train_list, predicted_test_bboxes
@@ -329,19 +332,10 @@ class CenterNetPipeline:
 
         # Train mode cropping
         if model_params['regenerate_crops_train']:
-            # NOTE: the following scripts are only run once to generate the images for training.
-            self.__logs['execution'].info('Starting procedure to regenerate cropped train character images')
-
-            self.__logs['execution'].info('Getting bounding boxes from annotations...')
-            crop_formatted_list = annotations_to_bounding_boxes(train_list)
-
-            self.__logs['execution'].info('Cropping images to characters...')
-            train_list: List[Tuple[str, int]] = create_crop_characters_train(crop_formatted_list,
-                                                                             crop_char_path_train)
-            self.__logs['execution'].info('Cropping done successfully!')
+            train_list = self.__img_cropper.regenerate_crops_train(train_list, crop_char_path_train)
         else:
-            # Load from folder
-            train_list: List[Tuple[str, int]] = load_crop_characters(crop_char_path_train, mode='train')
+            train_list: List[Tuple[str, int]] = self.__img_cropper.load_crop_characters(crop_char_path_train,
+                                                                                        mode='train')
 
         # Now 'train_list' is a list[(image_path, char_class)]
 
@@ -349,18 +343,9 @@ class CenterNetPipeline:
         test_list: Union[List[str], None] = None
         if model_params['predict_on_test']:
             if model_params['regenerate_crops_test']:
-                self.__logs['execution'].info('Starting procedure to regenerate cropped test character images')
-
-                # bbox_predictions is a dict: {image: np.arr[category, score, xmin, ymin, sxmax, ymax]}
-                nice_formatted_dict: Dict[str, np.array] = predictions_to_bounding_boxes(bbox_predictions)
-
-                self.__logs['execution'].info('Cropping test images to characters...')
-                test_list = create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
-                self.__logs['execution'].info('Cropping done successfully!')
-
+                test_list = self.__img_cropper.regenerate_crops_test(bbox_predictions, crop_char_path_test)
             else:
-                # Load from folder
-                test_list = load_crop_characters(crop_char_path_test, mode='test')
+                test_list = self.__img_cropper.load_crop_characters(crop_char_path_test, mode='test')
 
         # Now 'test_list' is a list[image_path] to cropped test images, or None if we are not in predict mode
 
