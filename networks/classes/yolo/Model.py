@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 from tensorflow.python.keras.utils import plot_model
 
-from networks.classes.Logger import Logger
+from networks.classes.general_utilities.Logger import Logger
 
 
 class Model:

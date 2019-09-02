@@ -7,8 +7,8 @@ import numpy as np
 import tensorflow as tf
 from libs.darkflow.darkflow.net.build import TFNet
 
-from networks.classes.Logger import Logger
-from networks.classes.Model import Model
+from networks.classes.general_utilities.Logger import Logger
+from networks.classes.yolo.Model import Model
 
 
 class ModelYOLO(Model):

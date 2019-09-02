@@ -8,14 +8,14 @@ import pickle
 import os
 
 from keras import backend as K
-from keras.optimizers import Adam, SGD, RMSprop
+from keras.optimizers import Adam, SGD
 from keras.layers import Input
-from keras.models import Model, load_model
+from keras.models import Model
 from keras_frcnn import config, data_generators
 from keras_frcnn import losses as losses
 import keras_frcnn.roi_helpers as roi_helpers
 from keras.utils import generic_utils
-from networks.classes.Params import Params
+from networks.classes.general_utilities.Params import Params
 
 if __name__ == '__main__':
     path = os.path.join("networks", "configuration", "params_model_FRCNN.json")

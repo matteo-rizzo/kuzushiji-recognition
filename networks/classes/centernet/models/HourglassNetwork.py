@@ -6,8 +6,8 @@ from tensorflow.keras.losses import mean_squared_error
 from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import RMSprop
 
-from networks.classes.CenterNetDetectionDataset import CenterNetDetectionDataset
-from networks.classes.ModelCenterNet import ModelCenterNet
+from networks.classes.centernet.datasets.DetectionDataset import DetectionDataset
+from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 
 
 class HourglassNetwork:
@@ -44,7 +44,7 @@ class HourglassNetwork:
         dataset_params['batch_size_predict'] = self.__model_params['batch_size_predict']
 
         # Generate the dataset for detection
-        dataset_detection = CenterNetDetectionDataset(dataset_params)
+        dataset_detection = DetectionDataset(dataset_params)
         _, _ = dataset_detection.generate_dataset(train_list, test_list)
         training_set, detection_ts_size = dataset_detection.get_training_set()
         validation_set, detection_vs_size = dataset_detection.get_validation_set()

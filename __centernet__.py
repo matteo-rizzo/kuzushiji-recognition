@@ -4,9 +4,9 @@ import os
 import absl.logging
 import tensorflow as tf
 
-from networks.classes.CenterNetPipeline import CenterNetPipeline
-from networks.classes.Logger import Logger
-from networks.classes.Params import Params
+from networks.classes.centernet.Pipeline import CenterNetPipeline
+from networks.classes.general_utilities.Logger import Logger
+from networks.classes.general_utilities.Params import Params
 
 
 def main():

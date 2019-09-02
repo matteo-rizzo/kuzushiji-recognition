@@ -10,7 +10,7 @@ from PIL import Image
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-class CenterNetPreprocessingDataset:
+class PreprocessingDataset:
     def __init__(self, params: Dict):
         self.__train_csv_path = params['train_csv_path']
         self.__train_images_path = params['train_images_path']

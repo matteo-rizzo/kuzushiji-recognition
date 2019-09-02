@@ -4,10 +4,10 @@ import os
 import absl.logging
 import tensorflow as tf
 
-from networks.classes.Dataset import Dataset
-from networks.classes.Logger import Logger
-from networks.classes.ModelYOLO import ModelYOLO
-from networks.classes.Params import Params
+from networks.classes.yolo.Dataset import Dataset
+from networks.classes.general_utilities.Logger import Logger
+from networks.classes.yolo.ModelYOLO import ModelYOLO
+from networks.classes.general_utilities.Params import Params
 
 
 def main():
