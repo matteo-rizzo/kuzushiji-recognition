@@ -70,7 +70,7 @@ def main():
     exe_log.info('* Executing eagerly?  ' + eager_exec_status)
 
     exe_log.info('General parameters:')
-    exe_log.info('* Model:               CenterNet')
+    exe_log.info('* Model:              CenterNet')
     exe_log.info('* Training dataset:   ' + dataset_params['train_images_path'])
     exe_log.info('* Test dataset:       ' + dataset_params['test_images_path'] + '\n')
 

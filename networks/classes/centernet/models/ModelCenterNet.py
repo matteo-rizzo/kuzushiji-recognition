@@ -15,7 +15,7 @@ class ModelCenterNet:
     def __init__(self, logs: Dict):
         self.__logs = logs
 
-    def build_model(self, input_shape, mode: int, n_category: int = 1) -> tf.keras.Model:
+    def build_model(self, input_shape, mode: str, n_category: int = 1) -> tf.keras.Model:
         """
         Builds the network.
 
@@ -26,7 +26,7 @@ class ModelCenterNet:
         :return: a Keras model
         """
 
-        self.__logs['execution'].info('Building model {}...'.format(mode))
+        self.__logs['execution'].info('Building {} model...'.format(mode))
 
         return ModelGenerator().generate_model(input_shape, mode, n_category)
 
@@ -80,8 +80,7 @@ class ModelCenterNet:
 
         init_epoch_str = '0' + str(init_epoch) if init_epoch < 10 else str(init_epoch)
 
-        restore_filename_reg = 'weights.{}-*.hdf5'.format(init_epoch_str)
-        restore_path_reg = os.path.join(weights_folder_path, restore_filename_reg)
+        restore_path_reg = os.path.join(weights_folder_path, 'weights.{}-*.hdf5'.format(init_epoch_str))
         list_files = glob.glob(restore_path_reg)
         assert len(list_files) > 0, \
             'ERR: No weights file match provided name {}'.format(restore_path_reg)
@@ -89,7 +88,6 @@ class ModelCenterNet:
         # Take real filename
         restore_filename = list_files[0].split('/')[-1]
         restore_path = os.path.join(weights_folder_path, restore_filename)
-
         assert os.path.isfile(restore_path), \
             'ERR: Weight file in path {} seems not to be a file'.format(restore_path)
 

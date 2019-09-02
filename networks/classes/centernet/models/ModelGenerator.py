@@ -168,7 +168,7 @@ class ModelGenerator:
 
         return Model(input_layer, out)
 
-    def generate_model(self, input_shape, mode: int, n_category: int = 1) -> tf.keras.Model:
+    def generate_model(self, input_shape, mode: str, n_category: int = 1) -> tf.keras.Model:
         """
         Builds the network.
 
@@ -180,9 +180,9 @@ class ModelGenerator:
         """
 
         modes = {
-            '1': self.__generate_preprocessing_model,
-            '2': self.__generate_detection_model,
-            '3': self.__generate_classification_model
+            'preprocessing': self.__generate_preprocessing_model,
+            'detection': self.__generate_detection_model,
+            'classification': self.__generate_classification_model
         }
 
         input_layer = Input(input_shape)

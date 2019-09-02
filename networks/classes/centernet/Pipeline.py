@@ -20,13 +20,13 @@ from networks.functions.cropping import load_crop_characters, annotations_to_bou
 
 
 class CenterNetPipeline:
-    __dict_cat: Dict[str, int]
 
     def __init__(self, dataset_params: Dict, logs):
         self.__logs = logs
         self.__model_utils = ModelCenterNet(logs=self.__logs)
         self.__dataset_params = dataset_params
         self.__input_shape = (None, None, None)
+        self.__dict_cat: Dict[str, int] = {}
 
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = os.path.join(os.getcwd(), 'datasets', 'kaggle', 'testing', 'images')
@@ -167,8 +167,8 @@ class CenterNetPipeline:
 
         # Generate the CenterNet model
         model = self.__model_utils.build_model(input_shape=self.__input_shape,
-                                               n_category=1,
-                                               mode=2)
+                                               mode='detection',
+                                               n_category=1)
 
         # Initialize the decay, if defined
         try:
@@ -302,7 +302,7 @@ class CenterNetPipeline:
         # Generate a model
         self.__model_utils = ModelCenterNet(logs=self.__logs)
         model = self.__model_utils.build_model(input_shape=self.__input_shape,
-                                               mode=3,
+                                               mode='classification',
                                                n_category=len(self.__dict_cat))
 
         # Restore the weights, if required
