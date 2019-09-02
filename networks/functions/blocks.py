@@ -24,3 +24,13 @@ def resblock(x_in, layer_n):
     x = cbr(x, layer_n, 3, 1)
     x = Add()([x, x_in])
     return x
+
+
+def new_resblock(x_in, layer_n):
+    x = BatchNormalization()(x_in)
+    x = LeakyReLU(alpha=0.1)(x)
+    x = cbr(x, layer_n, 3, 1)
+    x = Conv2D(layer_n, kernel_size=3, strides=1, padding="same")(x)
+    x = Add()([x, x_in])
+
+    return x

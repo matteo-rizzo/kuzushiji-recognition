@@ -60,6 +60,6 @@ def check_iou_score(true_boxes, detected_boxes, iou_thresh):
     return score
 
 
-def detection_to_csv(test_list: List[str], predictions: Any, path_to_csv: str):
-    # TODO
+def detection_to_csv(test_csv: str, predictions: List[List], save_csv: str):
+    # TODO: use a csv to write in crop_char_test a list of images and corresponding bboxes
     pass

@@ -109,7 +109,7 @@ def create_crop_characters_test(images_to_split: Dict[str, np.array],
     :param images_to_split: dict of {image_path: ndarray([ymin, xmin, ymax, xmax])}
     :param save_dir: directory where to save cropped images
     """
-
+    # TODO: save on csv original images and their bounding box
     user_check(save_dir)
 
     # ---- Cropping ----
