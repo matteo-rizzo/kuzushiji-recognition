@@ -20,6 +20,8 @@ class DetectionDataset:
         self.__aspect_ratio_pic_all: List[float]
 
         self.__training_ratio = params['training_ratio']
+        self.__validation_ratio = params['validation_ratio']
+        self.__evaluation_ratio = params['evaluation_ratio']
         self.__batch_size = params['batch_size']
         self.__batch_size_predict = params['batch_size_predict']
 
@@ -29,8 +31,9 @@ class DetectionDataset:
         self.__output_height = params['output_height']
         self.__output_width = params['output_width']
 
-        self.__validation_set: Tuple[tf.data.Dataset, int] = None
-        self.__training_set: Tuple[tf.data.Dataset, int] = None
+        self.__validation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
+        self.__training_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
+        self.__evaluation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__test_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
 
     def __dataset_generator(self, list_samples, batch_size) -> (np.float32, np.float32):
@@ -185,7 +188,7 @@ class DetectionDataset:
 
     def generate_dataset(self,
                          input_list: List[List],
-                         test_list: Union[List[str], None]) -> Tuple[List[List], List[List]]:
+                         test_list: Union[List[str], None]) -> Tuple[List[List], List[List], List[List]]:
         """
         Generate the tf.data.Dataset with train, validation and test set.
 
@@ -196,7 +199,15 @@ class DetectionDataset:
             and shuffling operations.
         """
 
-        xy_train, xy_val = train_test_split(input_list,
+        assert self.__evaluation_ratio + self.__training_ratio + self.__validation_ratio == 1, \
+            'Split ratios are not correctly set up'
+
+        training, xy_eval = train_test_split(input_list,
+                                             random_state=797,
+                                             train_size=int(
+                                                 (1 - self.__evaluation_ratio) * len(input_list)))
+
+        xy_train, xy_val = train_test_split(training,
                                             train_size=int(self.__training_ratio * len(input_list)))
 
         self.__training_set = (
@@ -208,14 +219,24 @@ class DetectionDataset:
                 .prefetch(AUTOTUNE),
             len(xy_train))
 
-        self.__validation_set = (
-            tf.data.Dataset.from_generator(
-                lambda: self.__dataset_generator(xy_val, self.__batch_size),
-                output_types=(np.float32,
-                              np.float32))
-                .repeat()
-                .prefetch(AUTOTUNE),
-            len(xy_val))
+        if len(xy_val):
+            self.__validation_set = (
+                tf.data.Dataset.from_generator(
+                    lambda: self.__dataset_generator(xy_val, self.__batch_size),
+                    output_types=(np.float32,
+                                  np.float32))
+                    .repeat()
+                    .prefetch(AUTOTUNE),
+                len(xy_val))
+
+        if len(xy_eval):
+            self.__evaluation_set = (
+                tf.data.Dataset.from_generator(
+                    lambda: self.__dataset_generator(xy_eval, self.__batch_size),
+                    output_types=(np.float32,
+                                  np.float32))
+                    .prefetch(AUTOTUNE),
+                len(xy_eval))
 
         if test_list is not None:
             self.__test_set = (
@@ -224,15 +245,18 @@ class DetectionDataset:
                     .batch(self.__batch_size_predict)
                     .prefetch(AUTOTUNE),
                 len(test_list))
-        # else: it's (None, 0)
+            # else: it's (None, 0)
 
-        return xy_train, xy_val
+        return xy_train, xy_val, xy_eval
 
-    def get_training_set(self) -> Tuple[tf.data.Dataset, int]:
+    def get_training_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__training_set
 
-    def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
+    def get_validation_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__validation_set
+
+    def get_evaluation_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
+        return self.__evaluation_set
 
     def get_test_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__test_set
