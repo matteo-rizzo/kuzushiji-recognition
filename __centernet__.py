@@ -1,6 +1,6 @@
 import logging
 import os
-
+import pandas as pd
 import absl.logging
 import tensorflow as tf
 
@@ -107,6 +107,12 @@ def main():
                                                               run_id + '_2',
                                                               'weights'))
 
+    train_list_df = pd.DataFrame(train_list)
+    train_list_df.to_csv(os.path.join('datasets', 'train_list.csv'))
+
+    bbox_predictions_df = pd.DataFrame(bbox_predictions)
+    bbox_predictions_df.to_csv(os.path.join('datasets', 'bbox_predictions.csv'))
+
     # --- STEP 3: Classification ---
 
     predictions = pipeline.run_classification(model_params=model_3_params,
@@ -114,6 +120,17 @@ def main():
                                               bbox_predictions=bbox_predictions,
                                               weights_path=os.path.join(base_experiments_path, run_id + '_3',
                                                                         'weights'))
+
+    predictions_df = pd.DataFrame(predictions)
+    predictions_df.to_csv(os.path.join('datasets', 'predictions.csv'))
+
+    print(predictions)
+    print('--------------------------------')
+    for prediction in predictions:
+        print(prediction)
+    print('--------------------------------')
+    print(len(predictions))
+    print('--------------------------------')
 
 
 if __name__ == '__main__':

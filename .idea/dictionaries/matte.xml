@@ -12,6 +12,10 @@
       <w>selu</w>
       <w>tensorboard</w>
       <w>tensorflow</w>
+      <w>xmax</w>
+      <w>xmin</w>
+      <w>ymax</w>
+      <w>ymin</w>
     </words>
   </dictionary>
 </component>
