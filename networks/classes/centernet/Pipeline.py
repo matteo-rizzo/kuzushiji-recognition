@@ -179,6 +179,8 @@ class CenterNetPipeline:
         except ValueError:
             decay = None
 
+        # ---- MODEL COMPILING and WEIGHTS RESTORATION ----
+
         model.compile(optimizer=Adam(lr=model_params['learning_rate'],
                                      decay=decay if decay else 0.0),
                       loss=self.__loss.all_loss,
@@ -192,6 +194,8 @@ class CenterNetPipeline:
                                                init_epoch=model_params['initial_epoch'],
                                                weights_folder_path=weights_path)
 
+        # ---- DATASET CREATION ----
+
         # Get labels from dataset and compute the recommended split,
         # format is: [ [image path, annotations, height split, width split] ]
         avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
@@ -203,14 +207,19 @@ class CenterNetPipeline:
         # Pass the list of test images if we are in test mode,
         # otherwise pass None, so that the test set will not be generated
         test_list = self.__test_list if model_params['predict_on_test'] else None
-        xy_train, xy_val = dataset_detection.generate_dataset(train_list, test_list)
+        xy_train, xy_val, xy_eval = dataset_detection.generate_dataset(train_list, test_list)
         detection_ts, detection_ts_size = dataset_detection.get_training_set()
         detection_vs, detection_vs_size = dataset_detection.get_validation_set()
+        detection_es, detection_es_size = dataset_detection.get_evaluation_set()
         detection_ps, detection_ps_size = dataset_detection.get_test_set()
+        print(detection_ts_size, detection_vs_size, detection_es_size, detection_ps_size)
+
+        # ---- TRAINING ----
 
         # Train the model
         if model_params['train']:
-            self.__logs['execution'].info('Starting the training procedure for the object detection model...')
+            self.__logs['execution'].info(
+                'Starting the training procedure for the object detection model...')
 
             # Set up the callbacks
             callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path,
@@ -222,15 +231,23 @@ class CenterNetPipeline:
                                      epochs=model_params['epochs'],
                                      training_set=detection_ts,
                                      validation_set=detection_vs,
-                                     training_steps=int(detection_ts_size // model_params['batch_size']) + 1,
-                                     validation_steps=int(detection_vs_size // model_params['batch_size']) + 1,
+                                     training_steps=int(
+                                         detection_ts_size // model_params['batch_size']) + 1,
+                                     validation_steps=int(
+                                         detection_vs_size // model_params['batch_size']) + 1,
                                      callbacks=callbacks)
 
+        # ---- EVALUATION ----
+
+        if model_params['evaluate']:
+
             # Evaluate the model
+            self.__logs['test'].info('Evaluating the model...')
             metrics = self.__model_utils.evaluate(model=model,
-                                                  evaluation_set=detection_vs,
+                                                  evaluation_set=detection_es,
                                                   evaluation_steps=int(
-                                                      detection_vs_size // model_params['batch_size'] + 1))
+                                                      detection_es_size // model_params[
+                                                          'batch_size']) + 1)
 
             self.__logs['test'].info('Evaluation metrics:\n'
                                      'all_loss     : {}\n'
@@ -242,11 +259,10 @@ class CenterNetPipeline:
                                              metrics[2],
                                              metrics[3]))
 
-        # ---- MINI TEST ON VALIDATION SET ----
-
-        if model_params['show_prediction_examples']:
-            # Prepare a test dataset from the validation set taking its first 10 values
-            test_path_list = [ann[0] for ann in xy_val[:10]]
+            if model_params['show_prediction_examples']:
+                self.__logs['test'].info('Showing prediction examples...')
+            # Prepare a test dataset from the evaluation set taking its first 10 values
+            test_path_list = [ann[0] for ann in xy_eval[:10]]
             mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
                 .map(self.__resize_fn,
                      num_parallel_calls=tf.data.experimental.AUTOTUNE) \
@@ -257,10 +273,10 @@ class CenterNetPipeline:
             detected_predictions = self.__model_utils.predict(model, mini_test)
             self.__bb_handler.get_bb_boxes(detected_predictions,
                                            mode='train',
-                                           annotation_list=xy_val[:10],
+                                           annotation_list=xy_eval[:10],
                                            show=True)
 
-        # ---- END MINI TEST ----
+        # ---- GENERATION OF TEST PREDICTIONS ----
 
         predicted_test_bboxes: Union[Dict[str, np.ndarray], None] = None
 
@@ -334,8 +350,9 @@ class CenterNetPipeline:
         if model_params['regenerate_crops_train']:
             train_list = self.__img_cropper.regenerate_crops_train(train_list, crop_char_path_train)
         else:
-            train_list: List[Tuple[str, int]] = self.__img_cropper.load_crop_characters(crop_char_path_train,
-                                                                                        mode='train')
+            train_list: List[Tuple[str, int]] = self.__img_cropper.load_crop_characters(
+                crop_char_path_train,
+                mode='train')
 
         # Now 'train_list' is a list[(image_path, char_class)]
 
@@ -343,7 +360,8 @@ class CenterNetPipeline:
         test_list: Union[List[str], None] = None
         if model_params['predict_on_test']:
             if model_params['regenerate_crops_test']:
-                test_list = self.__img_cropper.regenerate_crops_test(bbox_predictions, crop_char_path_test)
+                test_list = self.__img_cropper.regenerate_crops_test(bbox_predictions,
+                                                                     crop_char_path_test)
             else:
                 test_list = self.__img_cropper.load_crop_characters(crop_char_path_test, mode='test')
 
@@ -360,7 +378,8 @@ class CenterNetPipeline:
         classification_ps, classification_ps_size = dataset_classification.get_test_set()
 
         if model_params['train']:
-            self.__logs['execution'].info('Starting the training procedure for the classification model...')
+            self.__logs['execution'].info(
+                'Starting the training procedure for the classification model...')
 
             callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path,
                                                            batch_size=batch_size)
@@ -375,7 +394,8 @@ class CenterNetPipeline:
                                      callbacks=callbacks)
 
         if model_params['predict_on_test']:
-            self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+            self.__logs['execution'].info(
+                'Starting the predict procedure of char class (takes much time)...')
             # Note that predictions.shape = (n_sample, n_category)
             predictions = self.__model_utils.predict(model=model, dataset=classification_ps)
             self.__logs['execution'].info('Prediction completed.')

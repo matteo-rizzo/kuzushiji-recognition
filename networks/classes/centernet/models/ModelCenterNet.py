@@ -132,7 +132,7 @@ class ModelCenterNet:
     def evaluate(self,
                  model: tf.keras.Model,
                  evaluation_set: tf.data.Dataset,
-                 evaluation_steps: int) -> Union[float, List[float]]:
+                 evaluation_steps: Union[int, None] = None) -> Union[float, List[float], None]:
         """
         Evaluate the model on provided set.
         :return: the loss value if model has no other metrics, otw returns array with loss and metrics
@@ -141,8 +141,11 @@ class ModelCenterNet:
 
         self.__logs['training'].info('Evaluating the model...')
 
-        return model.evaluate(evaluation_set,
-                              steps=evaluation_steps)
+        if evaluation_steps is not None and evaluation_steps == 0:
+            self.__logs['training'].warn('Skipping evaluation since provided set is empty')
+            return None
+
+        return model.evaluate(evaluation_set, verbose=1, steps=evaluation_steps)
 
         # predictions = model.predict(evaluation_set, steps=evaluation_steps)
         #
@@ -169,4 +172,4 @@ class ModelCenterNet:
 
         self.__logs['test'].info("Predicting...")
 
-        return model.predict(dataset)
+        return model.predict(dataset, verbose=1)
