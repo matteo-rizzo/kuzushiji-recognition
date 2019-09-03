@@ -115,7 +115,8 @@ def main():
     predictions = pipeline.run_classification(model_params=model_3_params,
                                               train_list=train_list,
                                               bbox_predictions=bbox_predictions,
-                                              weights_path=os.path.join(base_experiments_path, run_id + '_3',
+                                              weights_path=os.path.join(base_experiments_path,
+                                                                        run_id + '_3',
                                                                         'weights'))
 
     predictions_df = pd.DataFrame(predictions)

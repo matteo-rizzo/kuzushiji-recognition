@@ -213,7 +213,6 @@ class CenterNetPipeline:
         detection_vs, detection_vs_size = dataset_detection.get_validation_set()
         detection_es, detection_es_size = dataset_detection.get_evaluation_set()
         detection_ps, detection_ps_size = dataset_detection.get_test_set()
-        print(detection_ts_size, detection_vs_size, detection_es_size, detection_ps_size)
 
         # ---- TRAINING ----
 
@@ -378,12 +377,9 @@ class CenterNetPipeline:
         classification_vs, classification_vs_size = dataset_classification.get_validation_set()
         classification_es, classification_es_size = dataset_classification.get_evaluation_set()
         classification_ps, classification_ps_size = dataset_classification.get_test_set()
-        print(classification_ts_size, classification_vs_size, classification_es_size,
-              classification_ps_size)
 
         if model_params['train']:
-            self.__logs['execution'].info(
-                'Starting the training procedure for the classification model...')
+            self.__logs['execution'].info('Starting the training procedure for the classification model...')
 
             callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path,
                                                            batch_size=batch_size)
