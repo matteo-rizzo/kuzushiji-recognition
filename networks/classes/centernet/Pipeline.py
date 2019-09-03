@@ -247,7 +247,7 @@ class CenterNetPipeline:
                                                   evaluation_set=detection_es,
                                                   evaluation_steps=int(
                                                       detection_es_size // model_params[
-                                                          'batch_size_predict']) + 1)
+                                                          'batch_size']) + 1)
 
             self.__logs['test'].info('Evaluation metrics:\n'
                                      'all_loss     : {}\n'
