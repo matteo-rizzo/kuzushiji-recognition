@@ -119,24 +119,13 @@ class ModelCenterNet:
         self.__logs['training'].info('* Total number of epochs:   ' + str(epochs))
         self.__logs['training'].info('* Initial epoch:            ' + str(init_epoch) + '\n')
 
-        datagen = ImageDataGenerator(brightness_range=[0.2, 1.0], zoom_range=[0.5, 1.0])
-        it = datagen.flow(training_set)
-
-        model.fit_generator(it,
-                            epochs=epochs,
-                            steps_per_epoch=training_steps,
-                            validation_data=validation_set,
-                            validation_steps=validation_steps,
-                            callbacks=callbacks,
-                            initial_epoch=init_epoch)
-
-        # model.fit(training_set,
-        #           epochs=epochs,
-        #           steps_per_epoch=training_steps,
-        #           validation_data=validation_set,
-        #           validation_steps=validation_steps,
-        #           callbacks=callbacks,
-        #           initial_epoch=init_epoch)
+        model.fit(training_set,
+                  epochs=epochs,
+                  steps_per_epoch=training_steps,
+                  validation_data=validation_set,
+                  validation_steps=validation_steps,
+                  callbacks=callbacks,
+                  initial_epoch=init_epoch)
 
         self.__logs['training'].info('Training procedure performed successfully!\n')
 
