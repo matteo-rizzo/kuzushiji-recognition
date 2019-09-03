@@ -160,9 +160,8 @@ class ImageCropper:
         cropped_list = []
 
         for img_path, boxes in tqdm(images_to_split.items()):
-
             # Get image name without extension, e.g. dataset/img.jpg -> img
-            img_name = img_path.split(str(os.sep))[-1].split('.')[0]
+            img_name = img_path.split('/')[-1].split('.')[0]
 
             # Relative path with image name (no extension)
             img_name_path = os.path.join(save_dir, img_name)

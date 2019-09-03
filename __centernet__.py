@@ -109,11 +109,11 @@ def main():
 
     # --- STEP 3: Classification ---
 
-    pipeline.run_classification(model_params=model_3_params,
-                                train_list=train_list,
-                                bbox_predictions=bbox_predictions,
-                                weights_path=os.path.join(base_experiments_path, run_id + '_3',
-                                                          'weights'))
+    predictions = pipeline.run_classification(model_params=model_3_params,
+                                              train_list=train_list,
+                                              bbox_predictions=bbox_predictions,
+                                              weights_path=os.path.join(base_experiments_path, run_id + '_3',
+                                                                        'weights'))
 
 
 if __name__ == '__main__':

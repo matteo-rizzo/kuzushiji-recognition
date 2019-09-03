@@ -327,8 +327,8 @@ class CenterNetPipeline:
                       metrics=["sparse_categorical_accuracy"])
 
         # Generate dataset object for the classification model
-        crop_char_path_train = os.path.join(os.getcwd(), 'datasets', 'char_cropped_train')
-        crop_char_path_test = os.path.join(os.getcwd(), 'datasets', 'char_cropped_test')
+        crop_char_path_train = os.path.join('datasets', 'char_cropped_train')
+        crop_char_path_test = os.path.join('datasets', 'char_cropped_test')
 
         # Train mode cropping
         if model_params['regenerate_crops_train']:
@@ -383,3 +383,6 @@ class CenterNetPipeline:
             return predictions
 
         return None
+
+    def write_subsmission(predictions):
+        pass
