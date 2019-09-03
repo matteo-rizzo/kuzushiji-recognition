@@ -30,8 +30,11 @@ class PreprocessingDataset:
     def get_dataset_labels(self) -> List[float]:
         return [el[1] for el in self.__annotation_list_train_area]
 
-    def generate_dataset(self) -> Dict[str, int]:
-        # Generate a list of list where each row represent an image and the list of the characters within it
+    def get_categories_dict(self) -> Dict[str, int]:
+        return self.__dict_cat
+
+    def generate_dataset(self):
+        # Generate a train list of lists where each row represents an image and the list of the characters within it
         # (codified as integers) with relative coordinates of bbox
         self.__annotate()
 
@@ -40,8 +43,6 @@ class PreprocessingDataset:
 
         # Generate the tf.data.Dataset containing all the objects
         self.__compose_dataset_object()
-
-        return self.__dict_cat
 
     def __annotate(self):
         df_train = pd.read_csv(self.__train_csv_path)
@@ -68,58 +69,57 @@ class PreprocessingDataset:
         # inv_dict_cat = {str(j): list(category_names)[j] for j in range(len(category_names))}
 
         for i in range(len(df_train)):
-            # Get one row for each label character for image i, as category,x,y,width,height
+            # Get one row for each label character for image i, as: <category> <x> <y> <width> <height>
             ann = np.array(df_train.loc[i, "labels"].split(" ")).reshape(-1, 5)
 
-            # Iterate over categories in first column of ann (characters)
+            # Iterate over categories in first column of annotations (characters)
             for j, category_name in enumerate(ann[:, 0]):
                 # Change categories in integer values
                 ann[j, 0] = int(self.__dict_cat[category_name])
 
             # Calculate the center of each bbox
-            # ann[:, 0] = class
-            # ann[:, 1] = xmin
-            # ann[:, 2] = ymin
-            # ann[:, 3] = x width
-            # ann[:, 4] = y height
+            # Before the operations:
+            # - ann[:, 0] = class
+            # - ann[:, 1] = xmin
+            # - ann[:, 2] = ymin
+            # - ann[:, 3] = x width
+            # - ann[:, 4] = y height
+
             ann = ann.astype('int32')
-            ann[:, 1] += ann[:, 3] // 2  # center_x
-            ann[:, 2] += ann[:, 4] // 2  # center_y
-            # ann[:, 0] = class
-            # ann[:, 1] = x_center
-            # ann[:, 2] = y_center
-            # ann[:, 3] = x width
-            # ann[:, 4] = y height
 
-            annotation_list_train.append(
-                ["{}/{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]),
-                 ann])
+            # center_x
+            ann[:, 1] += ann[:, 3] // 2
 
-            # print("Sample image show")
-            # img = np.asarray(
-            #    Image.open(annotation_list_train[0][0]).resize((self.__input_width,
-            #       self.__input_height)).convert('RGB'))
-            # plt.imshow(img)
-            # plt.show()
+            # center_y
+            ann[:, 2] += ann[:, 4] // 2
 
-        # This is a list of list where each row represent an image and the list of the characters within it
-        # (codified as integers) with relative coordinates of bbox
+            # After the operations:
+            #    ann[:, 0] = class
+            # -> ann[:, 1] = x_center
+            # -> ann[:, 2] = y_center
+            #    ann[:, 3] = x width
+            #    ann[:, 4] = y height
+
+            annotation_list_train.append(["{}/{}.jpg".format(self.__train_images_path,
+                                                             df_train.loc[i, "image_id"]),
+                                          ann])
+
+        # __annotation_list_train is a list of list where each row represent an image and
+        # the list of the characters within it with relative coordinates of bbox
         self.__annotation_list_train = annotation_list_train
 
-    def __annotate_char_area(self) -> List[List]:
+    def __annotate_char_area(self):
         """
         Computes the average bbox ratio w.r.t. the image area considering all the images,
         and plots a graph with ratio distribution.
 
-        :return: a list where each row represent the average bbox ratio for character in an image.
+        :return: a list where each row represents the average bbox ratio for character in an image.
         """
+
         self.__aspect_ratio_pic_all = []
-        aspect_ratio_pic_all_test = []
         average_letter_size_all = []
         annotation_list_train_area = []
-        # resize_dir = "resized/"
 
-        # if os.path.exists(resize_dir) == False: os.mkdir(resize_dir)
         for i in range(len(self.__annotation_list_train)):
             with Image.open(self.__annotation_list_train[i][0]) as f:
                 # Image dimensions
@@ -131,8 +131,7 @@ class PreprocessingDataset:
                 self.__aspect_ratio_pic_all.append(aspect_ratio_pic)
 
                 # Bbox area for each character in image (width * height)
-                letter_size = self.__annotation_list_train[i][1][:, 3] * \
-                              self.__annotation_list_train[i][1][:, 4]
+                letter_size = self.__annotation_list_train[i][1][:, 3] * self.__annotation_list_train[i][1][:, 4]
 
                 # List of ratios for each character
                 letter_size_ratio = letter_size / area
@@ -142,37 +141,23 @@ class PreprocessingDataset:
                 average_letter_size_all.append(average_letter_size)
 
                 # Add example for training with image path and log average bbox size for objects in it
-                annotation_list_train_area.append([self.__annotation_list_train[i][0],
-                                                   np.log(average_letter_size)])
-
-        # Create test set
-        # test_df = pd.read_csv(self.__sample_submission)
-        # test_images = []
-        # for image_id in test_df['image_id']:
-        #     test_images.append(os.path.join(self.__test_images_path, image_id + '.jpg'))
-        #
-        # for i in range(len(test_images)):
-        #     with Image.open(test_images[i]) as f:
-        #         width, height = f.size
-        #         aspect_ratio_pic = height / width
-        #         aspect_ratio_pic_all_test.append(aspect_ratio_pic)
+                annotation_list_train_area.append([self.__annotation_list_train[i][0], np.log(average_letter_size)])
 
         plt.hist(np.log(average_letter_size_all), bins=100)
         plt.title('log(ratio of letter_size / picture_size)', loc='center', fontsize=12)
-        # plt.show()
 
         self.__annotation_list_train_area = annotation_list_train_area
 
-        return annotation_list_train_area  # List[str, float]
-
     def annotate_split_recommend(self, annotations_w_area: List[float]) -> List[List]:
         """
-        Given a list of bbox sizes for each train image, computes the best size according to the image must be split
+        Given a list of sizes of bboxes for each train image,
+        computes the best size according to the image must be split
 
         :param annotations_w_area: list of predicted bbox areas for all characters
         :return: extended annotation list with recommended splits in format:
             image path: str, annotations: np.array, height split: float, width split: float
         """
+
         base_detect_num_h, base_detect_num_w = 25, 25
 
         annotation_list_train_w_split = []
@@ -186,19 +171,11 @@ class PreprocessingDataset:
             h_split_recommend = max([1, detect_num_h / base_detect_num_h])
             w_split_recommend = max([1, detect_num_w / base_detect_num_w])
 
-            annotation_list_train_w_split.append(
-                [self.__annotation_list_train[i][0], self.__annotation_list_train[i][1],
-                 h_split_recommend,
-                 w_split_recommend])
-            # Format: image path, annotations, height split, width split
-
-        # Just for test
-        # for i in np.arange(0, 1):
-        #     print("recommended height split:{}, recommended width_split:{}".format(
-        #         annotation_list_train_w_split[i][2], annotation_list_train_w_split[i][3]))
-        #     img = np.asarray(Image.open(annotation_list_train_w_split[i][0]).convert('RGB'))
-        #     plt.imshow(img)
-        #     plt.show()
+            # Format: <image path> <annotations> <height split> <width split>
+            annotation_list_train_w_split.append([self.__annotation_list_train[i][0],
+                                                  self.__annotation_list_train[i][1],
+                                                  h_split_recommend,
+                                                  w_split_recommend])
 
         return annotation_list_train_w_split
 
@@ -212,6 +189,7 @@ class PreprocessingDataset:
         :param random_crop: whether to apply a random crop
         :return: image and labels tensors.
         """
+
         input_width, input_height = self.__input_width, self.__input_height
         crop_ratio = np.random.uniform(0.7, 1) if random_crop else 1
 
@@ -259,15 +237,17 @@ class PreprocessingDataset:
         Generates the tf.data.Dataset containing all the objects
         """
 
-        image_paths = [sample[0] for sample in self.__annotation_list_train_area]  # sample path
-        image_labels = [sample[1] for sample in self.__annotation_list_train_area]  # avg bbox ratios
+        # Iterate over paths of samples
+        image_paths = [sample[0] for sample in self.__annotation_list_train_area]
+
+        # Iterate over avg bbox ratios
+        image_labels = [sample[1] for sample in self.__annotation_list_train_area]
 
         image_dataset = tf.data.Dataset.from_tensor_slices(image_paths)
         label_dataset = tf.data.Dataset.from_tensor_slices(image_labels)
 
-        self.__dataset = (
-            tf.data.Dataset.zip((image_dataset, label_dataset)).shuffle(buffer_size=500),
-            len(image_paths))
+        self.__dataset = (tf.data.Dataset.zip((image_dataset, label_dataset)).shuffle(buffer_size=500),
+                          len(image_paths))
 
     def get_training_set(self) -> Tuple[tf.data.Dataset, int]:
         TRAIN_SIZE = int(self.__training_ratio * self.__dataset[1])
@@ -284,10 +264,10 @@ class PreprocessingDataset:
                 TRAIN_SIZE)
 
     def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
-        TRAIN_SIZE = int(self.__training_ratio * self.__dataset[1])
+        train_size = int(self.__training_ratio * self.__dataset[1])
 
         return (self.__dataset[0]
-                .skip(TRAIN_SIZE)
+                .skip(train_size)
                 .map(lambda path, label: tf.py_function(self.__preprocess_image,
                                                         [path, label, False, False],
                                                         (tf.float32, tf.float64)),
@@ -295,8 +275,4 @@ class PreprocessingDataset:
                 .batch(self.batch_size)
                 .repeat()
                 .prefetch(AUTOTUNE),
-                self.__dataset[1] - TRAIN_SIZE)
-
-    def get_test_set(self) -> Tuple[tf.data.Dataset, int]:
-        # TODO
-        return (None, 0)
+                self.__dataset[1] - train_size)

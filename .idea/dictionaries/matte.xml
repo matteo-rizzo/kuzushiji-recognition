@@ -2,6 +2,7 @@
   <dictionary name="matte">
     <words>
       <w>autotune</w>
+      <w>bboxes</w>
       <w>checkpointer</w>
       <w>conv</w>
       <w>convolutional</w>
@@ -9,6 +10,7 @@
       <w>datasets</w>
       <w>kaggle</w>
       <w>keras</w>
+      <w>preprocessing</w>
       <w>selu</w>
       <w>tensorboard</w>
       <w>tensorflow</w>

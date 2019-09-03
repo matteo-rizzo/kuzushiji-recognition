@@ -110,9 +110,6 @@ def main():
     train_list_df = pd.DataFrame(train_list)
     train_list_df.to_csv(os.path.join('datasets', 'train_list.csv'))
 
-    bbox_predictions_df = pd.DataFrame(bbox_predictions)
-    bbox_predictions_df.to_csv(os.path.join('datasets', 'bbox_predictions.csv'))
-
     # --- STEP 3: Classification ---
 
     predictions = pipeline.run_classification(model_params=model_3_params,

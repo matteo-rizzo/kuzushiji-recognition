@@ -97,9 +97,10 @@ class CenterNetPipeline:
 
         # Build dataset for the preprocessing model
         dataset_avg_size = PreprocessingDataset(model_params)
+        dataset_avg_size.generate_dataset()
 
         # Dictionary that map each char category into an integer value
-        self.__dict_cat = dataset_avg_size.generate_dataset()
+        self.__dict_cat = dataset_avg_size.get_categories_dict()
 
         return dataset_avg_size
 
@@ -404,5 +405,5 @@ class CenterNetPipeline:
 
         return None
 
-    def write_subsmission(predictions):
+    def write_submission(self, predictions):
         pass
