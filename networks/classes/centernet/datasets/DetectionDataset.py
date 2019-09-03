@@ -36,7 +36,8 @@ class DetectionDataset:
         self.__evaluation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__test_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
 
-    def __dataset_generator(self, list_samples, batch_size) -> (np.float32, np.float32):
+    def __dataset_generator(self, list_samples, batch_size, random_crop: bool = True) \
+            -> (np.float32, np.float32):
         """
         Generates a dataset given the samples and a batch size
 
@@ -81,17 +82,25 @@ class DetectionDataset:
 
                 with Image.open(list_samples[i][0]) as f:
 
-                    # random crop
                     pic_width, pic_height = f.size
-                    f = np.asarray(f.convert('RGB'), dtype=np.uint8)
 
-                    top_offset = np.random.randint(0, pic_height - int(crop_ratio_h * pic_height))
-                    left_offset = np.random.randint(0, pic_width - int(crop_ratio_w * pic_width))
-                    bottom_offset = top_offset + int(crop_ratio_h * pic_height)
-                    right_offset = left_offset + int(crop_ratio_w * pic_width)
+                    if random_crop:
+                        # random crop
+                        f = np.asarray(f.convert('RGB'), dtype=np.uint8)
 
-                    f = cv2.resize(f[top_offset:bottom_offset, left_offset:right_offset, :],
-                                   (input_height, input_width))
+                        top_offset = np.random.randint(0, pic_height - int(crop_ratio_h * pic_height))
+                        left_offset = np.random.randint(0, pic_width - int(crop_ratio_w * pic_width))
+                        bottom_offset = top_offset + int(crop_ratio_h * pic_height)
+                        right_offset = left_offset + int(crop_ratio_w * pic_width)
+
+                        f = cv2.resize(f[top_offset:bottom_offset, left_offset:right_offset, :],
+                                       (input_height, input_width))
+                    else:
+                        # No crop
+                        top_offset, left_offset, bottom_offset, right_offset = 0, 0, 0, 0
+                        crop_ratio, crop_ratio_h, crop_ratio_w = 1, 1, 1
+                        f = f.resize((input_width, input_height))
+                        f = np.asarray(f.convert('RGB'), dtype=np.uint8)
 
                     x.append(f)
 
@@ -111,6 +120,7 @@ class DetectionDataset:
                     x_c = (annotation[1] - left_offset) * (output_width / int(crop_ratio_w * pic_width))
                     y_c = (annotation[2] - top_offset) * (output_height / int(crop_ratio_h * pic_height))
 
+                    # Divide by output stride (pic_width * crop / out_width)
                     width = annotation[3] * (output_width / int(crop_ratio_w * pic_width))
                     height = annotation[4] * (output_height / int(crop_ratio_h * pic_height))
 
@@ -187,12 +197,12 @@ class DetectionDataset:
         return image_resized / 255
 
     def generate_dataset(self,
-                         input_list: List[List],
+                         train_list: List[List],
                          test_list: Union[List[str], None]) -> Tuple[List[List], List[List], List[List]]:
         """
         Generate the tf.data.Dataset with train, validation and test set.
 
-        :param input_list: list with format [[image path, annotations, height split, width split]]
+        :param train_list: list with format [[image path, annotations, height split, width split]]
         :param test_list: list of test images file paths, or None if we don't want to generate the
             test set (i.e. not in predict mode).
         :return: the train and validation sets in the same format as the input_list, after splitting
@@ -202,17 +212,21 @@ class DetectionDataset:
         assert self.__evaluation_ratio + self.__training_ratio + self.__validation_ratio == 1, \
             'Split ratios are not correctly set up'
 
-        training, xy_eval = train_test_split(input_list,
+        training, xy_eval = train_test_split(train_list,
                                              random_state=797,
+                                             shuffle=True,
                                              train_size=int(
-                                                 (1 - self.__evaluation_ratio) * len(input_list)))
+                                                 (1 - self.__evaluation_ratio) * len(train_list)))
 
         xy_train, xy_val = train_test_split(training,
-                                            train_size=int(self.__training_ratio * len(input_list)))
+                                            shuffle=True,
+                                            train_size=int(self.__training_ratio * len(train_list)))
 
         self.__training_set = (
             tf.data.Dataset.from_generator(
-                lambda: self.__dataset_generator(xy_train, self.__batch_size),
+                lambda: self.__dataset_generator(xy_train,
+                                                 self.__batch_size,
+                                                 random_crop=True),
                 output_types=(np.float32,
                               np.float32))
                 .repeat()
@@ -222,7 +236,9 @@ class DetectionDataset:
         if len(xy_val):
             self.__validation_set = (
                 tf.data.Dataset.from_generator(
-                    lambda: self.__dataset_generator(xy_val, self.__batch_size),
+                    lambda: self.__dataset_generator(xy_val,
+                                                     self.__batch_size,
+                                                     random_crop=False),
                     output_types=(np.float32,
                                   np.float32))
                     .repeat()
@@ -232,7 +248,9 @@ class DetectionDataset:
         if len(xy_eval):
             self.__evaluation_set = (
                 tf.data.Dataset.from_generator(
-                    lambda: self.__dataset_generator(xy_eval, self.__batch_size),
+                    lambda: self.__dataset_generator(xy_eval,
+                                                     self.__batch_size,
+                                                     random_crop=False),
                     output_types=(np.float32,
                                   np.float32))
                     .prefetch(AUTOTUNE),
