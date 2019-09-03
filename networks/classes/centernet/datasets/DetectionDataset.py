@@ -187,12 +187,12 @@ class DetectionDataset:
         return image_resized / 255
 
     def generate_dataset(self,
-                         input_list: List[List],
+                         train_list: List[List],
                          test_list: Union[List[str], None]) -> Tuple[List[List], List[List], List[List]]:
         """
         Generate the tf.data.Dataset with train, validation and test set.
 
-        :param input_list: list with format [[image path, annotations, height split, width split]]
+        :param train_list: list with format [[image path, annotations, height split, width split]]
         :param test_list: list of test images file paths, or None if we don't want to generate the
             test set (i.e. not in predict mode).
         :return: the train and validation sets in the same format as the input_list, after splitting
@@ -202,13 +202,15 @@ class DetectionDataset:
         assert self.__evaluation_ratio + self.__training_ratio + self.__validation_ratio == 1, \
             'Split ratios are not correctly set up'
 
-        training, xy_eval = train_test_split(input_list,
+        training, xy_eval = train_test_split(train_list,
                                              random_state=797,
+                                             shuffle=True,
                                              train_size=int(
-                                                 (1 - self.__evaluation_ratio) * len(input_list)))
+                                                 (1 - self.__evaluation_ratio) * len(train_list)))
 
         xy_train, xy_val = train_test_split(training,
-                                            train_size=int(self.__training_ratio * len(input_list)))
+                                            shuffle=True,
+                                            train_size=int(self.__training_ratio * len(train_list)))
 
         self.__training_set = (
             tf.data.Dataset.from_generator(
@@ -232,7 +234,7 @@ class DetectionDataset:
         if len(xy_eval):
             self.__evaluation_set = (
                 tf.data.Dataset.from_generator(
-                    lambda: self.__dataset_generator(xy_eval, self.__batch_size),
+                    lambda: self.__dataset_generator(xy_eval, self.__batch_size_predict),
                     output_types=(np.float32,
                                   np.float32))
                     .prefetch(AUTOTUNE),

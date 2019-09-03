@@ -17,6 +17,8 @@ class ClassificationDataset:
         self.__sample_submission = params['sample_submission']
 
         self.__training_ratio = params['training_ratio']
+        self.__validation_ratio = params['validation_ratio']
+        self.__evaluation_ratio = params['evaluation_ratio']
         self.__batch_size = params['batch_size']
         self.__batch_size_predict = params['batch_size_predict']
 
@@ -28,8 +30,9 @@ class ClassificationDataset:
         self.__output_height = params['output_height']
         self.__output_width = params['output_width']
 
-        self.__validation_set: Tuple[tf.data.Dataset, int] = None
-        self.__training_set: Tuple[tf.data.Dataset, int] = None
+        self.__validation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
+        self.__evaluation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
+        self.__training_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__test_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
 
     def __dataset_generator(self,
@@ -104,7 +107,7 @@ class ClassificationDataset:
 
     def generate_dataset(self,
                          train_list: List[Tuple[str, int]],
-                         test_list: Union[List[str], None]) -> Tuple[List[List], List[List]]:
+                         test_list: Union[List[str], None]) -> Tuple[List[List], List[List], List[List]]:
 
         """
         Generate the tf.data.Dataset containing all the objects.
@@ -115,31 +118,52 @@ class ClassificationDataset:
                 param.
         """
 
-        train_xy, val_xy = train_test_split(train_list,
+        assert self.__evaluation_ratio + self.__training_ratio + self.__validation_ratio == 1, \
+            'Split ratios are not correctly set up'
+
+        training, xy_eval = train_test_split(train_list,
+                                             random_state=797,
+                                             shuffle=True,
+                                             train_size=int(
+                                                 (1 - self.__evaluation_ratio) * len(train_list)))
+
+        xy_train, xy_val = train_test_split(training,
                                             train_size=int(self.__training_ratio * len(train_list)),
                                             shuffle=True)
 
         self.__training_set = (
             tf.data.Dataset.from_generator(
-                lambda: self.__dataset_generator(train_xy,
+                lambda: self.__dataset_generator(xy_train,
                                                  is_train=True,
                                                  random_crop=True),
                 output_types=(np.float32,
                               np.float32))
                 .repeat()
                 .prefetch(AUTOTUNE),
-            len(train_xy))
+            len(xy_train))
 
-        self.__validation_set = (
-            tf.data.Dataset.from_generator(
-                lambda: self.__dataset_generator(val_xy,
-                                                 is_train=False,
-                                                 random_crop=False),
-                output_types=(np.float32,
-                              np.float32))
-                .repeat()
-                .prefetch(AUTOTUNE),
-            len(val_xy))
+        if len(xy_val):
+            self.__validation_set = (
+                tf.data.Dataset.from_generator(
+                    lambda: self.__dataset_generator(xy_val,
+                                                     is_train=False,
+                                                     random_crop=False),
+                    output_types=(np.float32,
+                                  np.float32))
+                    .repeat()
+                    .prefetch(AUTOTUNE),
+                len(xy_val))
+
+        if len(xy_eval):
+            self.__evaluation_set = (
+                tf.data.Dataset.from_generator(
+                    lambda: self.__dataset_generator(xy_eval,
+                                                     is_train=False,
+                                                     random_crop=False),
+                    output_types=(np.float32,
+                                  np.float32))
+                    .prefetch(AUTOTUNE),
+                len(xy_val))
 
         if test_list is not None:
             self.__test_set = (
@@ -152,13 +176,16 @@ class ClassificationDataset:
             )
         # else: it remains (None, 0)
 
-        return train_xy, val_xy
+        return xy_train, xy_val, xy_eval
 
-    def get_training_set(self) -> Tuple[tf.data.Dataset, int]:
+    def get_training_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__training_set
 
-    def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
+    def get_validation_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__validation_set
+
+    def get_evaluation_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
+        return self.__evaluation_set
 
     def get_test_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__test_set

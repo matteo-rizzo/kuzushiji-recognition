@@ -6,8 +6,8 @@
     "test_images_path": "datasets/kaggle/testing/images",
     "sample_submission": "datasets/kaggle/sample_submission.csv",
     "training_ratio": 0.7,
-    "validation_ratio": 0.2,
-    "evaluation_ratio": 0.1
+    "validation_ratio": 0.15,
+    "evaluation_ratio": 0.15
   },
   "model_1": {
     "batch_size": 32,
@@ -33,7 +33,7 @@
     "learning_rate": 1e-5,
     "decay": 0.001,
     "predict_on_test": false,
-    "evaluate": true,
+    "evaluate": false,
     "show_prediction_examples": false,
     "input_width": 512,
     "input_height": 512,
@@ -52,7 +52,7 @@
     "learning_rate": 1e-5,
     "decay": "",
     "predict_on_test": false,
-    "evaluate": true,
+    "evaluate": false,
     "regenerate_crops_test": false,
     "input_width": 32,
     "input_height": 32,

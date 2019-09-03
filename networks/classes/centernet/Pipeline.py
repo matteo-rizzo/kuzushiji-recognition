@@ -247,7 +247,7 @@ class CenterNetPipeline:
                                                   evaluation_set=detection_es,
                                                   evaluation_steps=int(
                                                       detection_es_size // model_params[
-                                                          'batch_size']) + 1)
+                                                          'batch_size_predict']) + 1)
 
             self.__logs['test'].info('Evaluation metrics:\n'
                                      'all_loss     : {}\n'
@@ -261,20 +261,20 @@ class CenterNetPipeline:
 
             if model_params['show_prediction_examples']:
                 self.__logs['test'].info('Showing prediction examples...')
-            # Prepare a test dataset from the evaluation set taking its first 10 values
-            test_path_list = [ann[0] for ann in xy_eval[:10]]
-            mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
-                .map(self.__resize_fn,
-                     num_parallel_calls=tf.data.experimental.AUTOTUNE) \
-                .batch(1) \
-                .prefetch(tf.data.experimental.AUTOTUNE)
+                # Prepare a test dataset from the evaluation set taking its first 10 values
+                test_path_list = [ann[0] for ann in xy_eval[:10]]
+                mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
+                    .map(self.__resize_fn,
+                         num_parallel_calls=tf.data.experimental.AUTOTUNE) \
+                    .batch(1) \
+                    .prefetch(tf.data.experimental.AUTOTUNE)
 
-            # Perform the prediction on the newly created dataset and show images
-            detected_predictions = self.__model_utils.predict(model, mini_test)
-            self.__bb_handler.get_bb_boxes(detected_predictions,
-                                           mode='train',
-                                           annotation_list=xy_eval[:10],
-                                           show=True)
+                # Perform the prediction on the newly created dataset and show images
+                detected_predictions = self.__model_utils.predict(model, mini_test)
+                self.__bb_handler.get_bb_boxes(detected_predictions,
+                                               mode='train',
+                                               annotation_list=xy_eval[:10],
+                                               show=True)
 
         # ---- GENERATION OF TEST PREDICTIONS ----
 
@@ -372,10 +372,13 @@ class CenterNetPipeline:
 
         # We need to pass it the training list, and the list of cropped images from test set if we are
         # in predict mode (otw pass we pass test_list=None).
-        _, _ = dataset_classification.generate_dataset(train_list, test_list)
+        _, _, xy_eval = dataset_classification.generate_dataset(train_list, test_list)
         classification_ts, classification_ts_size = dataset_classification.get_training_set()
         classification_vs, classification_vs_size = dataset_classification.get_validation_set()
+        classification_es, classification_es_size = dataset_classification.get_evaluation_set()
         classification_ps, classification_ps_size = dataset_classification.get_test_set()
+        print(classification_ts_size, classification_vs_size, classification_es_size,
+              classification_ps_size)
 
         if model_params['train']:
             self.__logs['execution'].info(
@@ -392,6 +395,20 @@ class CenterNetPipeline:
                                      training_steps=int(classification_ts_size // batch_size) + 1,
                                      validation_steps=int(classification_vs_size // batch_size) + 1,
                                      callbacks=callbacks)
+
+        if model_params['evaluate']:
+            self.__logs['execution'].info('Evaluating the classification model...')
+
+            metrics = self.__model_utils.evaluate(model=model,
+                                                  evaluation_set=classification_es,
+                                                  evaluation_steps=int(
+                                                      classification_es_size // model_params[
+                                                          'batch_size']) + 1)
+
+            self.__logs['test'].info('Evaluation metrics:\n'
+                                     'sparse_categorical_crossentropy : {}\n'
+                                     'sparse_categorical_accuracy     : {}'
+                                     .format(metrics[0], metrics[1]))
 
         if model_params['predict_on_test']:
             self.__logs['execution'].info(
