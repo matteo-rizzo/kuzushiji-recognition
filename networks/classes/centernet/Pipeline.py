@@ -566,6 +566,4 @@ class CenterNetPipeline:
                                xmax - xmin,
                                ymax - ymin])
 
-            print(labels)
-
             bbox_visualizer.visualize_bboxes(image_id=sub_data['image_id'], labels=labels)

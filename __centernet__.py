@@ -85,38 +85,38 @@ def main():
 
     # --- STEP 1: Pre-processing (Check Object Size) ---
 
-    # dataset_avg_size = pipeline.run_preprocessing(model_params=model_1_params,
-    #                                               weights_path=os.path.join(base_experiments_path,
-    #                                                                         run_id + '_1',
-    #                                                                         'weights'))
+    dataset_avg_size = pipeline.run_preprocessing(model_params=model_1_params,
+                                                  weights_path=os.path.join(base_experiments_path,
+                                                                            run_id + '_1',
+                                                                            'weights'))
 
     # --- STEP 2: Detection by CenterNet ---
 
-    # pipeline.run_hourglass_detection(model_params=model_2_params,
-    #                                  dataset_avg_size=dataset_avg_size,
-    #                                  weights_path=os.path.join(
-    #                                      base_experiments_path,
-    #                                      run_id + '_2',
-    #                                      'weights'),
-    #                                  run_id=run_id)
+    pipeline.run_hourglass_detection(model_params=model_2_params,
+                                     dataset_avg_size=dataset_avg_size,
+                                     weights_path=os.path.join(
+                                         base_experiments_path,
+                                         run_id + '_2',
+                                         'weights'),
+                                     run_id=run_id)
 
-    # train_list, bbox_predictions = pipeline.run_detection(model_params=model_2_params,
-    #                                                       dataset_avg_size=dataset_avg_size,
-    #                                                       weights_path=os.path.join(
-    #                                                           base_experiments_path,
-    #                                                           run_id + '_2',
-    #                                                           'weights'))
+    train_list, bbox_predictions = pipeline.run_detection(model_params=model_2_params,
+                                                          dataset_avg_size=dataset_avg_size,
+                                                          weights_path=os.path.join(
+                                                              base_experiments_path,
+                                                              run_id + '_2',
+                                                              'weights'))
 
     # --- STEP 3: Classification ---
 
-    # predictions = pipeline.run_classification(model_params=model_3_params,
-    #                                           train_list=train_list,
-    #                                           bbox_predictions=bbox_predictions,
-    #                                           weights_path=os.path.join(base_experiments_path,
-    #                                                                     run_id + '_3',
-    #                                                                     'weights'))
+    predictions = pipeline.run_classification(model_params=model_3_params,
+                                              train_list=train_list,
+                                              bbox_predictions=bbox_predictions,
+                                              weights_path=os.path.join(base_experiments_path,
+                                                                        run_id + '_3',
+                                                                        'weights'))
 
-    # pipeline.write_submission(predictions)
+    pipeline.write_submission(predictions)
 
     pipeline.visualize_final_results()
 
