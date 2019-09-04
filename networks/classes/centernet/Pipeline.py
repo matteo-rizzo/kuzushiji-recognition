@@ -32,7 +32,7 @@ class CenterNetPipeline:
         self.__dict_cat: Dict[str, int] = {}
 
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
-        base_path = os.path.join(os.getcwd(), 'datasets', 'kaggle', 'testing', 'images')
+        base_path = dataset_params['test_images_path']
         self.__test_list = [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list]
 
     def __write_test_list_to_csv(self, test_list: List, bbox_predictions: Dict):
@@ -64,7 +64,9 @@ class CenterNetPipeline:
 
             # Map each cropped image to its bounding box
             cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
-            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_name + '.jpg'][cropped_img_id][2:]]
+            # Relative path
+            key = os.path.join(self.__dataset_params['test_images_path'], original_img_name + '.jpg')
+            bbox_coords = [str(coord) for coord in bbox_predictions[str(key)][cropped_img_id][2:]]
             # Note that the coordinates are in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
 
@@ -383,7 +385,7 @@ class CenterNetPipeline:
                                                      regenerate=model_params['regenerate_crops_test'],
                                                      mode='test')
 
-            self.__write_test_list_to_csv(test_list[:10], bbox_predictions)
+            self.__write_test_list_to_csv(test_list, bbox_predictions)
 
         batch_size = int(model_params['batch_size'])
         dataset_classification = ClassificationDataset(model_params)
@@ -540,7 +542,8 @@ class CenterNetPipeline:
             if i == max_visualizations:
                 break
 
-            classes = [label.strip().split(' ')[0] for label in re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
+            classes = [label.strip().split(' ')[0] for label in
+                       re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
             bboxes = test_data['bboxes'].split(' ')
 
             # Iterate over the predicted classes and corresponding bboxes
