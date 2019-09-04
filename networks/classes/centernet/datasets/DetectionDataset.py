@@ -238,7 +238,7 @@ class DetectionDataset:
                 tf.data.Dataset.from_generator(
                     lambda: self.__dataset_generator(xy_val,
                                                      self.__batch_size,
-                                                     random_crop=False),
+                                                     random_crop=True),
                     output_types=(np.float32,
                                   np.float32))
                     .repeat()
@@ -250,9 +250,10 @@ class DetectionDataset:
                 tf.data.Dataset.from_generator(
                     lambda: self.__dataset_generator(xy_eval,
                                                      self.__batch_size,
-                                                     random_crop=False),
+                                                     random_crop=True),
                     output_types=(np.float32,
                                   np.float32))
+                    .repeat()
                     .prefetch(AUTOTUNE),
                 len(xy_eval))
 

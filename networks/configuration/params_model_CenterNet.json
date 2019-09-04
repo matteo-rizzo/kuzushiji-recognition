@@ -1,13 +1,13 @@
 {
-  "run_id": "test_centernet",
+  "run_id": "test_centernet_new",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "train_images_path": "datasets/kaggle/training/images",
     "test_images_path": "datasets/kaggle/testing/images",
     "sample_submission": "datasets/kaggle/sample_submission.csv",
     "training_ratio": 0.7,
-    "validation_ratio": 0.2,
-    "evaluation_ratio": 0.1
+    "validation_ratio": 0.15,
+    "evaluation_ratio": 0.15
   },
   "model_1": {
     "batch_size": 32,
@@ -24,13 +24,13 @@
     "output_height": 128
   },
   "model_2": {
-    "batch_size": 16,
+    "batch_size": 32,
     "batch_size_predict": 64,
-    "restore_weights": true,
-    "initial_epoch": 138,
-    "train": false,
-    "epochs": 138,
-    "learning_rate": 1e-5,
+    "restore_weights": false,
+    "initial_epoch": 0,
+    "train": true,
+    "epochs": 10,
+    "learning_rate": 1e-4,
     "decay": 0.001,
     "predict_on_test": true,
     "evaluate": false,
