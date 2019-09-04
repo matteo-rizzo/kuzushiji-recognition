@@ -5,12 +5,12 @@ from typing import List, Union
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
 from keras.preprocessing.image import ImageDataGenerator
-from networks.classes.centernet.models.ModelGenerator import ModelGenerator
+# from networks.classes.centernet.models.ModelGenerator import ModelGenerator
 
 
-# from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
+from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
 
 
 class ModelCenterNet:
@@ -34,7 +34,8 @@ class ModelCenterNet:
         return ModelGenerator().generate_model(input_shape, mode, n_category)
 
     @staticmethod
-    def setup_callbacks(weights_log_path: str, batch_size: int) -> List[tf.keras.callbacks.Callback]:
+    def setup_callbacks(weights_log_path: str, batch_size: int, lr: float) -> List[
+        tf.keras.callbacks.Callback]:
         """
         Sets up the callbacks for the training of the model.
         """
@@ -67,7 +68,15 @@ class ModelCenterNet:
         #    mode='min',
         # )
 
-        return [tensorboard, checkpointer]
+        def lrs(epoch):
+            lrate = lr
+            if epoch > 20:
+                lrate = lr / 10
+            return lrate
+
+        lr_schedule = LearningRateScheduler(lrs)
+
+        return [tensorboard, checkpointer, lr_schedule]
 
     def restore_weights(self,
                         model: tf.keras.Model,

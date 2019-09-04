@@ -84,19 +84,19 @@ def main():
 
     # --- STEP 1: Pre-processing (Check Object Size) ---
 
-    # dataset_avg_size = pipeline.run_preprocessing(model_params=model_1_params,
-    #                                               weights_path=os.path.join(base_experiments_path,
-    #                                                                         run_id + '_1',
-    #                                                                         'weights'))
+    dataset_avg_size = pipeline.run_preprocessing(model_params=model_1_params,
+                                                  weights_path=os.path.join(base_experiments_path,
+                                                                            run_id + '_1',
+                                                                            'weights'))
 
     # --- STEP 2: Detection by CenterNet ---
 
-    # train_list, bbox_predictions = pipeline.run_detection(model_params=model_2_params,
-    #                                                       dataset_avg_size=dataset_avg_size,
-    #                                                       weights_path=os.path.join(
-    #                                                           base_experiments_path,
-    #                                                           run_id + '_2',
-    #                                                           'weights'))
+    train_list, bbox_predictions = pipeline.run_detection(model_params=model_2_params,
+                                                          dataset_avg_size=dataset_avg_size,
+                                                          weights_path=os.path.join(
+                                                              base_experiments_path,
+                                                              run_id + '_2',
+                                                              'weights'))
 
     # --- STEP 3: Classification ---
 
@@ -109,7 +109,7 @@ def main():
 
     # pipeline.write_submission(predictions)
 
-    pipeline.visualize_final_results()
+    # pipeline.visualize_final_results()
 
 
 if __name__ == '__main__':

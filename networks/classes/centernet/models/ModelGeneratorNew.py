@@ -5,6 +5,8 @@ from tensorflow.python.keras.layers import Conv2DTranspose, BatchNormalization, 
 from tensorflow.python.keras.layers import UpSampling2D, Input, AveragePooling2D, \
     GlobalAveragePooling2D, Dense, Dropout, Activation, ZeroPadding2D, MaxPooling2D
 
+from tensorflow.python.keras.applications.resnet50 import ResNet50
+
 
 class ModelGenerator:
 
@@ -83,6 +85,54 @@ class ModelGenerator:
 
         return x_1, x_2, x_3, x
 
+    def __generate_pretrained_encoder(self, input_layer: Model):
+        resnet = ResNet50(include_top=False, weights='imagenet',
+                          input_tensor=input_layer, input_shape=(512, 512, 3),
+                          pooling=None)
+
+        for layer in resnet.layers:
+            layer.trainable = False
+
+        return resnet
+
+    def __generate_detection_model_2(self, input_layer, n_category=None):
+        out_filters = n_category + 4
+
+        resnet: Model = self.__generate_pretrained_encoder(input_layer)
+
+        x_0 = resnet.get_layer("activation").output
+        x_1 = resnet.get_layer("activation_9").output
+        x_2 = resnet.get_layer("activation_21").output
+        x_3 = resnet.get_layer("activation_39").output
+        x = resnet.get_layer("activation_48").output
+
+        # Deconvolution block 1: (16, 16, 512) -> (32, 32, 512)
+        x = Conv2D(filters=256, kernel_size=3, strides=1, padding='same')(x)
+        x = Conv2DTranspose(filters=256, kernel_size=4, strides=2, padding='same')(x)
+        x = Concatenate(axis=-1)([x_3, x])
+        x = BatchNormalization()(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        # Deconvolution block 2: (32, 32, 512) -> (64, 64, 256)
+        x = Conv2D(filters=128, kernel_size=3, strides=1, padding='same')(x)
+        x = Conv2DTranspose(filters=128, kernel_size=4, strides=2, padding='same')(x)
+        x = Concatenate()([x_2, x])
+        x = BatchNormalization()(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        # Deconvolution block 3: (64, 64, 256) -> (128, 128, 128)
+        x = Conv2D(filters=64, kernel_size=3, strides=1, padding='same')(x)
+        x = Conv2DTranspose(filters=64, kernel_size=4, strides=2, padding='same')(x)
+        x = Concatenate()([x_1, x])
+        x = BatchNormalization()(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        # Block 4:
+        x = Conv2D(filters=out_filters, kernel_size=1, strides=1, padding='same')(x)
+        out = Activation('sigmoid')(x)  # optional
+
+        return Model(input_layer, out)
+
     def __generate_preprocessing_model(self, input_layer, n_category=None):
         # input_layer_1, input_layer_2 = self.__resize_input_layers(input_layer)
 
@@ -160,7 +210,7 @@ class ModelGenerator:
 
         modes = {
             'preprocessing': self.__generate_preprocessing_model,
-            'detection': self.__generate_detection_model,
+            'detection': self.__generate_detection_model_2,
             'classification': self.__generate_classification_model
         }
 

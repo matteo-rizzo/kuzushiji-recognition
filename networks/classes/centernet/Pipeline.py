@@ -249,7 +249,8 @@ class CenterNetPipeline:
 
             # Set up the callbacks
             callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path,
-                                                           batch_size=model_params['batch_size'])
+                                                           batch_size=model_params['batch_size'],
+                                                           lr=model_params['learning_rate'])
 
             # Start the training procedure
             self.__model_utils.train(model=model,
@@ -401,7 +402,9 @@ class CenterNetPipeline:
         if model_params['train']:
             self.__logs['execution'].info('Starting the training procedure for the classification model...')
 
-            callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path, batch_size=batch_size)
+            callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path,
+                                                           batch_size=batch_size,
+                                                           lr=model_params['learning_rate'])
 
             self.__model_utils.train(model=model,
                                      init_epoch=model_params['initial_epoch'],
