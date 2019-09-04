@@ -76,8 +76,8 @@ class BBoxesHandler:
                                              print_h / self.__pred_out_h,
                                              print_w / self.__pred_out_w]
 
-            # Produce a dictionary { "image_name": np.ndarray([category, score, ymin, xmin, ymax, xmax]) }
-            all_boxes[image_path.split(os.sep)[-1]] = box_and_score
+            # Produce a dictionary { "image_path": np.ndarray([category, score, ymin, xmin, ymax, xmax]) }
+            all_boxes[image_path] = box_and_score
 
             if mode == 'train' and show:
                 # Boxes in the format: c_x, c_y, width, height
@@ -162,7 +162,8 @@ class BBoxesHandler:
         # Sorted preserves original order of boxes
         return box_and_score_all[sorted(unique_idx)]
 
-    def __boxes_image_nms(self, score, y_c, x_c, height, width, iou_thresh, merge_mode=False) -> np.array:
+    def __boxes_image_nms(self, score, y_c, x_c, height, width, iou_thresh,
+                          merge_mode=False) -> np.array:
         """
         Performs the non-maximum suppression on the given bboxes
 
@@ -197,7 +198,8 @@ class BBoxesHandler:
             xmax = x_c + width / 2  # right
             ymax = y_c + height / 2  # bottom
 
-            inside_pic = (ymin > 0) * (xmin > 0) * (ymax < self.__pred_out_h) * (xmax < self.__pred_out_w)
+            inside_pic = (ymin > 0) * (xmin > 0) * (ymax < self.__pred_out_h) * (
+                        xmax < self.__pred_out_w)
             # outside_pic = len(inside_pic) - np.sum(inside_pic)
 
             normal_size = (size < (np.mean(size) * 10)) * (size > (np.mean(size) / 10))

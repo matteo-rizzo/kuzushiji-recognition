@@ -32,7 +32,7 @@ class CenterNetPipeline:
         self.__dict_cat: Dict[str, int] = {}
 
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
-        base_path = os.path.join(os.getcwd(), 'datasets', 'kaggle', 'testing', 'images')
+        base_path = dataset_params['test_images_path']
         self.__test_list = [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list]
 
     def __write_test_list_to_csv(self, test_list: List, bbox_predictions: Dict):
@@ -64,7 +64,9 @@ class CenterNetPipeline:
 
             # Map each cropped image to its bounding box
             cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
-            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_name + '.jpg'][cropped_img_id][2:]]
+            # Relative path
+            key = os.path.join(self.__dataset_params['test_images_path'], original_img_name + '.jpg')
+            bbox_coords = [str(coord) for coord in bbox_predictions[str(key)][cropped_img_id][2:]]
             # Note that the coordinates are in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
 
@@ -72,11 +74,14 @@ class CenterNetPipeline:
             for cropped_img_name in cropped_img_names:
                 original_img_to_bbox[original_img_name].append(cropped_img_to_bbox[cropped_img_name])
 
-        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in original_img_to_bbox.items()}
+        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in
+                                original_img_to_bbox.items()}
 
         test_dict = {
-            'original_image': [original_img_name for original_img_name in original_img_to_cropped.keys()],
-            'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in original_img_to_cropped.values()],
+            'original_image': [original_img_name for original_img_name in
+                               original_img_to_cropped.keys()],
+            'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in
+                               original_img_to_cropped.values()],
             'bboxes': [bbox for bbox in original_img_to_bbox.values()]
         }
 
@@ -383,7 +388,7 @@ class CenterNetPipeline:
                                                      regenerate=model_params['regenerate_crops_test'],
                                                      mode='test')
 
-            self.__write_test_list_to_csv(test_list[:10], bbox_predictions)
+            self.__write_test_list_to_csv(test_list, bbox_predictions)
 
         batch_size = int(model_params['batch_size'])
         dataset_classification = ClassificationDataset(model_params)
@@ -397,9 +402,11 @@ class CenterNetPipeline:
         classification_ps, classification_ps_size = dataset_classification.get_test_set()
 
         if model_params['train']:
-            self.__logs['execution'].info('Starting the training procedure for the classification model...')
+            self.__logs['execution'].info(
+                'Starting the training procedure for the classification model...')
 
-            callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path, batch_size=batch_size)
+            callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path,
+                                                           batch_size=batch_size)
 
             self.__model_utils.train(model=model,
                                      init_epoch=model_params['initial_epoch'],
@@ -423,7 +430,8 @@ class CenterNetPipeline:
                                      .format(metrics[0], metrics[1]))
 
         if model_params['predict_on_test']:
-            self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+            self.__logs['execution'].info(
+                'Starting the predict procedure of char class (takes much time)...')
 
             predictions = self.__model_utils.predict(model=model, dataset=classification_ps)
             self.__logs['execution'].info('Prediction completed.')
@@ -451,7 +459,8 @@ class CenterNetPipeline:
         # Read the test data from csv file
         path_to_test_list = os.path.join('datasets', 'test_list.csv')
         try:
-            test_list = pd.read_csv(path_to_test_list, usecols=['original_image', 'cropped_images', 'bboxes'])
+            test_list = pd.read_csv(path_to_test_list,
+                                    usecols=['original_image', 'cropped_images', 'bboxes'])
         except FileNotFoundError:
             raise Exception('Cannot write submission because non test list was written at {}\n'
                             'Probably predict_on_test param was set to False, thus no prediction has been made on test'
@@ -484,7 +493,8 @@ class CenterNetPipeline:
                 y = str(ymin + ((ymax - ymin) // 2))
 
                 # Append the current label to the list of the labels of the current images
-                submission_dict.setdefault(img_data['original_image'], []).append(' '.join([unicode, x, y]))
+                submission_dict.setdefault(img_data['original_image'], []).append(
+                    ' '.join([unicode, x, y]))
 
                 # Set the index for the next prediction
                 i += 1
@@ -511,28 +521,33 @@ class CenterNetPipeline:
         try:
             submission = pd.read_csv(path_to_submission, usecols=['image_id', 'labels'])
         except FileNotFoundError:
-            raise Exception('Cannot fetch data for visualization because no submission was written at {}\n'
-                            'Probably predict_on_test param was set to False, thus no submission has been written'
-                            .format(path_to_submission))
+            raise Exception(
+                'Cannot fetch data for visualization because no submission was written at {}\n'
+                'Probably predict_on_test param was set to False, thus no submission has been written'
+                    .format(path_to_submission))
 
         # Read the test data from csv file
         path_to_test_list = os.path.join('datasets', 'test_list.csv')
         try:
-            test_list = pd.read_csv(path_to_test_list, usecols=['original_image', 'cropped_images', 'bboxes'])
+            test_list = pd.read_csv(path_to_test_list,
+                                    usecols=['original_image', 'cropped_images', 'bboxes'])
         except FileNotFoundError:
-            raise Exception('Cannot fetch data for visualization because no submission was written at {}\n'
-                            'Probably predict_on_test param was set to False, thus no prediction has been made on test'
-                            .format(path_to_test_list))
+            raise Exception(
+                'Cannot fetch data for visualization because no submission was written at {}\n'
+                'Probably predict_on_test param was set to False, thus no prediction has been made on test'
+                    .format(path_to_test_list))
 
         # Initialize a bboxes visualizer object to print bboxes on images
-        bbox_visualizer = BBoxesVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
+        bbox_visualizer = BBoxesVisualizer(
+            path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
 
         submission_rows = [r for _, r in submission.iterrows()]
         test_data_rows = [r for _, r in test_list.iterrows()]
 
         # Iterate over the images
         for sub_data, test_data in zip(submission_rows, test_data_rows):
-            classes = [label.strip().split(' ')[0] for label in re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
+            classes = [label.strip().split(' ')[0] for label in
+                       re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
             bboxes = test_data['bboxes'].split(' ')
 
             # Iterate over the predicted classes and corresponding bboxes
