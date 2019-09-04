@@ -1,9 +1,8 @@
-import csv
 import os
 import shutil
 import sys
 from typing import List, Dict, Union, Tuple
-
+import regex as re
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -15,6 +14,7 @@ from networks.classes.centernet.datasets.PreprocessingDataset import Preprocessi
 from networks.classes.centernet.models.HourglassNetwork import HourglassNetwork
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 from networks.classes.centernet.utils.BoundingBoxesHandler import BoundingBoxesHandler
+from networks.classes.centernet.utils.BboxVisualizer import BboxVisualizer
 from networks.classes.centernet.utils.ImageCropper import ImageCropper
 from networks.classes.centernet.utils.LossFunctionsGenerator import LossFunctionsGenerator
 
@@ -479,16 +479,19 @@ class CenterNetPipeline:
         # Initialize an empty dataset for submission
         submission = pd.DataFrame(columns=['image_id', 'labels'])
 
+        # Initialize an empty dict with the data for the submission
+        submission_dict = {}
+
+        # Read the test data from csv file
         test_list = pd.read_csv(os.path.join('datasets', 'test_list.csv'),
                                 usecols=['original_image', 'cropped_images', 'bboxes'])
-
-        submission_dict = {}
 
         # Initialize an index to iterate over the predictions
         i = 0
 
-        # Iterate over all the bboxes
+        # Iterate over all the predicted original images
         for _, img_data in test_list.iterrows():
+
             cropped_images = list(img_data['cropped_images'].split(' '))
             bboxes = list(img_data['bboxes'].split(' '))
 
@@ -500,21 +503,55 @@ class CenterNetPipeline:
 
                 # Get the coordinates of the bbox
                 xmin, ymin, width, height = bbox.split(':')
-                x = str((float(xmin) + float(width)) / 2)
-                y = str((float(ymin) + float(height)) / 2)
+                x = str((float(xmin) + float(width)) // 2)
+                y = str((float(ymin) + float(height)) // 2)
 
                 # Append the current label to the list of the labels of the current images
                 submission_dict.setdefault(img_data['original_image'], []).append(' '.join([unicode, x, y]))
 
-            # Set the index for the next prediction
-            i += 1
+                # Set the index for the next prediction
+                i += 1
 
         # Convert the row in format: <image_id>, <label 1> <X_1> <Y_1> <label_2> <X_2> <Y_2> ...
         for original_image, labels in submission_dict.items():
             submission_dict[original_image] = ' '.join(labels)
 
+        # Fill the dataframe with the data from the dict
         submission['image_id'] = submission_dict.keys()
         submission['labels'] = submission_dict.values()
 
-        print(submission)
+        # Write the submission to csv
         submission.to_csv(os.path.join('datasets', 'submission.csv'))
+
+    @staticmethod
+    def visualize_final_results():
+
+        # Read the submission data from csv file
+        submission = pd.read_csv(os.path.join('datasets', 'submission.csv'), usecols=['image_id', 'labels'])
+
+        # Read the test data from csv file
+        test_list = pd.read_csv(os.path.join('datasets', 'test_list.csv'),
+                                usecols=['original_image', 'cropped_images', 'bboxes'])
+
+        # Initialize a bboxes visualizer object to print bboxes on images
+        bbox_visualizer = BboxVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
+
+        submission_rows = [r for _, r in submission.iterrows()]
+        test_data_rows = [r for _, r in test_list.iterrows()]
+
+        # Iterate over the images
+        for sub_data, test_data in zip(submission_rows, test_data_rows):
+            classes = [label.strip().split(' ')[0] for label in re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
+            bboxes = test_data['bboxes'].split(' ')
+
+            # Iterate over the predicted classes and corresponding bboxes
+            labels = []
+            for char_class, bbox in zip(classes, bboxes):
+                xmin, ymin, width, height = bbox.split(':')
+                labels.append([char_class,
+                               round(float(xmin)),
+                               round(float(ymin)),
+                               round(float(width)),
+                               round(float(height))])
+
+            bbox_visualizer.visualize_bboxes(image_id=sub_data['image_id'], labels=labels)
