@@ -14,7 +14,7 @@ class ImageCropper:
     def __init__(self, log):
         self.__log = log
 
-    def regenerate_crops_train(self, train_list, crop_char_path_train):
+    def __regenerate_crops_train(self, train_list, crop_char_path_train):
         self.__log.info('Starting procedure to regenerate cropped train character images')
 
         self.__log.info('Getting bounding boxes from annotations...')
@@ -30,16 +30,16 @@ class ImageCropper:
     def get_crops(self, img_data: any, crop_char_path: str, mode='train', regenerate: bool = False):
 
         regenerate_crops = {
-            'train': self.regenerate_crops_train,
-            'test': self.regenerate_crops_test
+            'train': self.__regenerate_crops_train,
+            'test': self.__regenerate_crops_test
         }
 
         if regenerate:
             return regenerate_crops[mode](img_data, crop_char_path)
         else:
-            return self.load_crop_characters(crop_char_path, mode=mode)
+            return self.__load_crop_characters(crop_char_path, mode=mode)
 
-    def regenerate_crops_test(self, bbox_predictions, crop_char_path_test):
+    def __regenerate_crops_test(self, bbox_predictions, crop_char_path_test):
 
         self.__log.info('Starting procedure to regenerate cropped test character images')
 
@@ -205,7 +205,7 @@ class ImageCropper:
         return cropped_list
 
     @staticmethod
-    def load_crop_characters(save_dir: str, mode: str) -> Union[List[Tuple[str, int]], List[str]]:
+    def __load_crop_characters(save_dir: str, mode: str) -> Union[List[Tuple[str, int]], List[str]]:
         """
         Loads the list of characters from file system. Useful to avoid regenerating cropped characters every time.
 
