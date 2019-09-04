@@ -381,7 +381,8 @@ class CenterNetPipeline:
         classification_ps, classification_ps_size = dataset_classification.get_test_set()
 
         if model_params['train']:
-            self.__logs['execution'].info('Starting the training procedure for the classification model...')
+            self.__logs['execution'].info(
+                'Starting the training procedure for the classification model...')
 
             callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path,
                                                            batch_size=batch_size)
