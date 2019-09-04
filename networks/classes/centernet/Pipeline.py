@@ -379,11 +379,11 @@ class CenterNetPipeline:
         test_list: Union[List[str], None] = None
         if model_params['predict_on_test']:
             test_list = self.__img_cropper.get_crops(img_data=bbox_predictions,
-                                                     crop_char_path=crop_char_path_train,
+                                                     crop_char_path=crop_char_path_test,
                                                      regenerate=model_params['regenerate_crops_test'],
                                                      mode='test')
 
-            self.__write_test_list_to_csv(test_list, bbox_predictions)
+            self.__write_test_list_to_csv(test_list[:10], bbox_predictions)
 
         batch_size = int(model_params['batch_size'])
         dataset_classification = ClassificationDataset(model_params)
@@ -422,13 +422,13 @@ class CenterNetPipeline:
                                      'sparse_categorical_accuracy     : {}'
                                      .format(metrics[0], metrics[1]))
 
-            if model_params['predict_on_test']:
-                self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+        if model_params['predict_on_test']:
+            self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
 
-                predictions = self.__model_utils.predict(model=model, dataset=classification_ps)
-                self.__logs['execution'].info('Prediction completed.')
+            predictions = self.__model_utils.predict(model=model, dataset=classification_ps)
+            self.__logs['execution'].info('Prediction completed.')
 
-                return predictions
+            return predictions
 
         return None
 

@@ -34,7 +34,7 @@
     "decay": 0.001,
     "predict_on_test": true,
     "evaluate": false,
-    "show_prediction_examples": true,
+    "show_prediction_examples": false,
     "input_width": 512,
     "input_height": 512,
     "input_channels": 3,

@@ -168,7 +168,7 @@ class ClassificationDataset:
 
         if test_list is not None:
             self.__test_set = (
-                tf.data.Dataset.from_tensor_slices(test_list)
+                tf.data.Dataset.from_tensor_slices(test_list[:10])
                     .map(self.__test_resize_fn,
                          num_parallel_calls=AUTOTUNE)
                     .batch(self.__batch_size_predict)
