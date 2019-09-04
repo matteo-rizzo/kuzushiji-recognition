@@ -365,7 +365,7 @@ class CenterNetPipeline:
             else:
                 test_list = self.__img_cropper.load_crop_characters(crop_char_path_test, mode='test')
 
-        self.write_test_list_to_csv(test_list[:10], bbox_predictions)
+            self.write_test_list_to_csv(test_list, bbox_predictions)
 
         # Now 'test_list' is a list[image_path] to cropped test images, or None if we are not in predict mode
 
