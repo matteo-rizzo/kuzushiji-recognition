@@ -118,6 +118,8 @@ def main():
 
     pipeline.write_submission(predictions)
 
+    pipeline.visualize_final_results()
+
 
 if __name__ == '__main__':
     main()

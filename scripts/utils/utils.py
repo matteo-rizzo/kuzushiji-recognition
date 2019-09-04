@@ -41,7 +41,7 @@ def unicode_to_character(unicode):
     """
 
     # Set the path to the list of classes (i.e. characters)
-    path_to_classes = os.path.join('datasets', 'kaggle', 'classes.csv')
+    path_to_classes = os.path.join('datasets', 'kaggle', 'unicode_translation.csv')
 
     # Create a codepoint to character map
     unicode_map = {codepoint: char for codepoint, char in pd.read_csv(path_to_classes).values}

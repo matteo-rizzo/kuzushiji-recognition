@@ -7,8 +7,10 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.image import ImageDataGenerator
-# from networks.classes.centernet.models.ModelGenerator import ModelGenerator
-from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
+from networks.classes.centernet.models.ModelGenerator import ModelGenerator
+
+
+# from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
 
 
 class ModelCenterNet:
