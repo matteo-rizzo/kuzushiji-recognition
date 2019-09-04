@@ -21,48 +21,65 @@ class BBoxesVisualizer:
         """
 
         path_to_image = os.path.join(self.__path_to_images, image_id + '.jpg')
+        fig = plt.figure(figsize=(15, 15))
 
-        plt = self.__display_image(path_to_image, show=False)
+        fig.add_subplot(1, 2, 1)
+        plt.imshow(Image.open(path_to_image))
         ax = plt.gca()
 
         for label in labels:
-            ax = self.__draw_box_and_text(ax, label)
+            ax = self.__draw_box_and_text(ax=ax,
+                                          label=label,
+                                          font_size=18,
+                                          text_color='r',
+                                          text_position='side',
+                                          show_text=False,
+                                          show_bbox=True)
+
+        fig.add_subplot(1, 2, 2)
+        plt.imshow(Image.open(path_to_image), alpha=0.3)
+        ax = plt.gca()
+        for label in labels:
+            ax = self.__draw_box_and_text(ax=ax,
+                                          label=label,
+                                          font_size=24,
+                                          text_color='b',
+                                          text_position='center',
+                                          show_text=True,
+                                          show_bbox=False)
 
         plt.show()
 
-    def __draw_box_and_text(self, ax, label):
+    def __draw_box_and_text(self,
+                            ax,
+                            label,
+                            font_size=18,
+                            text_color='r',
+                            text_position='side',
+                            show_text=True,
+                            show_bbox=True):
 
         codepoint, x, y, w, h = label
         x, y, w, h = int(x), int(y), int(w), int(h)
 
-        rect = Rectangle((x, y), w, h, linewidth=1, edgecolor="r", facecolor="none")
-        ax.add_patch(rect)
+        if show_bbox:
+            rect = Rectangle((x, y), w, h, linewidth=2, edgecolor="r", facecolor="none")
+            ax.add_patch(rect)
 
-        ax.text(x + w + 25,
-                y + (h / 2) + 20,
-                self.__unicode_to_character(codepoint),
-                fontproperties=self.__get_font(),
-                color="r",
-                size=18)
+        if show_text:
+            if text_position == 'side':
+                x = x + w + 25
+
+            y = y + h / 2 + 20
+
+            ax.text(x=x,
+                    y=y,
+                    s=self.__unicode_to_character(codepoint),
+                    fontproperties=self.__get_font(),
+                    color=text_color,
+                    size=font_size)
 
         return ax
-
-    @staticmethod
-    def __display_image(path_to_image: str, show: bool = True):
-        """
-        Displays an image.
-        :param show: a boolean flag to indicate if the image must be displayed on stdout
-        :param path_to_image: the path to the image to be displayed
-        :return a plot
-        """
-
-        plt.figure(figsize=(15, 15))
-        plt.imshow(Image.open(path_to_image))
-
-        if show:
-            plt.show()
-
-        return plt
 
     @staticmethod
     def __get_font():

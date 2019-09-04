@@ -503,8 +503,9 @@ class CenterNetPipeline:
 
         self.__logs['execution'].info('Written submission data at {}'.format(path_to_submission))
 
-    @staticmethod
-    def visualize_final_results():
+    def visualize_final_results(self, max_visualizations=5):
+
+        self.__logs['execution'].info('Visualizing final results...')
 
         # Read the submission data from csv file
         path_to_submission = os.path.join('datasets', 'submission.csv')
@@ -527,11 +528,18 @@ class CenterNetPipeline:
         # Initialize a bboxes visualizer object to print bboxes on images
         bbox_visualizer = BBoxesVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
 
+        # i counts the number of images that can be visualized
+        i = 0
+
         submission_rows = [r for _, r in submission.iterrows()]
         test_data_rows = [r for _, r in test_list.iterrows()]
 
         # Iterate over the images
         for sub_data, test_data in zip(submission_rows, test_data_rows):
+
+            if i == max_visualizations:
+                break
+
             classes = [label.strip().split(' ')[0] for label in re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
             bboxes = test_data['bboxes'].split(' ')
 
@@ -551,4 +559,8 @@ class CenterNetPipeline:
                                xmax - xmin,
                                ymax - ymin])
 
-            bbox_visualizer.visualize_bboxes(image_id=sub_data['image_id'], labels=labels)
+            img_id = sub_data['image_id']
+            self.__logs['execution'].info('Visualizing image {}'.format(img_id))
+            bbox_visualizer.visualize_bboxes(image_id=img_id, labels=labels)
+
+            i += 1
