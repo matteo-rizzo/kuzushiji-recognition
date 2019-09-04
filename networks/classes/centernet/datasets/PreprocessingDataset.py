@@ -17,7 +17,7 @@ class PreprocessingDataset:
         self.__test_images_path = params['test_images_path']
         self.__sample_submission = params['sample_submission']
 
-        self.__parsed_train_list: List[List]
+        self.__parsed_train_list: List[Tuple[str, np.array]]
         self.__aspect_ratios: List[float]
         self.__dataset: Tuple[tf.data.Dataset, int]
         self.__dict_cat: Dict[str, int]
@@ -25,7 +25,7 @@ class PreprocessingDataset:
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
         self.__training_ratio = params['training_ratio']
-        self.batch_size = params['batch_size']
+        self.__batch_size = params['batch_size']
 
     def get_dataset_labels(self) -> List[float]:
         return [el[1] for el in self.__train_image_avg_char_area_ratios]
@@ -34,17 +34,20 @@ class PreprocessingDataset:
         return self.__dict_cat
 
     def generate_dataset(self):
-        # Generate a train list of lists where each row represents an image and the list of the
+        # Generate a train list of tuples where each row represents an image and the list of the
         # characters within it (codified as integers) with relative coordinates of bbox
         self.__parse_train_csv()
 
         # Compute the average bbox ratio w.r.t. the image area considering all the images
-        self.__annotate_char_area_ratio(print=False)
+        self.__annotate_char_area_ratio(show_plot=False)
 
         # Generate the tf.data.Dataset containing all the objects
         self.__compose_dataset_object()
 
     def __parse_train_csv(self):
+        """
+        Read training csv and generate a list with char classes and bounding box in a convenient format.
+        """
         df_train = pd.read_csv(self.__train_csv_path)
 
         # Remove any row with at least one nan value
@@ -64,8 +67,9 @@ class PreprocessingDataset:
         category_names = sorted(category_names)
 
         # Make a dict assigning an integer to each category
-        self.__dict_cat = {list(category_names)[j]: j for j in range(len(category_names))}
-        self.__parsed_train_list = []
+        self.__dict_cat: Dict[str, int] = \
+            {list(category_names)[j]: j for j in range(len(category_names))}
+        self.__parsed_train_list: List[Tuple[str, np.array]] = []
 
         for i in range(len(df_train)):
             # Get one row for each label character for image i, as: <category> <x> <y> <width> <height>
@@ -99,24 +103,24 @@ class PreprocessingDataset:
             #    ann[:, 3] = x width
             #    ann[:, 4] = y height
 
-            self.__parsed_train_list.append(["{}/{}.jpg".format(self.__train_images_path,
+            self.__parsed_train_list.append(("{}/{}.jpg".format(self.__train_images_path,
                                                                 df_train.loc[i, "image_id"]),
-                                             ann])
+                                             ann))
 
         # __annotation_list_train is a list of list where each row represent an image and
         # the list of the characters within it with relative coordinates of bbox
 
-    def __annotate_char_area_ratio(self, print: bool = False):
+    def __annotate_char_area_ratio(self, show_plot: bool = False):
         """
-        Computes the average bbox ratio w.r.t. the image img_area considering all the images,
-        and plots a graph with ratio distribution.
+        Computes the average bbox ratio w.r.t. the image img_area considering all the training images,
+        and optionally plots a graph with ratio distribution.
 
-        :return: a list where each row represents the average bbox ratio for character in an image.
+        :param show_plot: whether to show histogram with average character size or not.
         """
 
-        self.__aspect_ratios = []
-        self.__train_image_avg_char_area_ratios = []
-        all_avg_char_area_ratio = []
+        self.__aspect_ratios: List[float] = []
+        self.__train_image_avg_char_area_ratios: List[Tuple[str, np.array]] = []
+        all_avg_char_area_ratio: List[np.array] = []
 
         for img_path, ann in self.__parsed_train_list:
             with Image.open(img_path) as img:
@@ -138,23 +142,24 @@ class PreprocessingDataset:
                 all_avg_char_area_ratio.append(avg_char_area_ratio)
 
                 # Add example for training with image path and log average bbox size for objects in it
-                self.__train_image_avg_char_area_ratios.append([img_path, np.log(avg_char_area_ratio)])
+                self.__train_image_avg_char_area_ratios.append((img_path, np.log(avg_char_area_ratio)))
                 # Add aspect ratio
                 self.__aspect_ratios.append(aspect_ratio)
 
-        if print:
+        if show_plot:
             plt.hist(np.log(all_avg_char_area_ratio), bins=100)
             plt.title('log(ratio of char_area / picture_size)', loc='center', fontsize=12)
             plt.show()
 
-    def annotate_split_recommend(self, avg_log_char_area_ratios: List[float]) -> List[List]:
+    def get_recommended_splits(self, avg_log_char_area_ratios: List[float]) \
+            -> List[Tuple[str, np.array, float, float]]:
         """
         Given a list of sizes of bboxes for each train image,
         computes the best size according to the image must be split
 
         :param avg_log_char_area_ratios: list of bbox areas for all characters (prediction or from train data)
         :return: extended annotation list with recommended splits in format:
-            image path: str, annotations: np.array, height split: float, width split: float
+            [image path, annotations, height split, width split]
         """
 
         base_stretch_factor_h, base_stretch_factor_w = 25, 25
@@ -176,10 +181,10 @@ class PreprocessingDataset:
             w_split_recommend = max([1, stretch_factor_w / base_stretch_factor_w])
 
             # Format: <image path> <annotations> <height split> <width split>
-            annotation_list_train_w_split.append([img_ann[0],
+            annotation_list_train_w_split.append((img_ann[0],
                                                   img_ann[1],
                                                   h_split_recommend,
-                                                  w_split_recommend])
+                                                  w_split_recommend))
 
         return annotation_list_train_w_split
 
@@ -262,7 +267,7 @@ class PreprocessingDataset:
                                                         [path, label, True, True],
                                                         (tf.float32, tf.float64)),
                      num_parallel_calls=AUTOTUNE)
-                .batch(self.batch_size)
+                .batch(self.__batch_size)
                 .repeat()
                 .prefetch(AUTOTUNE),
                 TRAIN_SIZE)
@@ -276,7 +281,7 @@ class PreprocessingDataset:
                                                         [path, label, False, False],
                                                         (tf.float32, tf.float64)),
                      num_parallel_calls=AUTOTUNE)
-                .batch(self.batch_size)
+                .batch(self.__batch_size)
                 .repeat()
                 .prefetch(AUTOTUNE),
                 self.__dataset[1] - train_size)

@@ -113,7 +113,7 @@ class CenterNetPipeline:
         model_params.update(self.__dataset_params)
 
         avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
-        train_list: List[List] = dataset_avg_size.annotate_split_recommend(avg_sizes)
+        train_list: List[List] = dataset_avg_size.get_recommended_splits(avg_sizes)
 
         model = HourglassNetwork(run_id=run_id,
                                  log=self.__logs['training'],
@@ -201,7 +201,7 @@ class CenterNetPipeline:
         # Get labels from dataset and compute the recommended split,
         # format is: [ [image path, annotations, height split, width split] ]
         avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
-        train_list: List[List] = dataset_avg_size.annotate_split_recommend(avg_sizes)
+        train_list: List[List] = dataset_avg_size.get_recommended_splits(avg_sizes)
 
         # Generate the dataset for detection
         dataset_detection = DetectionDataset(model_params)
