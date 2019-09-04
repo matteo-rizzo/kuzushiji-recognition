@@ -1,7 +1,7 @@
 import os
 import shutil
 import sys
-from typing import List, Dict, Union, Tuple
+from typing import List, Dict, Union
 import regex as re
 import numpy as np
 import pandas as pd
@@ -11,7 +11,6 @@ from tensorflow.python.keras.optimizers import Adam
 from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
 from networks.classes.centernet.datasets.DetectionDataset import DetectionDataset
 from networks.classes.centernet.datasets.PreprocessingDataset import PreprocessingDataset
-from networks.classes.centernet.models.HourglassNetwork import HourglassNetwork
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 from networks.classes.centernet.utils.BBoxesHandler import BBoxesHandler
 from networks.classes.centernet.utils.BBoxesVisualizer import BBoxesVisualizer
@@ -35,6 +34,58 @@ class CenterNetPipeline:
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = os.path.join(os.getcwd(), 'datasets', 'kaggle', 'testing', 'images')
         self.__test_list = [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list]
+
+    def __write_test_list_to_csv(self, test_list: List, bbox_predictions: Dict):
+
+        self.__logs['execution'].info('Writing test data to csv...')
+
+        # Get all the names of the cropped images
+        cropped_img_names = [cropped_img_path.split(os.sep)[-1] for cropped_img_path in test_list]
+
+        # Get all the original names of the cropped images
+        original_img_names = []
+        for cropped_img_name, cropped_img_path in zip(cropped_img_names, test_list):
+            original_img_name = '_'.join(cropped_img_name.split('_')[:-1])
+            original_img_names.append(original_img_name)
+
+        # Initialize a mapping <original image name> -> <list of cropped images names>
+        original_img_to_cropped = {original_img_name: [] for original_img_name in original_img_names}
+
+        # Initialize a mapping <cropped image name> -> <bbox coordinates>
+        cropped_img_to_bbox = {cropped_img_name: None for cropped_img_name in cropped_img_names}
+
+        # Initialize a mapping <original image name> -> <bbox coordinates>
+        original_img_to_bbox = {original_img_name: [] for original_img_name in original_img_names}
+
+        for cropped_img_name in cropped_img_names:
+            # Map each original image to its cropped characters
+            original_img_name = '_'.join(cropped_img_name.split('_')[:-1])
+            original_img_to_cropped[original_img_name].append(cropped_img_name)
+
+            # Map each cropped image to its bounding box
+            cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
+            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_name + '.jpg'][cropped_img_id][2:]]
+            # Note that the coordinates are in format ymin:xmin:ymax:xmax
+            cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
+
+        for original_img_name, cropped_img_names in original_img_to_cropped.items():
+            for cropped_img_name in cropped_img_names:
+                original_img_to_bbox[original_img_name].append(cropped_img_to_bbox[cropped_img_name])
+
+        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in original_img_to_bbox.items()}
+
+        test_dict = {
+            'original_image': [original_img_name for original_img_name in original_img_to_cropped.keys()],
+            'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in original_img_to_cropped.values()],
+            'bboxes': [bbox for bbox in original_img_to_bbox.values()]
+        }
+
+        test_list_df = pd.DataFrame(test_dict)
+
+        path_to_test_list = os.path.join('datasets', 'test_list.csv')
+        test_list_df.to_csv(path_to_test_list)
+
+        self.__logs['execution'].info('Written test data at {}'.format(path_to_test_list))
 
     def __check_no_weights_in_run_folder(self, folder: str):
         if os.path.isdir(folder):
@@ -104,34 +155,6 @@ class CenterNetPipeline:
         self.__dict_cat = dataset_avg_size.get_categories_dict()
 
         return dataset_avg_size
-
-    def run_hourglass_detection(self, model_params, dataset_avg_size, weights_path, run_id):
-
-        self.__logs['execution'].info('Initializing Hourglass model...')
-
-        # Add dataset params to model params for simplicity
-        model_params.update(self.__dataset_params)
-
-        avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
-        train_list: List[List] = dataset_avg_size.get_recommended_splits(avg_sizes)
-
-        model = HourglassNetwork(run_id=run_id,
-                                 log=self.__logs['training'],
-                                 model_params=model_params,
-                                 num_classes=6,
-                                 num_stacks=1,
-                                 num_channels=256,
-                                 in_res=(int(model_params['input_width']),
-                                         int(model_params['input_height'])),
-                                 out_res=(int(model_params['output_width']),
-                                          int(model_params['output_height'])))
-
-        self.__logs['execution'].info('Hourglass model successfully initialized!')
-
-        model.train(dataset_params=model_params,
-                    train_list=train_list,
-                    test_list=self.__test_list,
-                    weights_path=weights_path)
 
     def run_detection(self,
                       model_params: Dict,
@@ -283,8 +306,7 @@ class CenterNetPipeline:
 
         if model_params['predict_on_test']:
             self.__logs['execution'].info('Predicting test bounding boxes (takes time)...')
-            test_predictions = self.__model_utils.predict(model=model,
-                                                          dataset=detection_ps)
+            test_predictions = self.__model_utils.predict(model=model, dataset=detection_ps)
             self.__logs['execution'].info('Completed.')
 
             self.__logs['execution'].info('Converting test predictions into bounding boxes...')
@@ -348,26 +370,20 @@ class CenterNetPipeline:
         crop_char_path_test = os.path.join('datasets', 'char_cropped_test')
 
         # Train mode cropping
-        if model_params['regenerate_crops_train']:
-            train_list = self.__img_cropper.regenerate_crops_train(train_list, crop_char_path_train)
-        else:
-            train_list: List[Tuple[str, int]] = self.__img_cropper.load_crop_characters(crop_char_path_train,
-                                                                                        mode='train')
-
-        # Now 'train_list' is a list[(image_path, char_class)]
+        train_list = self.__img_cropper.get_crops(img_data=train_list,
+                                                  crop_char_path=crop_char_path_train,
+                                                  regenerate=model_params['regenerate_crops_train'],
+                                                  mode='train')
 
         # Test mode cropping
         test_list: Union[List[str], None] = None
         if model_params['predict_on_test']:
-            if model_params['regenerate_crops_test']:
-                test_list = self.__img_cropper.regenerate_crops_test(bbox_predictions,
-                                                                     crop_char_path_test)
-            else:
-                test_list = self.__img_cropper.load_crop_characters(crop_char_path_test, mode='test')
+            test_list = self.__img_cropper.get_crops(img_data=bbox_predictions,
+                                                     crop_char_path=crop_char_path_train,
+                                                     regenerate=model_params['regenerate_crops_test'],
+                                                     mode='test')
 
-            self.write_test_list_to_csv(test_list, bbox_predictions)
-
-        # Now 'test_list' is a list[image_path] to cropped test images, or None if we are not in predict mode
+            self.__write_test_list_to_csv(test_list, bbox_predictions)
 
         batch_size = int(model_params['batch_size'])
         dataset_classification = ClassificationDataset(model_params)
@@ -381,19 +397,17 @@ class CenterNetPipeline:
         classification_ps, classification_ps_size = dataset_classification.get_test_set()
 
         if model_params['train']:
-            self.__logs['execution'].info(
-                'Starting the training procedure for the classification model...')
+            self.__logs['execution'].info('Starting the training procedure for the classification model...')
 
-            callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path,
-                                                           batch_size=batch_size)
+            callbacks = self.__model_utils.setup_callbacks(weights_log_path=weights_path, batch_size=batch_size)
 
             self.__model_utils.train(model=model,
                                      init_epoch=model_params['initial_epoch'],
                                      epochs=model_params['epochs'],
                                      training_set=classification_ts,
                                      validation_set=classification_vs,
-                                     training_steps=int(classification_ts_size // batch_size) + 1,
-                                     validation_steps=int(classification_vs_size // batch_size) + 1,
+                                     training_steps=classification_ts_size // batch_size + 1,
+                                     validation_steps=classification_vs_size // batch_size + 1,
                                      callbacks=callbacks)
 
         if model_params['evaluate']:
@@ -401,72 +415,22 @@ class CenterNetPipeline:
 
             metrics = self.__model_utils.evaluate(model=model,
                                                   evaluation_set=classification_es,
-                                                  evaluation_steps=int(
-                                                      classification_es_size // model_params[
-                                                          'batch_size']) + 1)
+                                                  evaluation_steps=classification_es_size // batch_size + 1)
 
             self.__logs['test'].info('Evaluation metrics:\n'
                                      'sparse_categorical_crossentropy : {}\n'
                                      'sparse_categorical_accuracy     : {}'
                                      .format(metrics[0], metrics[1]))
 
-        if model_params['predict_on_test']:
-            self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+            if model_params['predict_on_test']:
+                self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
 
-            # Note that predictions.shape = (n_sample, n_category)
-            predictions = self.__model_utils.predict(model=model, dataset=classification_ps)
-            self.__logs['execution'].info('Prediction completed.')
+                predictions = self.__model_utils.predict(model=model, dataset=classification_ps)
+                self.__logs['execution'].info('Prediction completed.')
 
-            return predictions
+                return predictions
 
         return None
-
-    @staticmethod
-    def write_test_list_to_csv(test_list: List, bbox_predictions: Dict):
-
-        # Get all the names of the cropped images
-        cropped_img_names = [cropped_img_path.split(os.sep)[-1] for cropped_img_path in test_list]
-
-        # Get all the original names of the cropped images
-        original_img_names = []
-        for cropped_img_name, cropped_img_path in zip(cropped_img_names, test_list):
-            original_img_name = '_'.join(cropped_img_name.split('_')[:-1])
-            original_img_names.append(original_img_name)
-
-        # Initialize a mapping <original image name> -> <list of cropped images names>
-        original_img_to_cropped = {original_img_name: [] for original_img_name in original_img_names}
-
-        # Initialize a mapping <cropped image name> -> <bbox coordinates>
-        cropped_img_to_bbox = {cropped_img_name: None for cropped_img_name in cropped_img_names}
-
-        # Initialize a mapping <original image name> -> <bbox coordinates>
-        original_img_to_bbox = {original_img_name: [] for original_img_name in original_img_names}
-
-        for cropped_img_name in cropped_img_names:
-            # Map each original image to its cropped characters
-            original_img_name = '_'.join(cropped_img_name.split('_')[:-1])
-            original_img_to_cropped[original_img_name].append(cropped_img_name)
-
-            # Map each cropped image to its bounding box
-            cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
-            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_name + '.jpg'][cropped_img_id][2:]]
-            # Note that the coordinates are in format ymin:xmin:ymax:xmax
-            cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
-
-        for original_img_name, cropped_img_names in original_img_to_cropped.items():
-            for cropped_img_name in cropped_img_names:
-                original_img_to_bbox[original_img_name].append(cropped_img_to_bbox[cropped_img_name])
-
-        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in original_img_to_bbox.items()}
-
-        test_dict = {
-            'original_image': [original_img_name for original_img_name in original_img_to_cropped.keys()],
-            'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in original_img_to_cropped.values()],
-            'bboxes': [bbox for bbox in original_img_to_bbox.values()]
-        }
-
-        test_list_df = pd.DataFrame(test_dict)
-        test_list_df.to_csv(os.path.join('datasets', 'test_list.csv'))
 
     def write_submission(self, predictions: List[List[float]]):
         """
@@ -476,6 +440,8 @@ class CenterNetPipeline:
         :param predictions: a list of class predictions for the cropped characters
         """
 
+        self.__logs['execution'].info('Writing submission data...')
+
         # Initialize an empty dataset for submission
         submission = pd.DataFrame(columns=['image_id', 'labels'])
 
@@ -483,8 +449,13 @@ class CenterNetPipeline:
         submission_dict = {}
 
         # Read the test data from csv file
-        test_list = pd.read_csv(os.path.join('datasets', 'test_list.csv'),
-                                usecols=['original_image', 'cropped_images', 'bboxes'])
+        path_to_test_list = os.path.join('datasets', 'test_list.csv')
+        try:
+            test_list = pd.read_csv(path_to_test_list, usecols=['original_image', 'cropped_images', 'bboxes'])
+        except FileNotFoundError:
+            raise Exception('Cannot write submission because non test list was written at {}\n'
+                            'Probably predict_on_test param was set to False, thus no prediction has been made on test'
+                            .format(path_to_test_list))
 
         # Initialize an index to iterate over the predictions
         i = 0
@@ -527,17 +498,31 @@ class CenterNetPipeline:
         submission['labels'] = submission_dict.values()
 
         # Write the submission to csv
-        submission.to_csv(os.path.join('datasets', 'submission.csv'))
+        path_to_submission = os.path.join('datasets', 'submission.csv')
+        submission.to_csv(path_to_submission)
+
+        self.__logs['execution'].info('Written submission data at {}'.format(path_to_submission))
 
     @staticmethod
     def visualize_final_results():
 
         # Read the submission data from csv file
-        submission = pd.read_csv(os.path.join('datasets', 'submission.csv'), usecols=['image_id', 'labels'])
+        path_to_submission = os.path.join('datasets', 'submission.csv')
+        try:
+            submission = pd.read_csv(path_to_submission, usecols=['image_id', 'labels'])
+        except FileNotFoundError:
+            raise Exception('Cannot fetch data for visualization because no submission was written at {}\n'
+                            'Probably predict_on_test param was set to False, thus no submission has been written'
+                            .format(path_to_submission))
 
         # Read the test data from csv file
-        test_list = pd.read_csv(os.path.join('datasets', 'test_list.csv'),
-                                usecols=['original_image', 'cropped_images', 'bboxes'])
+        path_to_test_list = os.path.join('datasets', 'test_list.csv')
+        try:
+            test_list = pd.read_csv(path_to_test_list, usecols=['original_image', 'cropped_images', 'bboxes'])
+        except FileNotFoundError:
+            raise Exception('Cannot fetch data for visualization because no submission was written at {}\n'
+                            'Probably predict_on_test param was set to False, thus no prediction has been made on test'
+                            .format(path_to_test_list))
 
         # Initialize a bboxes visualizer object to print bboxes on images
         bbox_visualizer = BBoxesVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))

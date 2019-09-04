@@ -1,6 +1,5 @@
 import logging
 import os
-import pandas as pd
 import absl.logging
 import tensorflow as tf
 
@@ -91,14 +90,6 @@ def main():
                                                                             'weights'))
 
     # --- STEP 2: Detection by CenterNet ---
-
-    # pipeline.run_hourglass_detection(model_params=model_2_params,
-    #                                  dataset_avg_size=dataset_avg_size,
-    #                                  weights_path=os.path.join(
-    #                                      base_experiments_path,
-    #                                      run_id + '_2',
-    #                                      'weights'),
-    #                                  run_id=run_id)
 
     train_list, bbox_predictions = pipeline.run_detection(model_params=model_2_params,
                                                           dataset_avg_size=dataset_avg_size,

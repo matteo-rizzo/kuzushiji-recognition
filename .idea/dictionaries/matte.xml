@@ -1,6 +1,7 @@
 <component name="ProjectDictionaryState">
   <dictionary name="matte">
     <words>
+      <w>absl</w>
       <w>autotune</w>
       <w>bboxes</w>
       <w>bidimensional</w>
@@ -16,6 +17,7 @@
       <w>keras</w>
       <w>ndarray</w>
       <w>noto</w>
+      <w>preinit</w>
       <w>preprocessing</w>
       <w>selu</w>
       <w>tensorboard</w>

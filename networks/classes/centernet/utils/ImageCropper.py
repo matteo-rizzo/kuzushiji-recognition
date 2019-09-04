@@ -27,6 +27,18 @@ class ImageCropper:
 
         return train_list
 
+    def get_crops(self, img_data: any, crop_char_path: str, mode='train', regenerate: bool = False):
+
+        regenerate_crops = {
+            'train': self.regenerate_crops_train,
+            'test': self.regenerate_crops_test
+        }
+
+        if regenerate:
+            return regenerate_crops[mode](img_data, crop_char_path)
+        else:
+            return self.load_crop_characters(crop_char_path, mode=mode)
+
     def regenerate_crops_test(self, bbox_predictions, crop_char_path_test):
 
         self.__log.info('Starting procedure to regenerate cropped test character images')
