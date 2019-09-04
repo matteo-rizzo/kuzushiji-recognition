@@ -7,7 +7,7 @@ from matplotlib import font_manager
 from matplotlib.patches import Rectangle
 
 
-class BboxVisualizer:
+class BBoxesVisualizer:
 
     def __init__(self, path_to_images: str):
         self.__path_to_images = path_to_images
@@ -20,13 +20,32 @@ class BboxVisualizer:
         :param labels: the labels of the image to be tested
         """
 
-        plt = self.__display_image(os.path.join(self.__path_to_images, image_id + '.jpg'), show=False)
+        path_to_image = os.path.join(self.__path_to_images, image_id + '.jpg')
+
+        plt = self.__display_image(path_to_image, show=False)
         ax = plt.gca()
 
         for label in labels:
-            ax = self.draw_box_and_text(ax, label)
+            ax = self.__draw_box_and_text(ax, label)
 
         plt.show()
+
+    def __draw_box_and_text(self, ax, label):
+
+        codepoint, x, y, w, h = label
+        x, y, w, h = int(x), int(y), int(w), int(h)
+
+        rect = Rectangle((x, y), w, h, linewidth=1, edgecolor="r", facecolor="none")
+        ax.add_patch(rect)
+
+        ax.text(x + w + 25,
+                y + (h / 2) + 20,
+                self.__unicode_to_character(codepoint),
+                fontproperties=self.__get_font(),
+                color="r",
+                size=18)
+
+        return ax
 
     @staticmethod
     def __display_image(path_to_image: str, show: bool = True):
@@ -38,8 +57,7 @@ class BboxVisualizer:
         """
 
         plt.figure(figsize=(15, 15))
-        this_img = Image.open(path_to_image)
-        plt.imshow(this_img)
+        plt.imshow(Image.open(path_to_image))
 
         if show:
             plt.show()
@@ -53,20 +71,6 @@ class BboxVisualizer:
         """
         path = os.path.join(os.getcwd(), 'scripts', 'assets', 'fonts', 'NotoSansCJKjp-Regular.otf')
         return font_manager.FontProperties(fname=path)
-
-    def draw_box_and_text(self, ax, label):
-        codepoint, x, y, w, h = label
-        x, y, w, h = int(x), int(y), int(w), int(h)
-
-        rect = Rectangle((x, y), w, h, linewidth=1, edgecolor="r", facecolor="none")
-        ax.add_patch(rect)
-
-        ax.text(x + w + 25, y + (h / 2) + 20, self.__unicode_to_character(codepoint),
-                fontproperties=self.__get_font(),
-                color="r",
-                size=16)
-
-        return ax
 
     @staticmethod
     def __unicode_to_character(unicode):

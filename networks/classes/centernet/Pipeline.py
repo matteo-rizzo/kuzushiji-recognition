@@ -13,8 +13,8 @@ from networks.classes.centernet.datasets.DetectionDataset import DetectionDatase
 from networks.classes.centernet.datasets.PreprocessingDataset import PreprocessingDataset
 from networks.classes.centernet.models.HourglassNetwork import HourglassNetwork
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
-from networks.classes.centernet.utils.BoundingBoxesHandler import BoundingBoxesHandler
-from networks.classes.centernet.utils.BboxVisualizer import BboxVisualizer
+from networks.classes.centernet.utils.BBoxesHandler import BBoxesHandler
+from networks.classes.centernet.utils.BBoxesVisualizer import BBoxesVisualizer
 from networks.classes.centernet.utils.ImageCropper import ImageCropper
 from networks.classes.centernet.utils.LossFunctionsGenerator import LossFunctionsGenerator
 
@@ -25,7 +25,7 @@ class CenterNetPipeline:
         self.__logs = logs
         self.__model_utils = ModelCenterNet(logs=self.__logs)
         self.__img_cropper = ImageCropper(log=self.__logs['execution'])
-        self.__bb_handler = BoundingBoxesHandler()
+        self.__bb_handler = BBoxesHandler()
         self.__loss = LossFunctionsGenerator()
 
         self.__dataset_params = dataset_params
@@ -272,10 +272,10 @@ class CenterNetPipeline:
 
                 # Perform the prediction on the newly created dataset and show images
                 detected_predictions = self.__model_utils.predict(model, mini_test)
-                self.__bb_handler.get_bb_boxes(detected_predictions,
-                                               mode='train',
-                                               annotation_list=xy_eval[:10],
-                                               show=True)
+                self.__bb_handler.get_bboxes(detected_predictions,
+                                             mode='train',
+                                             annotation_list=xy_eval[:10],
+                                             show=True)
 
         # ---- GENERATION OF TEST PREDICTIONS ----
 
@@ -288,10 +288,10 @@ class CenterNetPipeline:
             self.__logs['execution'].info('Completed.')
 
             self.__logs['execution'].info('Converting test predictions into bounding boxes...')
-            predicted_test_bboxes = self.__bb_handler.get_bb_boxes(test_predictions,
-                                                                   mode='test',
-                                                                   test_images_path=self.__test_list,
-                                                                   show=False)
+            predicted_test_bboxes = self.__bb_handler.get_bboxes(test_predictions,
+                                                                 mode='test',
+                                                                 test_images_path=self.__test_list,
+                                                                 show=False)
             self.__logs['execution'].info('Completed.')
 
         return train_list, predicted_test_bboxes
@@ -450,7 +450,7 @@ class CenterNetPipeline:
             # Map each cropped image to its bounding box
             cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
             bbox_coords = [str(coord) for coord in bbox_predictions[original_img_name + '.jpg'][cropped_img_id][2:]]
-            # Note that the coordinates are in format xmin:ymin:width:height
+            # Note that the coordinates are in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
 
         for original_img_name, cropped_img_names in original_img_to_cropped.items():
@@ -502,9 +502,15 @@ class CenterNetPipeline:
                 unicode = list(self.__dict_cat.keys())[list(self.__dict_cat.values()).index(class_index)]
 
                 # Get the coordinates of the bbox
-                xmin, ymin, width, height = bbox.split(':')
-                x = str((float(xmin) + float(width)) // 2)
-                y = str((float(ymin) + float(height)) // 2)
+                ymin, xmin, ymax, xmax = bbox.split(':')
+
+                ymin = round(float(ymin))
+                xmin = round(float(xmin))
+                ymax = round(float(ymax))
+                xmax = round(float(xmax))
+
+                x = str(xmin + ((xmax - xmin) // 2))
+                y = str(ymin + ((ymax - ymin) // 2))
 
                 # Append the current label to the list of the labels of the current images
                 submission_dict.setdefault(img_data['original_image'], []).append(' '.join([unicode, x, y]))
@@ -534,7 +540,7 @@ class CenterNetPipeline:
                                 usecols=['original_image', 'cropped_images', 'bboxes'])
 
         # Initialize a bboxes visualizer object to print bboxes on images
-        bbox_visualizer = BboxVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
+        bbox_visualizer = BBoxesVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
 
         submission_rows = [r for _, r in submission.iterrows()]
         test_data_rows = [r for _, r in test_list.iterrows()]
@@ -547,11 +553,19 @@ class CenterNetPipeline:
             # Iterate over the predicted classes and corresponding bboxes
             labels = []
             for char_class, bbox in zip(classes, bboxes):
-                xmin, ymin, width, height = bbox.split(':')
+                ymin, xmin, ymax, xmax = bbox.split(':')
+
+                xmin = round(float(xmin))
+                ymin = round(float(ymin))
+                xmax = round(float(xmax))
+                ymax = round(float(ymax))
+
                 labels.append([char_class,
-                               round(float(xmin)),
-                               round(float(ymin)),
-                               round(float(width)),
-                               round(float(height))])
+                               xmin,
+                               ymin,
+                               xmax - xmin,
+                               ymax - ymin])
+
+            print(labels)
 
             bbox_visualizer.visualize_bboxes(image_id=sub_data['image_id'], labels=labels)

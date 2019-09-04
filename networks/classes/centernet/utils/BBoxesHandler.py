@@ -8,18 +8,18 @@ from PIL import ImageDraw
 from tqdm import tqdm
 
 
-class BoundingBoxesHandler:
+class BBoxesHandler:
 
     def __init__(self, w: int = 128, h: int = 128):
         self.__pred_out_w = w
         self.__pred_out_h = h
 
-    def get_bb_boxes(self,
-                     predictions: np.ndarray,
-                     mode: str,
-                     annotation_list: np.array = None,
-                     test_images_path: List[str] = None,
-                     show: bool = False) -> Dict[str, np.ndarray]:
+    def get_bboxes(self,
+                   predictions: np.ndarray,
+                   mode: str,
+                   annotation_list: np.array = None,
+                   test_images_path: List[str] = None,
+                   show: bool = False) -> Dict[str, np.ndarray]:
         """
         Computes the bounding boxes and perform non maximum suppression
 
@@ -76,7 +76,7 @@ class BoundingBoxesHandler:
                                              print_h / self.__pred_out_h,
                                              print_w / self.__pred_out_w]
 
-            # Produce a dictionary { "image_path": np.ndarray([category, score, ymin, xmin, ymax, xmax]) }
+            # Produce a dictionary { "image_name": np.ndarray([category, score, ymin, xmin, ymax, xmax]) }
             all_boxes[image_path.split(os.sep)[-1]] = box_and_score
 
             if mode == 'train' and show:
