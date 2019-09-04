@@ -1,6 +1,6 @@
 from typing import Dict
 from typing import List
-
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
@@ -34,7 +34,7 @@ class BoundingBoxesHandler:
                 - annotation_list[1] = annotations, as np.array
                 - annotation_list[2] = recommended height split
                 - annotation_list[3] = recommended width split
-        :param test_images_path: list of filepaths to test images
+        :param test_images_path: list of file paths to test images
         :param show: whether to show bboxes and iou scores. Iou scores are available only in train mode.
         :return: dict of boxes, as {<image_path>: [<category>, <score>, <ymin>, <xmin>, <ymax>, <xmax>]}.
                 Note that <category> is always 0 in our case.
@@ -77,7 +77,7 @@ class BoundingBoxesHandler:
                                              print_w / self.__pred_out_w]
 
             # Produce a dictionary { "image_path": np.ndarray([category, score, ymin, xmin, ymax, xmax]) }
-            all_boxes[image_path] = box_and_score
+            all_boxes[image_path.split(os.sep)[-1]] = box_and_score
 
             if mode == 'train' and show:
                 # Boxes in the format: c_x, c_y, width, height

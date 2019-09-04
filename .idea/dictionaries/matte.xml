@@ -3,13 +3,16 @@
     <words>
       <w>autotune</w>
       <w>bboxes</w>
+      <w>bidimensional</w>
       <w>checkpointer</w>
       <w>conv</w>
       <w>convolutional</w>
       <w>crossentropy</w>
       <w>datasets</w>
+      <w>heatmap</w>
       <w>kaggle</w>
       <w>keras</w>
+      <w>ndarray</w>
       <w>preprocessing</w>
       <w>selu</w>
       <w>tensorboard</w>
