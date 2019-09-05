@@ -3,7 +3,7 @@ import os
 import absl.logging
 import tensorflow as tf
 
-from networks.classes.centernet.Pipeline import CenterNetPipeline
+from networks.classes.centernet.pipeline.Pipeline import CenterNetPipeline
 from networks.classes.general_utilities.Logger import Logger
 from networks.classes.general_utilities.Params import Params
 

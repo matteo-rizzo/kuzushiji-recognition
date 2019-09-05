@@ -1,5 +1,5 @@
 {
-  "run_id": "test_matteo",
+  "run_id": "test_centernet",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "train_images_path": "datasets/kaggle/training/images",
@@ -29,7 +29,7 @@
     "restore_weights": false,
     "initial_epoch": 138,
     "train": false,
-    "epochs": 40,
+    "epochs": 138,
     "learning_rate": 1e-4,
     "decay": "",
     "predict_on_test": true,

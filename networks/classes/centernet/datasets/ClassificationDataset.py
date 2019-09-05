@@ -86,8 +86,7 @@ class ClassificationDataset:
 
                     count = 0
 
-                    x = []
-                    y = []
+                    x, y = [], []
 
                     yield b_x, b_y
 
@@ -117,7 +116,7 @@ class ClassificationDataset:
         """
 
         assert self.__evaluation_ratio + self.__training_ratio + self.__validation_ratio == 1, \
-            'Split ratios are not correctly set up'
+            'ERROR: Split ratios are not correctly set up!'
 
         training, xy_eval = train_test_split(train_list,
                                              random_state=797,
