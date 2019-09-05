@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import natsort
 from typing import List, Tuple, Dict, Union
 
 import numpy as np
@@ -167,8 +168,6 @@ class ImageCropper:
 
         self.__user_check(save_dir)
 
-        # ---- Cropping ----
-
         cropped_list = []
 
         for img_path, boxes in tqdm(images_to_split.items()):
@@ -225,11 +224,10 @@ class ImageCropper:
                 csv_path), "Error: csv file 'crop_list.csv' doesn't exists in path {}".format(csv_path)
 
             csv_df = pd.read_csv(csv_path, delimiter=',')
-
             n_rows = len(csv_df.index)
 
-            assert len(os.listdir(
-                save_dir)) - 1 == n_rows, "Error: csv and save_dir contains different number of items"
+            assert len(os.listdir(save_dir)) - 1 == n_rows, \
+                "Error: csv and save_dir contains different number of items"
 
             return [tuple(c) for c in csv_df.values]
 
@@ -237,7 +235,8 @@ class ImageCropper:
             assert not os.path.isfile(csv_path), "Error: there is an unexpected csv file in save_dir at {}." \
                 .format(save_dir)
 
-            img = sorted(os.listdir(save_dir))
+            # Sort the images
+            img = natsort.natsorted(os.listdir(save_dir))
 
             # Add relative path to image name
             img = [str(os.path.join(save_dir, name)) for name in img]

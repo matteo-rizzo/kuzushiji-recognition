@@ -3,6 +3,8 @@ import tensorflow as tf
 import numpy as np
 import os
 from typing import Dict, List, Union
+
+import natsort
 from tensorflow.python.keras.optimizers import Adam
 
 from networks.classes.centernet.datasets.DetectionDataset import DetectionDataset
@@ -28,7 +30,7 @@ class Detector:
 
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = dataset_params['test_images_path']
-        self.__test_list = [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list]
+        self.__test_list = natsort.natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
 
     @staticmethod
     def __resize_fn(path: str, input_h, input_w):

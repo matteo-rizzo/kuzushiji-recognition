@@ -3,7 +3,7 @@
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "train_images_path": "datasets/kaggle/training/images",
-    "test_images_path": "datasets/kaggle/testing/images",
+    "test_images_path": "datasets\\kaggle\\testing\\images",
     "sample_submission": "datasets/kaggle/sample_submission.csv",
     "training_ratio": 0.7,
     "validation_ratio": 0.15,

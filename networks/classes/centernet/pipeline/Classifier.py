@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from typing import Dict, List, Union, Generator
+
 from tensorflow.python.keras.optimizers import Adam
 from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
@@ -198,12 +199,10 @@ class Classifier:
             # Set the relative path to the original image
             original_img_path = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
 
-            print(cropped_img_name)
-            # print(bbox_predictions[original_img_path])
-            # print(bbox_predictions[original_img_path][cropped_img_id][2:])
-
+            # Convert the coords of the bboxes from float to string
             bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][cropped_img_id][2:]]
-            # Note that the coordinates are in format ymin:xmin:ymax:xmax
+
+            # Join the coordinates in a single string, in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
 
         for original_img_name, cropped_img_names in original_img_to_cropped.items():
