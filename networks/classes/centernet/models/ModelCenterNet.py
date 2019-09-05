@@ -5,9 +5,10 @@ from typing import Dict, List, Union
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
 from networks.classes.centernet.models.ModelGenerator import ModelGenerator
 from networks.classes.centernet.datasets.DataAugmentation import DataAugmentation
+
 
 # from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
 
@@ -33,7 +34,7 @@ class ModelCenterNet:
         return ModelGenerator().generate_model(input_shape, mode, n_category)
 
     @staticmethod
-    def setup_callbacks(weights_log_path: str, batch_size: int) -> List[tf.keras.callbacks.Callback]:
+    def setup_callbacks(weights_log_path: str, batch_size: int, lr: float) -> List[tf.keras.callbacks.Callback]:
         """
         Sets up the callbacks for the training of the model.
         """
