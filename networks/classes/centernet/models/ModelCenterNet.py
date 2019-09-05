@@ -1,14 +1,13 @@
 import glob
 import os
-from typing import Dict
-from typing import List, Union
+from tqdm import tqdm
+from typing import Dict, List, Union
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.preprocessing.image import ImageDataGenerator
 from networks.classes.centernet.models.ModelGenerator import ModelGenerator
-
+from networks.classes.centernet.datasets.DataAugmentation import DataAugmentation
 
 # from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
 
@@ -120,6 +119,9 @@ class ModelCenterNet:
         self.__logs['training'].info('Starting the fitting procedure:')
         self.__logs['training'].info('* Total number of epochs:   ' + str(epochs))
         self.__logs['training'].info('* Initial epoch:            ' + str(init_epoch) + '\n')
+
+        # da = DataAugmentation(augmentations=['flip', 'color', 'zoom', 'rotate'])
+        # training_set = da.augment_dataset(training_set)
 
         model.fit(training_set,
                   epochs=epochs,

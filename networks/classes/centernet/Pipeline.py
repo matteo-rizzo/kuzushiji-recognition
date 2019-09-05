@@ -385,7 +385,7 @@ class CenterNetPipeline:
                                                      regenerate=model_params['regenerate_crops_test'],
                                                      mode='test')
 
-            self.__write_test_list_to_csv(test_list, bbox_predictions)
+            self.__write_test_list_to_csv(test_list[:1200], bbox_predictions)
 
         batch_size = int(model_params['batch_size'])
         dataset_classification = ClassificationDataset(model_params)

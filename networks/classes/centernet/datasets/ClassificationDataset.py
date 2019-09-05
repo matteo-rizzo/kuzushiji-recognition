@@ -124,8 +124,7 @@ class ClassificationDataset:
         training, xy_eval = train_test_split(train_list,
                                              random_state=797,
                                              shuffle=True,
-                                             train_size=int(
-                                                 (1 - self.__evaluation_ratio) * len(train_list)))
+                                             train_size=int((1 - self.__evaluation_ratio) * len(train_list)))
 
         xy_train, xy_val = train_test_split(training,
                                             train_size=int(self.__training_ratio * len(train_list)),
@@ -168,7 +167,7 @@ class ClassificationDataset:
 
         if test_list is not None:
             self.__test_set = (
-                tf.data.Dataset.from_tensor_slices(test_list)
+                tf.data.Dataset.from_tensor_slices(test_list[:1200])
                     .map(self.__test_resize_fn,
                          num_parallel_calls=AUTOTUNE)
                     .batch(self.__batch_size_predict)
