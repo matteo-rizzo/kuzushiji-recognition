@@ -91,29 +91,27 @@ class ClassificationDataset:
 
                     yield b_x, b_y
 
-    def __test_resize_fn(self, path):
-        """
-        Utility function for image resizing
-
-        :param path: the path to the image to be resized
-        :return: a resized image
-        """
-
-        image_string = tf.read_file(path)
-        image_decoded = tf.image.decode_jpeg(image_string)
-        image_resized = tf.image.resize(image_decoded, (self.__input_height, self.__input_width))
-
-        return image_resized / 255
+    # def __test_resize_fn(self, path):
+    #     """
+    #     Utility function for image resizing
+    #
+    #     :param path: the path to the image to be resized
+    #     :return: a resized image
+    #     """
+    #
+    #     image_string = tf.read_file(path)
+    #     image_decoded = tf.image.decode_jpeg(image_string)
+    #     image_resized = tf.image.resize(image_decoded, (self.__input_height, self.__input_width))
+    #
+    #     return image_resized / 255
 
     def generate_dataset(self,
-                         train_list: List[Tuple[str, int]],
-                         test_list: Union[List[str], None]) -> Tuple[List[List], List[List], List[List]]:
+                         train_list: List[Tuple[str, int]]) -> Tuple[List[List], List[List], List[List]]:
 
         """
         Generate the tf.data.Dataset containing all the objects.
 
         :param train_list: training list with samples as list of tuples (image, class)
-        :param test_list: a list of test image paths, ore None if test set must not be generated.
         :return: the split and shuffled train and validation set, in the same shape as 'train_list'
                 param.
         """
@@ -165,17 +163,6 @@ class ClassificationDataset:
                     .repeat()
                     .prefetch(AUTOTUNE),
                 len(xy_val))
-
-        if test_list is not None:
-            self.__test_set = (
-                tf.data.Dataset.from_tensor_slices(test_list)
-                    .map(self.__test_resize_fn,
-                         num_parallel_calls=AUTOTUNE)
-                    .batch(self.__batch_size_predict)
-                    .prefetch(AUTOTUNE),
-                len(test_list)
-            )
-        # else: it remains (None, 0)
 
         return xy_train, xy_val, xy_eval
 

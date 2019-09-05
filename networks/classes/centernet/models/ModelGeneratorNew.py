@@ -90,8 +90,8 @@ class ModelGenerator:
                           input_tensor=input_layer, input_shape=(512, 512, 3),
                           pooling=None)
 
-        for layer in resnet.layers:
-            layer.trainable = False
+        # for layer in resnet.layers:
+        #     layer.trainable = False
 
         return resnet
 
@@ -109,11 +109,11 @@ class ModelGenerator:
         # Deconvolution block 1: (16, 16, 512) -> (32, 32, 512)
         x = Conv2D(filters=256, kernel_size=3, strides=1, padding='same')(x)
         x = Conv2DTranspose(filters=256, kernel_size=4, strides=2, padding='same')(x)
-        x = Concatenate(axis=-1)([x_3, x])
+        x = Concatenate()([x_3, x])
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
 
-        # Deconvolution block 2: (32, 32, 512) -> (64, 64, 256)
+        # Deconvolution block 2: (32, 32, 1024) -> (64, 64, 256)
         x = Conv2D(filters=128, kernel_size=3, strides=1, padding='same')(x)
         x = Conv2DTranspose(filters=128, kernel_size=4, strides=2, padding='same')(x)
         x = Concatenate()([x_2, x])

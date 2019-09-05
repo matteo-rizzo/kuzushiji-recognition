@@ -1,12 +1,13 @@
 import os
 import shutil
 import sys
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Generator
 import regex as re
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.python.keras.optimizers import Adam
+from tqdm import tqdm
 
 from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
 from networks.classes.centernet.datasets.DetectionDataset import DetectionDataset
@@ -116,7 +117,7 @@ class CenterNetPipeline:
                               model_params['input_height'],
                               model_params['input_channels'])
 
-    def __resize_fn(self, path: str):
+    def __resize_fn(self, path: str, input_h, input_w):
         """
         Utility function for image resizing
 
@@ -126,7 +127,7 @@ class CenterNetPipeline:
 
         image_string = tf.read_file(path)
         image_decoded = tf.image.decode_jpeg(image_string)
-        image_resized = tf.image.resize(image_decoded, (self.__input_shape[1], self.__input_shape[0]))
+        image_resized = tf.image.resize(image_decoded, (input_h, input_w))
 
         return image_resized / 255
 
@@ -287,11 +288,12 @@ class CenterNetPipeline:
                                              metrics[3]))
 
             if model_params['show_prediction_examples']:
+                input_h, input_w = model_params['input_height'], model_params['input_width']
                 self.__logs['test'].info('Showing prediction examples...')
                 # Prepare a test dataset from the evaluation set taking its first 10 values
                 test_path_list = [ann[0] for ann in xy_eval[:10]]
                 mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
-                    .map(self.__resize_fn,
+                    .map(lambda i: self.__resize_fn(i, input_h, input_w),
                          num_parallel_calls=tf.data.experimental.AUTOTUNE) \
                     .batch(1) \
                     .prefetch(tf.data.experimental.AUTOTUNE)
@@ -325,7 +327,7 @@ class CenterNetPipeline:
                            model_params: Dict,
                            train_list: List[List],
                            bbox_predictions: Union[Dict[str, np.ndarray], None],
-                           weights_path: str):
+                           weights_path: str) -> Union[Generator, None]:
         """
         Classifies each character according to the available classes via a CNN
 
@@ -393,11 +395,11 @@ class CenterNetPipeline:
 
         # We need to pass it the training list, and the list of cropped images from test set
         # if we are in predict mode (otw pass we pass test_list=None).
-        _, _, xy_eval = dataset_classification.generate_dataset(train_list, test_list)
+        _, _, xy_eval = dataset_classification.generate_dataset(train_list)
         classification_ts, classification_ts_size = dataset_classification.get_training_set()
         classification_vs, classification_vs_size = dataset_classification.get_validation_set()
         classification_es, classification_es_size = dataset_classification.get_evaluation_set()
-        classification_ps, classification_ps_size = dataset_classification.get_test_set()
+        # classification_ps, classification_ps_size = dataset_classification.get_test_set()
 
         if model_params['train']:
             self.__logs['execution'].info('Starting the training procedure for the classification model...')
@@ -428,21 +430,31 @@ class CenterNetPipeline:
                                      .format(metrics[0], metrics[1]))
 
         if model_params['predict_on_test']:
-            self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+            self.__logs['execution'].info(
+                'Starting the predict procedure of char class (takes much time)...')
 
-            predictions = self.__model_utils.predict(model=model, dataset=classification_ps)
+            input_h, input_w = model_params['input_height'], model_params['input_width']
+
+            for img_path in test_list:
+                img_dataset = tf.data.Dataset.from_tensor_slices([img_path]) \
+                    .map(lambda i: self.__resize_fn(i, input_h, input_w),
+                         num_parallel_calls=tf.data.experimental.AUTOTUNE) \
+                    .batch(1)
+
+                prediction = self.__model_utils.predict(model=model, dataset=img_dataset)
+
+                yield prediction
+
             self.__logs['execution'].info('Prediction completed.')
-
-            return predictions
 
         return None
 
-    def write_submission(self, predictions: List[List[float]]):
+    def write_submission(self, predictions_gen: Generator):
         """
         Writes a submission csv file in the format:
         - names of columns : image_id, labels
         - example of row   : image_id, {label X Y} {...}
-        :param predictions: a list of class predictions for the cropped characters
+        :param predictions_gen: a list of class predictions for the cropped characters
         """
 
         self.__logs['execution'].info('Writing submission data...')
@@ -456,24 +468,25 @@ class CenterNetPipeline:
         # Read the test data from csv file
         path_to_test_list = os.path.join('datasets', 'test_list.csv')
         try:
-            test_list = pd.read_csv(path_to_test_list, usecols=['original_image', 'cropped_images', 'bboxes'])
+            test_list = pd.read_csv(path_to_test_list,
+                                    usecols=['original_image', 'cropped_images', 'bboxes'])
         except FileNotFoundError:
             raise Exception('Cannot write submission because non test list was written at {}\n'
                             'Probably predict_on_test param was set to False, thus no prediction has been made on test'
                             .format(path_to_test_list))
 
         # Initialize an index to iterate over the predictions
-        i = 0
+        # i = 0
+        prediction = next(predictions_gen)
 
         # Iterate over all the predicted original images
-        for _, img_data in test_list.iterrows():
+        for _, img_data in tqdm(test_list.iterrows()):
 
             cropped_images = list(img_data['cropped_images'].split(' '))
             bboxes = list(img_data['bboxes'].split(' '))
 
             for cropped_image, bbox in zip(cropped_images, bboxes):
                 # Get the unicode class from the predictions
-                prediction = predictions[i]
                 class_index = np.where(prediction == max(prediction))[0][0]
                 unicode = list(self.__dict_cat.keys())[list(self.__dict_cat.values()).index(class_index)]
 
@@ -489,10 +502,10 @@ class CenterNetPipeline:
                 y = str(ymin + ((ymax - ymin) // 2))
 
                 # Append the current label to the list of the labels of the current images
-                submission_dict.setdefault(img_data['original_image'], []).append(' '.join([unicode, x, y]))
+                submission_dict.setdefault(img_data['original_image'], []).append(
+                    ' '.join([unicode, x, y]))
 
-                # Set the index for the next prediction
-                i += 1
+                prediction = next(predictions_gen)
 
         # Convert the row in format: <image_id>, <label 1> <X_1> <Y_1> <label_2> <X_2> <Y_2> ...
         for original_image, labels in submission_dict.items():
@@ -517,18 +530,20 @@ class CenterNetPipeline:
         try:
             submission = pd.read_csv(path_to_submission, usecols=['image_id', 'labels'])
         except FileNotFoundError:
-            raise Exception('Cannot fetch data for visualization because no submission was written at {}\n'
-                            'Probably predict_on_test param was set to False, thus no submission has been written'
-                            .format(path_to_submission))
+            raise Exception(
+                'Cannot fetch data for visualization because no submission was written at {}\n'
+                'Probably predict_on_test param was set to False, thus no submission has been written'
+                .format(path_to_submission))
 
         # Read the test data from csv file
         path_to_test_list = os.path.join('datasets', 'test_list.csv')
         try:
             test_list = pd.read_csv(path_to_test_list, usecols=['original_image', 'cropped_images', 'bboxes'])
         except FileNotFoundError:
-            raise Exception('Cannot fetch data for visualization because no submission was written at {}\n'
-                            'Probably predict_on_test param was set to False, thus no prediction has been made on test'
-                            .format(path_to_test_list))
+            raise Exception(
+                'Cannot fetch data for visualization because no submission was written at {}\n'
+                'Probably predict_on_test param was set to False, thus no prediction has been made on test'
+                .format(path_to_test_list))
 
         # Initialize a bboxes visualizer object to print bboxes on images
         bbox_visualizer = BBoxesVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
