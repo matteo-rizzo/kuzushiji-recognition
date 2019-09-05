@@ -36,14 +36,15 @@ class DetectionDataset:
         self.__evaluation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__test_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
 
-    def __dataset_generator(self, list_samples, batch_size, random_crop: bool = True) \
-            -> (np.float32, np.float32):
+    def __dataset_generator(self,
+                            list_samples,
+                            batch_size,
+                            random_crop: bool = True) -> (np.float32, np.float32):
         """
         Generates a dataset given the samples and a batch size
 
         :param list_samples: the list of samples the dataset will contain
         :param batch_size:
-
 
         Note that in the original paper, the heatmap is computed as:
         * exp(-((x_distance_from_center) ^ 2 + (y_distance_from_center) ^ 2) / (2 * sig ^ 2))
@@ -63,8 +64,7 @@ class DetectionDataset:
         category_n = 1
         output_layer_n = category_n + 4
 
-        x = []
-        y = []
+        x, y = [], []
 
         count = 0
 
@@ -106,11 +106,12 @@ class DetectionDataset:
 
                 output_layer = np.zeros((output_height, output_width, (output_layer_n + category_n)))
 
+                # list_samples has the following structure:
                 # list_samples[0] = path to image
                 # list_samples[1] = ann
                 # list_samples[2] = recommended height split
                 # list_samples[3] = recommended width split
-                # where 'ann' is data on bbox:
+                # Where 'ann' the bbox data:
                 # ann[:, 1] = xmin
                 # ann[:, 2] = ymin
                 # ann[:, 3] = x width
@@ -153,7 +154,7 @@ class DetectionDataset:
                     )
                     # Center points will have value closer to 1 (close to 0 otherwise)
 
-                    # category heatmap
+                    # Category heatmap
                     output_layer[:, :, 0] = np.maximum(output_layer[:, :, 0], heatmap[:, :])
                     output_layer[int(y_c // 1), int(x_c // 1), 1] = 1
                     output_layer[int(y_c // 1), int(x_c // 1), 2] = y_c % 1  # height offset
@@ -163,20 +164,15 @@ class DetectionDataset:
 
                 y.append(output_layer)
 
-                # print(output_layer.shape)
-
                 count += 1
                 if count == batch_size:
                     x = np.array(x, dtype=np.float32)
                     y = np.array(y, dtype=np.float32)
 
-                    # print('Yield batch shape ', y.shape)
-
                     inputs = x / 255
                     targets = y
 
-                    x = []
-                    y = []
+                    x, y = [], []
 
                     count = 0
 
@@ -204,7 +200,6 @@ class DetectionDataset:
         image_decoded = tf.image.decode_jpeg(image_string)
 
         # Get image size
-        # pic_height, pic_width, _ = image_decoded.shape
         shape = tf.shape(image_decoded)
         pic_h, pic_w = shape[0], shape[1]
 
@@ -261,13 +256,12 @@ class DetectionDataset:
         """
 
         assert self.__evaluation_ratio + self.__training_ratio + self.__validation_ratio == 1, \
-            'Split ratios are not correctly set up'
+            'Split ratios are not correctly set up!'
 
         training, xy_eval = train_test_split(train_list,
                                              random_state=797,
                                              shuffle=True,
-                                             train_size=int(
-                                                 (1 - self.__evaluation_ratio) * len(train_list)))
+                                             train_size=int((1 - self.__evaluation_ratio) * len(train_list)))
 
         xy_train, xy_val = train_test_split(training,
                                             shuffle=True,

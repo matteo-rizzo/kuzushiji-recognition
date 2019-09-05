@@ -194,11 +194,14 @@ class Classifier:
 
             # Map each cropped image to its bounding box
             cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
-            # Relative path
+
+            # Set the relative path to the original image
             original_img_path = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
+
             print(cropped_img_name)
-            print(bbox_predictions[original_img_path])
-            print(bbox_predictions[original_img_path][cropped_img_id][2:])
+            # print(bbox_predictions[original_img_path])
+            # print(bbox_predictions[original_img_path][cropped_img_id][2:])
+
             bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][cropped_img_id][2:]]
             # Note that the coordinates are in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)

@@ -154,6 +154,8 @@ class CenterNetPipeline:
         :param experiment_path: the base path to the current experiment
         """
 
+        self.__logs['execution'].info('Starting learning pipeline with operations: {}'.format(operations))
+
         # --- STEP 1: Pre-processing (Check Object Size) ---
         if 'preprocessing' in operations:
             dataset_avg_size = self.__run_preprocessing(model_params=params.model_1,

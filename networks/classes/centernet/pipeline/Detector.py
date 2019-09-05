@@ -139,7 +139,7 @@ class Detector:
 
     def __generate_test_predictions(self, dataset_detection):
 
-        detection_ps, detection_ps_size = dataset_detection.get_test_set()
+        detection_ps, _ = dataset_detection.get_test_set()
 
         self.__logs['execution'].info('Predicting test bounding boxes (takes time)...')
         test_predictions = self.__model_utils.predict(model=self.__model, dataset=detection_ps)

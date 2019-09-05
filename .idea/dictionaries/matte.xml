@@ -2,6 +2,7 @@
   <dictionary name="matte">
     <words>
       <w>absl</w>
+      <w>arange</w>
       <w>autotune</w>
       <w>bboxes</w>
       <w>bidimensional</w>
