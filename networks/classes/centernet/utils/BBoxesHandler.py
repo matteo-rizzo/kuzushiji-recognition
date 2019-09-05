@@ -1,11 +1,11 @@
 from typing import Dict
 from typing import List
-import os
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 from PIL import ImageDraw
 from tqdm import tqdm
+# from tensorflow.python.keras.layers import MaxPooling2D, AveragePooling2D
 
 
 class BBoxesHandler:
@@ -162,8 +162,7 @@ class BBoxesHandler:
         # Sorted preserves original order of boxes
         return box_and_score_all[sorted(unique_idx)]
 
-    def __boxes_image_nms(self, score, y_c, x_c, height, width, iou_thresh,
-                          merge_mode=False) -> np.array:
+    def __boxes_image_nms(self, score, y_c, x_c, height, width, iou_thresh) -> np.array:
         """
         Performs the non-maximum suppression on the given bboxes
 
@@ -173,41 +172,36 @@ class BBoxesHandler:
         :param height: the height of the bbox (flatten array)
         :param width: the width of the bbox (flatten array)
         :param iou_thresh: the minimum IoU threshold for the suppression
-        :param merge_mode:
         :return: an array of bboxes with the following structure: <score> <top> <left> <bottom> <right>
         """
 
-        if merge_mode:
-            score = score
-            ymin = y_c
-            xmin = x_c
-            ymax = height
-            xmax = width
-        else:
-            # --- Flattening ---
+        # --- Flattening ---
 
-            score = score.reshape(-1)
-            y_c = y_c.reshape(-1)
-            x_c = x_c.reshape(-1)
-            height = height.reshape(-1)
-            width = width.reshape(-1)
-            size = height * width
+        score = score.reshape(-1)
+        y_c = y_c.reshape(-1)
+        x_c = x_c.reshape(-1)
+        height = height.reshape(-1)
+        width = width.reshape(-1)
+        size = height * width
 
-            xmin = x_c - width / 2  # left
-            ymin = y_c - height / 2  # top
-            xmax = x_c + width / 2  # right
-            ymax = y_c + height / 2  # bottom
+        xmin = x_c - width / 2  # left
+        ymin = y_c - height / 2  # top
+        xmax = x_c + width / 2  # right
+        ymax = y_c + height / 2  # bottom
 
-            inside_pic = (ymin > 0) * (xmin > 0) * (ymax < self.__pred_out_h) * (
-                        xmax < self.__pred_out_w)
-            # outside_pic = len(inside_pic) - np.sum(inside_pic)
+        # Take only boxes inside picture
+        inside_pic = (ymin > 0) * (xmin > 0) * (ymax < self.__pred_out_h) * (
+                xmax < self.__pred_out_w)
 
-            normal_size = (size < (np.mean(size) * 10)) * (size > (np.mean(size) / 10))
-            score = score[inside_pic * normal_size]
-            ymin = ymin[inside_pic * normal_size]
-            xmin = xmin[inside_pic * normal_size]
-            ymax = ymax[inside_pic * normal_size]
-            xmax = xmax[inside_pic * normal_size]
+        # Take only boxes of reasonable size
+        normal_size = (size < (np.mean(size) * 10)) * (size > (np.mean(size) / 10))
+        score = score[inside_pic * normal_size]
+        ymin = ymin[inside_pic * normal_size]
+        xmin = xmin[inside_pic * normal_size]
+        ymax = ymax[inside_pic * normal_size]
+        xmax = xmax[inside_pic * normal_size]
+
+        # --- Non maximum suppression ---
 
         # Sort boxes in descending order
         score_sort = np.argsort(score)[::-1]
@@ -217,6 +211,7 @@ class BBoxesHandler:
         ymax = ymax[score_sort]
         xmax = xmax[score_sort]
 
+        # Box area of score-sorted boxes
         area = ((ymax - ymin) * (xmax - xmin))
 
         boxes = np.concatenate((score.reshape(-1, 1),
@@ -226,14 +221,12 @@ class BBoxesHandler:
                                 xmax.reshape(-1, 1)),
                                axis=1)
 
-        # --- Non maximum suppression ---
-
+        # Remove overlapping
         box_idx = np.arange(len(ymin))
         alive_box = []
 
         while len(box_idx) > 0:
-
-            # Take the first index of the best bbox
+            # Take the index of the best bbox
             alive_box.append(box_idx[0])
 
             y1 = np.maximum(ymin[0], ymin)
@@ -244,11 +237,11 @@ class BBoxesHandler:
             cross_h = np.maximum(0, y2 - y1)
             cross_w = np.maximum(0, x2 - x1)
 
+            # Keep just the boxes which overlap with best box for less than threshold
             still_alive = (((cross_h * cross_w) / area[0]) < iou_thresh)
 
-            if np.sum(still_alive) == len(box_idx):
-                print("An error occurred:")
-                print(np.max((cross_h * cross_w)), area[0])
+            assert np.sum(still_alive) != len(box_idx), \
+                'An error occurred: {} {}'.format(np.max((cross_h * cross_w)), area[0])
 
             ymin = ymin[still_alive]
             xmin = xmin[still_alive]
@@ -319,3 +312,89 @@ class BBoxesHandler:
         print("score:{}".format(np.round(score, 3)))
 
         return score
+
+    # IMPLEMENTATION OF PAPER NMS VERION
+    #
+    # def __boxes_with_pooling(self, predicts, category_n):
+    #     """
+    #     TEST
+    #     :param predicts:
+    #     :param category_n:
+    #     :return:
+    #     """
+    #     first: bool = True
+    #     # In our case category_n = 1, so category=0 (just one cycle)
+    #     for category in range(category_n):
+    #         k, s = 5, 5
+    #         bb = predicts[..., category:category + 1]
+    #         cc = predicts[..., category + 1:]
+    #         print(bb.shape, cc.shape)
+    #         r = MaxPooling2D(pool_size=k, strides=s, padding='same')(np.array([bb]))
+    #         r = r[0].numpy()
+    #         o = AveragePooling2D(pool_size=k, strides=s, padding='same')(
+    #             np.array([cc]))
+    #         o = o[0].numpy()
+    #         r = np.concatenate((r, o), axis=2)
+    #         print(r.shape)
+    #
+    #         out_w = (self.__pred_out_w + 2 * (k // 2) - k) // s + 1
+    #         out_h = (self.__pred_out_h + 2 * (k // 2) - k) // s + 1
+    #
+    #         # Filter
+    #
+    #         score = r[..., category]
+    #         y_c = r[..., category_n] + np.arange(out_h).reshape(-1, 1)
+    #         x_c = r[..., category_n + 1] + np.arange(out_w).reshape(1, -1)
+    #         height = r[..., category_n + 2] * out_h
+    #         width = r[..., category_n + 3] * out_w
+    #
+    #         score = score.reshape(-1)
+    #         y_c = y_c.reshape(-1)
+    #         x_c = x_c.reshape(-1)
+    #         height = height.reshape(-1)
+    #         width = width.reshape(-1)
+    #         size = height * width
+    #
+    #         xmin = x_c - width / 2  # left
+    #         ymin = y_c - height / 2  # top
+    #         xmax = x_c + width / 2  # right
+    #         ymax = y_c + height / 2  # bottom
+    #
+    #         # Take only boxes inside picture
+    #         inside_pic = (ymin > 0) * (xmin > 0) * (ymax < out_h) * (
+    #                 xmax < out_w)
+    #
+    #         # Take only boxes of reasonable size
+    #         normal_size = (size < (np.mean(size) * 10)) * (size > (np.mean(size) / 10))
+    #         score = score[inside_pic * normal_size]
+    #         ymin = ymin[inside_pic * normal_size]
+    #         xmin = xmin[inside_pic * normal_size]
+    #         ymax = ymax[inside_pic * normal_size]
+    #         xmax = xmax[inside_pic * normal_size]
+    #
+    #         boxes = np.concatenate((score.reshape(-1, 1),
+    #                                 ymin.reshape(-1, 1),
+    #                                 xmin.reshape(-1, 1),
+    #                                 ymax.reshape(-1, 1),
+    #                                 xmax.reshape(-1, 1)),
+    #                                axis=1)
+    #
+    #         # Insert <category> into box_and_score, which has structure: <score> <ymin> <xmin> <ymax> <xmax>
+    #         box_and_score = np.insert(boxes, 0, category, axis=1)
+    #
+    #         box_and_score_all = box_and_score if first else np.concatenate((box_and_score_all,
+    #                                                                         box_and_score),
+    #                                                                        axis=0)
+    #
+    #         first = False
+    #
+    #     # Get indexes to sort by score descending order
+    #     score_sort = np.argsort(box_and_score_all[:, 1])[::-1]
+    #     box_and_score_all = box_and_score_all[score_sort]
+    #
+    #     # If there are more than one box starting at same coordinate (ymin) remove it
+    #     # So it keeps the one with the highest score
+    #     _, unique_idx = np.unique(box_and_score_all[:, 2], return_index=True)
+    #
+    #     # Sorted preserves original order of boxes
+    #     return box_and_score_all[sorted(unique_idx)]
