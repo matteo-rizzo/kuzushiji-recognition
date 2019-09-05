@@ -9,6 +9,7 @@ from networks.classes.centernet.pipeline.Detector import Detector
 from networks.classes.centernet.pipeline.Classifier import Classifier
 from networks.classes.centernet.pipeline.SubmissionWriter import SubmissionWriter
 from networks.classes.centernet.pipeline.Visualizer import Visualizer
+from networks.classes.general_utilities import Params
 
 
 class CenterNetPipeline:
@@ -19,6 +20,12 @@ class CenterNetPipeline:
         self.__dict_cat: Dict[str, int] = {}
 
     def __check_no_weights_in_run_folder(self, folder: str):
+        """
+        Checks if the given folder contains weights files and  asks the user permission to delete them
+
+        :param folder: the path to the folder to be checked
+        """
+
         if os.path.isdir(folder):
             if len(os.listdir(folder)):
                 user_input = input('WARNING! You want to train the network without restoring weights,\n'
@@ -39,7 +46,7 @@ class CenterNetPipeline:
                     self.__logs['execution'].info('Aborting after user command!')
                     sys.exit(0)
 
-    def run_preprocessing(self, model_params: Dict, weights_path: str) -> PreprocessingDataset:
+    def __run_preprocessing(self, model_params: Dict, weights_path: str) -> PreprocessingDataset:
         """
         Creates and runs a CNN which takes an image/page of manuscript as input and predicts the
         average dimensional ratio between the characters and the image itself
@@ -58,10 +65,10 @@ class CenterNetPipeline:
 
         return dataset_avg_size
 
-    def run_detection(self,
-                      model_params: Dict,
-                      dataset_avg_size,
-                      weights_path: str) -> (List[List], Union[Dict[str, np.ndarray], None]):
+    def __run_detection(self,
+                        model_params: Dict,
+                        dataset_avg_size,
+                        weights_path: str) -> (List[List], Union[Dict[str, np.ndarray], None]):
         """
         Creates and runs a CenterNet to perform the image detection
 
@@ -83,11 +90,11 @@ class CenterNetPipeline:
 
         return detector.detect(dataset_avg_size)
 
-    def run_classification(self,
-                           model_params: Dict,
-                           train_list: List[List],
-                           bbox_predictions: Union[Dict[str, np.ndarray], None],
-                           weights_path: str) -> Union[Generator, None]:
+    def __run_classification(self,
+                             model_params: Dict,
+                             train_list: List[List],
+                             bbox_predictions: Union[Dict[str, np.ndarray], None],
+                             weights_path: str) -> Union[Generator, None]:
         """
         Classifies each character according to the available classes via a CNN
 
@@ -112,7 +119,7 @@ class CenterNetPipeline:
         return classifier.classify(train_list=train_list,
                                    bbox_predictions=bbox_predictions, )
 
-    def write_submission(self, predictions_gen: Generator):
+    def __write_submission(self, predictions_gen: Generator):
         """
         Writes a submission csv file in the format:
         - names of columns : image_id, labels
@@ -123,7 +130,7 @@ class CenterNetPipeline:
         sub_writer = SubmissionWriter(dict_cat=self.__dict_cat, log=self.__logs['execution'])
         sub_writer.write(predictions_gen)
 
-    def visualize_final_results(self, max_visualizations: int = 5):
+    def __visualize_final_results(self, max_visualizations: int = 5):
         """
         Visualizes the predicted results
 
@@ -132,3 +139,58 @@ class CenterNetPipeline:
 
         visualizer = Visualizer(log=self.__logs['execution'])
         visualizer.visualize(max_visualizations)
+
+    def run_pipeline(self, operations: List, params: Params, experiment_path: str):
+        """
+        Runs the learning pipeline
+
+        :param operations: a list containing one or more of the following values:
+            - preprocessing
+            - detection
+            - classification
+            - submission
+            - visualization
+        :param params: the parameters of the models
+        :param experiment_path: the base path to the current experiment
+        """
+
+        # --- STEP 1: Pre-processing (Check Object Size) ---
+        if 'preprocessing' in operations:
+            dataset_avg_size = self.__run_preprocessing(model_params=params.model_1,
+                                                        weights_path=os.path.join(experiment_path + '_1', 'weights'))
+
+        # --- STEP 2: Detection by CenterNet ---
+        if 'detection' in operations:
+
+            if 'preprocessing' not in operations:
+                raise Exception('ERROR: Cannot perform detection without preprocessing!'
+                                'Please specify "preprocessing" in the list of operations')
+
+            train_list, bbox_predictions = self.__run_detection(model_params=params.model_2,
+                                                                dataset_avg_size=dataset_avg_size,
+                                                                weights_path=os.path.join(experiment_path + '_2',
+                                                                                          'weights'))
+
+        # --- STEP 3: Classification ---
+        if 'classification' in operations:
+
+            if 'detection' not in operations:
+                raise Exception('ERROR: Cannot perform classification without detection!'
+                                'Please specify "detection" in the list of operations')
+
+            predictions = self.__run_classification(model_params=params.model_3,
+                                                    train_list=train_list,
+                                                    bbox_predictions=bbox_predictions,
+                                                    weights_path=os.path.join(experiment_path + '_3', 'weights'))
+
+        # -- STEP 4:  Analysis and visualization of results ---
+        if 'submission' in operations:
+
+            if 'classification' not in operations:
+                raise Exception('ERROR: Cannot write submission without classification!'
+                                'Please specify "classification" in the list of operations')
+
+            self.__write_submission(predictions)
+
+        if 'visualization' in operations:
+            self.__visualize_final_results()

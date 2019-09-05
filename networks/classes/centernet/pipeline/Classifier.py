@@ -13,15 +13,15 @@ class Classifier:
 
     def __init__(self, model_params, dataset_params, num_categories, weights_path, logs):
         self.__logs = logs
+        self.__weights_path = weights_path
 
         self.__model_params = model_params
         self.__model_params.update(dataset_params)
 
-        self.__weights_path = weights_path
-        self.__model = self.__build_and_compile_model(num_categories)
-
         self.__model_utils = ModelCenterNet(logs=self.__logs)
         self.__img_cropper = ImageCropper(log=self.__logs['execution'])
+
+        self.__model = self.__build_and_compile_model(num_categories)
 
     @staticmethod
     def __resize_fn(path: str, input_h, input_w):
@@ -195,9 +195,11 @@ class Classifier:
             # Map each cropped image to its bounding box
             cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
             # Relative path
-            key = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
-            print(bbox_predictions)
-            bbox_coords = [str(coord) for coord in bbox_predictions[str(key)][cropped_img_id][2:]]
+            original_img_path = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
+            print(cropped_img_name)
+            print(bbox_predictions[original_img_path])
+            print(bbox_predictions[original_img_path][cropped_img_id][2:])
+            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][cropped_img_id][2:]]
             # Note that the coordinates are in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
 
