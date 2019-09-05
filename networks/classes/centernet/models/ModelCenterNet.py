@@ -66,7 +66,15 @@ class ModelCenterNet:
         #    mode='min',
         # )
 
-        return [tensorboard, checkpointer]
+        def lrs(epoch):
+            lrate = lr
+            if epoch > 20:
+                lrate = lr / 10
+            return lrate
+
+        lr_schedule = LearningRateScheduler(lrs)
+
+        return [tensorboard, checkpointer, lr_schedule]
 
     def restore_weights(self,
                         model: tf.keras.Model,
