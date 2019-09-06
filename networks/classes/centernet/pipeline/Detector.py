@@ -30,7 +30,8 @@ class Detector:
 
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = dataset_params['test_images_path']
-        self.__test_list = natsort.natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
+        self.__test_list = natsort.natsorted(
+            [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
 
     @staticmethod
     def __resize_fn(path: str, input_h, input_w):
@@ -77,7 +78,8 @@ class Detector:
         return model
 
     def __train_model(self, dataset):
-        self.__logs['execution'].info('Starting the training procedure for the object detection model...')
+        self.__logs['execution'].info(
+            'Starting the training procedure for the object detection model...')
 
         # Set up the callbacks
         callbacks = self.__model_utils.setup_callbacks(weights_log_path=self.__weights_path,
@@ -155,6 +157,11 @@ class Detector:
                                                              mode='test',
                                                              test_images_path=self.__test_list,
                                                              show=False)
+        # predicted_test_bboxes = self.__bb_handler.get_tiled_bboxes(self.__test_list,
+        #                                                            mode='test',
+        #                                                            model=self.__model,
+        #                                                            n_tiles=3,
+        #                                                            show=False)
         self.__logs['execution'].info('Conversion completed.')
 
         return predicted_test_bboxes

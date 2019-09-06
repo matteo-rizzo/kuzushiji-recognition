@@ -125,11 +125,10 @@ class BBoxesHandler:
 
         for example in tqdm(dataset):
 
-            # FIXME: changes between train and test mode?
             if mode == 'train':
                 image_path = example[0]
             elif mode == 'test':
-                image_path = example[0]
+                image_path = example
             else:
                 raise ValueError('Error: unsupported mode {}'.format(mode))
 
