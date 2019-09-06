@@ -6,11 +6,11 @@ from typing import Dict, List, Union
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
-from networks.classes.centernet.models.ModelGenerator import ModelGenerator
+# from networks.classes.centernet.models.ModelGenerator import ModelGenerator
 from networks.classes.centernet.datasets.DataAugmentation import DataAugmentation
 
 
-# from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
+from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
 
 
 class ModelCenterNet:

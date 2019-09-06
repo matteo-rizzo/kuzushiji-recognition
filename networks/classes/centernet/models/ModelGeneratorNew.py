@@ -10,20 +10,29 @@ from tensorflow.python.keras.applications.resnet50 import ResNet50
 
 class ModelGenerator:
 
-    # def __preactivated_res_block(self, x_in, filter_n):
-    #     x = BatchNormalization()(x_in)
-    #     x = LeakyReLU(alpha=0.1)(x)
-    #     x = self.__cbr(x, filter_n, 3, 1)
-    #     x = Conv2D(filter_n, kernel_size=3, strides=1, padding="same")(x)
-    #     x = Add()([x, x_in])
-    #
-    #     return x
-
     @staticmethod
     def __cbr(x, filter_n, kernel, strides):
         x = Conv2D(filter_n, kernel_size=kernel, strides=strides, padding='same')(x)
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
+
+        return x
+
+    # Residual blocks
+
+    def __preactivated_res_block(self, x_in, filter_n):
+        x = BatchNormalization()(x_in)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = self.__cbr(x, filter_n, 3, 1)
+        x = Conv2D(filter_n, kernel_size=3, strides=1, padding='same')(x)
+        x = Add()([x, x_in])
+
+        return x
+
+    def __alt_res_block(self, x_in, filter_n):
+        x = self.__cbr(x_in, filter_n, 3, 1)
+        x = self.__cbr(x, filter_n, 3, 1)
+        x = Add()([x, x_in])
 
         return x
 
@@ -44,13 +53,6 @@ class ModelGenerator:
         x = LeakyReLU(alpha=0.1)(x)
 
         return x
-
-    # @staticmethod
-    # def __resize_input_layers(input_layer):
-    #     input_layer_1 = AveragePooling2D(2)(input_layer)
-    #     input_layer_2 = AveragePooling2D(2)(input_layer_1)
-    #
-    #     return input_layer_1, input_layer_2
 
     def __generate_encoder(self, input_layer):
         # Block 1: (512, 512, 3) -> (128, 128, 64)
@@ -89,9 +91,6 @@ class ModelGenerator:
         resnet = ResNet50(include_top=False, weights='imagenet',
                           input_tensor=input_layer, input_shape=(512, 512, 3),
                           pooling=None)
-
-        # for layer in resnet.layers:
-        #     layer.trainable = False
 
         return resnet
 
@@ -179,16 +178,16 @@ class ModelGenerator:
 
     def __generate_classification_model(self, input_layer, n_category):
         x = self.__cbr(input_layer, 64, 3, 1)
-        x = self.__res_block(x, 64)
-        x = self.__res_block(x, 64)
+        x = self.__preactivated_res_block(x, 64)
+        x = self.__alt_res_block(x, 64)
 
         x = self.__cbr(x, 128, 3, 2)  # 16
-        x = self.__res_block(x, 128)
-        x = self.__res_block(x, 128)
+        x = self.__preactivated_res_block(x, 128)
+        x = self.__preactivated_res_block(x, 128)
 
         x = self.__cbr(x, 256, 3, 2)  # 8
-        x = self.__res_block(x, 256)
-        x = self.__res_block(x, 256)
+        x = self.__preactivated_res_block(x, 256)
+        x = self.__preactivated_res_block(x, 256)
 
         x = GlobalAveragePooling2D()(x)
         x = Dropout(0.2)(x)
@@ -210,7 +209,7 @@ class ModelGenerator:
 
         modes = {
             'preprocessing': self.__generate_preprocessing_model,
-            'detection': self.__generate_detection_model_2,
+            'detection': self.__generate_detection_model,
             'classification': self.__generate_classification_model
         }
 
