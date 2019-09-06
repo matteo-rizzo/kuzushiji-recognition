@@ -137,7 +137,8 @@ class Classifier:
                                  init_epoch=self.__model_params['initial_epoch'],
                                  epochs=self.__model_params['epochs'],
                                  batch_size=self.__model_params['batch_size'],
-                                 callbacks=callbacks)
+                                 callbacks=callbacks,
+                                 augmentation=True)
 
     def __evaluate_model(self, dataset):
 
@@ -199,7 +200,7 @@ class Classifier:
                                                      regenerate=self.__model_params['regenerate_crops_test'],
                                                      mode='test')
 
-            self.__write_test_list_to_csv(test_list[:10], bbox_predictions)
+            self.__write_test_list_to_csv(test_list, bbox_predictions)
 
         dataset = ClassificationDataset(self.__model_params)
         _, _, xy_eval = dataset.generate_dataset(train_list)
