@@ -149,19 +149,19 @@ class Detector:
         detection_ps, _ = dataset.get_test_set()
 
         self.__logs['execution'].info('Predicting test bounding boxes (takes time)...')
-        test_predictions = self.__model_utils.predict(model=self.__model, dataset=detection_ps)
-        self.__logs['execution'].info('Predictions completed.')
+        # test_predictions = self.__model_utils.predict(model=self.__model, dataset=detection_ps)
+        # self.__logs['execution'].info('Predictions completed.')
 
         self.__logs['execution'].info('Converting test predictions into bounding boxes...')
-        predicted_test_bboxes = self.__bb_handler.get_bboxes(test_predictions,
-                                                             mode='test',
-                                                             test_images_path=self.__test_list,
-                                                             show=False)
-        # predicted_test_bboxes = self.__bb_handler.get_tiled_bboxes(self.__test_list,
-        #                                                            mode='test',
-        #                                                            model=self.__model,
-        #                                                            n_tiles=3,
-        #                                                            show=False)
+        # predicted_test_bboxes = self.__bb_handler.get_bboxes(test_predictions,
+        #                                                      mode='test',
+        #                                                      test_images_path=self.__test_list,
+        #                                                      show=False)
+        predicted_test_bboxes = self.__bb_handler.get_tiled_bboxes(self.__test_list,
+                                                                   mode='test',
+                                                                   model=self.__model,
+                                                                   n_tiles=3,
+                                                                   show=False)
         self.__logs['execution'].info('Conversion completed.')
 
         return predicted_test_bboxes

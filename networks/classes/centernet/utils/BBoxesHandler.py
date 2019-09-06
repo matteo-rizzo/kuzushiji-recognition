@@ -181,7 +181,7 @@ class BBoxesHandler:
 
             box_and_score_all = self.__boxes_image_nms(all_tile_boxes[:, 0], all_tile_boxes[:, 1],
                                                        all_tile_boxes[:, 2], all_tile_boxes[:, 3],
-                                                       all_tile_boxes[:, 4], iou_thresh=0.5,
+                                                       all_tile_boxes[:, 4], iou_thresh=0.4,
                                                        tiled_mode=True)
 
             # box_and_score_all has structure: [<score> <ymin> <xmin> <ymax> <xmax>]
@@ -261,9 +261,6 @@ class BBoxesHandler:
 
             # box_and_score has structure: <score> <ymin> <xmin> <ymax> <xmax>
 
-            # Insert <category> into
-            # box_and_score = np.insert(box_and_score, 0, category, axis=1)
-
             box_and_score_all = box_and_score if box_and_score_all.size == 0 else \
                 np.concatenate((box_and_score_all, box_and_score), axis=0)
 
@@ -328,7 +325,7 @@ class BBoxesHandler:
 
         # --- Non maximum suppression ---
 
-        # Sort boxes in descending order
+        # Sort boxes by score in descending order
         score_sort = np.argsort(score)[::-1]
         score = score[score_sort]
         ymin = ymin[score_sort]
@@ -365,7 +362,18 @@ class BBoxesHandler:
             cross_w = np.maximum(0, x2 - x1)
 
             # Mask to keep just the boxes which overlap with best box for less than threshold
-            still_alive = (((cross_h * cross_w) / area[0]) < iou_thresh)
+            max_over_lap = (((cross_h * cross_w) / area[0]) < iou_thresh)
+
+            # Remove nested bboxes
+            # not_nested = np.logical_or.reduce([np.equal(y1, ymin[0]),
+            #                                    np.equal(x1, xmin[0]),
+            #                                    np.equal(y2, ymax[0]),
+            #                                    np.equal(x2, xmax[0])])
+
+            # Mask to keep just the boxes with enough out_lap surface
+            min_out_lap = (((area - (cross_h * cross_w)) / area) > (1 - iou_thresh))
+
+            still_alive = max_over_lap * min_out_lap
 
             assert np.sum(still_alive) != len(box_idx), \
                 'An error occurred: {} {}'.format(np.max((cross_h * cross_w)), area[0])
@@ -374,7 +382,6 @@ class BBoxesHandler:
             xmin = xmin[still_alive]
             ymax = ymax[still_alive]
             xmax = xmax[still_alive]
-
             area = area[still_alive]
             box_idx = box_idx[still_alive]
 
@@ -427,6 +434,9 @@ class BBoxesHandler:
 
     @staticmethod
     def __check_iou_score(true_boxes, detected_boxes):
+        """
+        Compute mean IoU score for an image.
+        """
         iou_all = []
 
         for detected_box in detected_boxes:
@@ -435,16 +445,24 @@ class BBoxesHandler:
             y2 = np.minimum(detected_box[2], true_boxes[:, 2])
             x2 = np.minimum(detected_box[3], true_boxes[:, 3])
 
-            cross_section = np.maximum(0, y2 - y1) * np.maximum(0, x2 - x1)
-            all_area = (detected_box[2] - detected_box[0]) \
-                       * (detected_box[3] - detected_box[1]) \
-                       + (true_boxes[:, 2] - true_boxes[:, 0]) \
-                       * (true_boxes[:, 3] - true_boxes[:, 1])
+            # Intersection of true area with detected area
+            intersection = np.maximum(0, y2 - y1) * np.maximum(0, x2 - x1)
 
-            iou = np.max(cross_section / (all_area - cross_section))
+            # Sum of detected area + true area (intersection considered twice)
+            sum_areas = (detected_box[2] - detected_box[0]) \
+                        * (detected_box[3] - detected_box[1]) \
+                        + (true_boxes[:, 2] - true_boxes[:, 0]) \
+                        * (true_boxes[:, 3] - true_boxes[:, 1])
+
+            # Union
+            union = sum_areas - intersection
+
+            # Compute IoU (single scalar)
+            iou = np.amax(intersection / union)
             iou_all.append(iou)
 
+        # Return mean score
         score = 2 * np.sum(iou_all) / (len(detected_boxes) + len(true_boxes))
-        print("score:{}".format(np.round(score, 3)))
+        print("IoU score: {}".format(np.round(score, 3)))
 
         return score
