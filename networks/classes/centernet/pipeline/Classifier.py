@@ -84,8 +84,10 @@ class Classifier:
                                  epochs=self.__model_params['epochs'],
                                  training_set=classification_ts,
                                  validation_set=classification_vs,
-                                 training_steps=classification_ts_size // self.__model_params['batch_size'] + 1,
-                                 validation_steps=classification_vs_size // self.__model_params['batch_size'] + 1,
+                                 training_steps=classification_ts_size // self.__model_params[
+                                     'batch_size'] + 1,
+                                 validation_steps=classification_vs_size // self.__model_params[
+                                     'batch_size'] + 1,
                                  callbacks=callbacks)
 
     def __evaluate_model(self, dataset_classification):
@@ -96,8 +98,9 @@ class Classifier:
 
         metrics = self.__model_utils.evaluate(model=self.__model,
                                               evaluation_set=classification_es,
-                                              evaluation_steps=classification_es_size // self.__model_params[
-                                                  'batch_size'] + 1)
+                                              evaluation_steps=classification_es_size //
+                                                               self.__model_params[
+                                                                   'batch_size'] + 1)
 
         self.__logs['test'].info('Evaluation metrics:\n'
                                  'sparse_categorical_crossentropy : {}\n'
@@ -106,7 +109,8 @@ class Classifier:
 
     def __generate_predictions(self, test_list) -> Generator:
 
-        self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+        self.__logs['execution'].info(
+            'Starting the predict procedure of char class (takes much time)...')
 
         input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
 
@@ -130,22 +134,26 @@ class Classifier:
 
         :param train_list: a train data list predicted at the object detection step
         :param bbox_predictions: the bbox data predicted at the object detection step or None if
-                                predictions were not done.
+                                predictions were not done. dict as {path: score, xmin, ymin, xmax, ymax}
         :return: a couple of list with train and bbox data.
         """
 
         # Train mode cropping
         train_list = self.__img_cropper.get_crops(img_data=train_list,
-                                                  crop_char_path=os.path.join('datasets', 'char_cropped_train'),
-                                                  regenerate=self.__model_params['regenerate_crops_train'],
+                                                  crop_char_path=os.path.join('datasets',
+                                                                              'char_cropped_train'),
+                                                  regenerate=self.__model_params[
+                                                      'regenerate_crops_train'],
                                                   mode='train')
 
         # Test mode cropping
         test_list: Union[List[str], None] = None
         if self.__model_params['predict_on_test']:
             test_list = self.__img_cropper.get_crops(img_data=bbox_predictions,
-                                                     crop_char_path=os.path.join('datasets', 'char_cropped_test'),
-                                                     regenerate=self.__model_params['regenerate_crops_test'],
+                                                     crop_char_path=os.path.join('datasets',
+                                                                                 'char_cropped_test'),
+                                                     regenerate=self.__model_params[
+                                                         'regenerate_crops_test'],
                                                      mode='test')
 
             self.__write_test_list_to_csv(test_list, bbox_predictions)
@@ -167,7 +175,7 @@ class Classifier:
 
         return None
 
-    def __write_test_list_to_csv(self, test_list: List, bbox_predictions: Dict):
+    def __write_test_list_to_csv(self, test_list: List, bbox_predictions: Dict[str, np.array]):
 
         self.__logs['execution'].info('Writing test data to csv...')
 
@@ -198,10 +206,12 @@ class Classifier:
             cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
 
             # Set the relative path to the original image
-            original_img_path = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
+            original_img_path = os.path.join(self.__model_params['test_images_path'],
+                                             original_img_name + '.jpg')
 
             # Convert the coords of the bboxes from float to string
-            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][cropped_img_id][2:]]
+            bbox_coords = [str(coord) for coord in
+                           bbox_predictions[original_img_path][cropped_img_id][1:]]
 
             # Join the coordinates in a single string, in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
@@ -210,11 +220,14 @@ class Classifier:
             for cropped_img_name in cropped_img_names:
                 original_img_to_bbox[original_img_name].append(cropped_img_to_bbox[cropped_img_name])
 
-        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in original_img_to_bbox.items()}
+        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in
+                                original_img_to_bbox.items()}
 
         test_list_df = pd.DataFrame({
-            'original_image': [original_img_name for original_img_name in original_img_to_cropped.keys()],
-            'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in original_img_to_cropped.values()],
+            'original_image': [original_img_name for original_img_name in
+                               original_img_to_cropped.keys()],
+            'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in
+                               original_img_to_cropped.values()],
             'bboxes': [bbox for bbox in original_img_to_bbox.values()]
         })
 

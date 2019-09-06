@@ -1,18 +1,22 @@
 from typing import Dict
 from typing import List
+
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 from PIL import ImageDraw
 from tqdm import tqdm
-# from tensorflow.python.keras.layers import MaxPooling2D, AveragePooling2D
+from tensorflow.python.keras.models import Model
 
 
 class BBoxesHandler:
 
-    def __init__(self, w: int = 128, h: int = 128):
-        self.__pred_out_w = w
-        self.__pred_out_h = h
+    def __init__(self, out_w: int = 128, out_h: int = 128, in_w: int = 512, in_h: int = 512):
+        self.__pred_out_w = out_w
+        self.__pred_out_h = out_h
+        self.__pred_in_w = in_w
+        self.__pred_in_h = in_h
 
     def get_bboxes(self,
                    predictions: np.ndarray,
@@ -36,12 +40,10 @@ class BBoxesHandler:
                 - annotation_list[3] = recommended width split
         :param test_images_path: list of file paths to test images
         :param show: whether to show bboxes and iou scores. Iou scores are available only in train mode.
-        :return: dict of boxes, as {<image_path>: [<category>, <score>, <ymin>, <xmin>, <ymax>, <xmax>]}.
-                Note that <category> is always 0 in our case.
+        :return: dict of boxes, as {<image_path>: [<score>, <ymin>, <xmin>, <ymax>, <xmax>]}.
         """
 
         all_boxes = dict()
-        c = 0
 
         for i in tqdm(np.arange(0, predictions.shape[0])):
 
@@ -54,29 +56,28 @@ class BBoxesHandler:
 
             img = Image.open(image_path).convert("RGB")
 
-            # Bidimensional np.ndarray. Each row is (category, score, ymin, xmin, ymax, xmax)
+            # Bidimensional np.ndarray. Each row is (score, ymin, xmin, ymax, xmax)
+            # We removed category (from the original implementation)
             box_and_score = self.__boxes_for_image(predicts=predictions[i],
                                                    category_n=1,
                                                    score_thresh=0.3,
                                                    iou_thresh=0.4)
 
             if len(box_and_score) == 0:
-                c += 1
                 continue
 
             heatmap = predictions[i, :, :, 0]
 
             print_w, print_h = img.size
 
-            # Resize predicted box to original size. Leave unchanged score, category
+            # Resize predicted box to original size. Leave unchanged score
             box_and_score = box_and_score * [1,
-                                             1,
                                              print_h / self.__pred_out_h,
                                              print_w / self.__pred_out_w,
                                              print_h / self.__pred_out_h,
                                              print_w / self.__pred_out_w]
 
-            # Produce a dictionary { "image_path": np.ndarray([category, score, ymin, xmin, ymax, xmax]) }
+            # Produce a dictionary { "image_path": np.ndarray([score, ymin, xmin, ymax, xmax]) }
             all_boxes[image_path] = box_and_score
 
             if mode == 'train' and show:
@@ -90,8 +91,8 @@ class BBoxesHandler:
 
                 true_boxes = np.concatenate((top, left, bottom, right), axis=1)
 
-                self.__check_iou_score(true_boxes, box_and_score[:, 2:])
-                img = self.__draw_rectangle(box_and_score[:, 2:], img, "red")
+                self.__check_iou_score(true_boxes, box_and_score[:, 1:])
+                img = self.__draw_rectangle(box_and_score[:, 1:], img, "red")
                 img = self.__draw_rectangle(true_boxes, img, "blue")
 
                 fig, axes = plt.subplots(1, 2, figsize=(15, 15))
@@ -100,13 +101,130 @@ class BBoxesHandler:
                 plt.show()
 
             if mode == 'test' and show:
-                img = self.__draw_rectangle(box_and_score[:, 2:], img, "red")
+                img = self.__draw_rectangle(box_and_score[:, 1:], img, "red")
                 fig, axes = plt.subplots(1, 2, figsize=(15, 15))
                 axes[0].imshow(img)
                 axes[1].imshow(heatmap)
                 plt.show()
 
         return all_boxes
+
+    def get_tiled_bboxes(self, dataset: np.array, model: Model, n_tiles: int, mode: str, show: bool):
+        """
+        This functions behaves similarly to get_bboxes, but it compute bboxes direcly from each image
+        using tiling to improve accuracy.
+
+        :param dataset: the dataset in the format [[image path, annotations, height split, width split]]
+        :param model: a trained keras model
+        :param n_tiles: number of tiles t split the image
+        :param mode: one of 'test' or 'train'
+        :param show: whether to show results and scores
+        :return:
+        """
+        all_boxes = dict()
+
+        for example in tqdm(dataset):
+
+            # FIXME: changes between train and test mode?
+            if mode == 'train':
+                image_path = example[0]
+            elif mode == 'test':
+                image_path = example[0]
+            else:
+                raise ValueError('Error: unsupported mode {}'.format(mode))
+
+            # Process the single image
+            pic = Image.open(image_path)
+
+            img_w, img_h = pic.size
+            k_h = (4 * img_h) // (3 * n_tiles + 1)
+            k_w = (4 * img_w) // (3 * n_tiles + 1)
+
+            left_offsets = [int(i * 0.75 * k_w) for i in range(0, n_tiles)]
+            right_offsets = [(img_w - lo) for lo in reversed(left_offsets)]
+            top_offsets = [int(i * 0.75 * k_h) for i in range(0, n_tiles)]
+            bottom_offsets = [(img_h - to) for to in reversed(top_offsets)]
+
+            pic = np.asarray(pic.convert('RGB'), dtype=np.uint8)
+
+            all_tile_boxes = np.array([])
+
+            for top_offset, bottom_offset in zip(top_offsets, bottom_offsets):
+                for left_offset, right_offset in zip(left_offsets, right_offsets):
+                    tile = cv2.resize(pic[top_offset:bottom_offset, left_offset:right_offset, :],
+                                      (self.__pred_in_h, self.__pred_in_w))
+
+                    tile = np.array(tile, dtype=np.float32)
+                    tile /= 255
+
+                    predictions = model.predict(
+                        tile.reshape((1, self.__pred_in_h, self.__pred_in_w, 3)),
+                        batch_size=1,
+                        steps=1)
+                    # Output shape is (1, 128, 128, 5)
+
+                    boxes = self.__boxes_for_image(predictions, 1, 0.3, 0.4)
+                    # cat, score, top, left, bot, right
+
+                    if len(boxes) == 0:
+                        continue
+
+                    # reshape and add the offset
+                    boxes = boxes * [1,
+                                     k_h / self.__pred_out_h,
+                                     k_w / self.__pred_out_w,
+                                     k_h / self.__pred_out_h,
+                                     k_w / self.__pred_out_w] \
+                            + np.array([0, top_offset, left_offset, top_offset, left_offset])
+
+                    all_tile_boxes = boxes if all_tile_boxes.size == 0 else \
+                        np.concatenate((all_tile_boxes, boxes), axis=0)
+
+            box_and_score_all = self.__boxes_image_nms(all_tile_boxes[:, 0], all_tile_boxes[:, 1],
+                                                       all_tile_boxes[:, 2], all_tile_boxes[:, 3],
+                                                       all_tile_boxes[:, 4], iou_thresh=0.5,
+                                                       tiled_mode=True)
+
+            # box_and_score_all has structure: [<score> <ymin> <xmin> <ymax> <xmax>]
+
+            if box_and_score_all.size == 0:
+                print('No boxes found')
+                continue
+
+            # Produce a dictionary { "image_path": np.ndarray([score, ymin, xmin, ymax, xmax]) }
+            all_boxes[image_path] = box_and_score_all
+
+            image_show = Image.open(image_path).convert("RGB")
+
+            if mode == 'train' and show:
+                # Boxes in the format: c_x, c_y, width, height
+                true_boxes = example[1][:, 1:]
+
+                top = true_boxes[:, 1:2] - true_boxes[:, 3:4] / 2
+                left = true_boxes[:, 0:1] - true_boxes[:, 2:3] / 2
+                bottom = top + true_boxes[:, 3:4]
+                right = left + true_boxes[:, 2:3]
+
+                true_boxes = np.concatenate((top, left, bottom, right), axis=1)
+
+                self.__check_iou_score(true_boxes, box_and_score_all[:, 1:])
+                image_show = self.__draw_rectangle(box_and_score_all[:, 1:], image_show, "red")
+                image_show = self.__draw_rectangle(true_boxes, image_show, "blue")
+
+                plt.subplots(1, 1, figsize=(15, 15))
+                plt.imshow(image_show)
+                plt.show()
+
+            if mode == 'test' and show:
+                image_show = self.__draw_rectangle(box_and_score_all[:, 1:], image_show, "red")
+                plt.subplots(1, 1, figsize=(15, 15))
+                plt.imshow(image_show)
+                plt.show()
+
+        # return the dict
+        return all_boxes
+
+    # -------------- PRIVATE MEMBERS --------------
 
     def __boxes_for_image(self, predicts, category_n, score_thresh, iou_thresh) -> np.ndarray:
         """
@@ -124,7 +242,7 @@ class BBoxesHandler:
         height = predicts[..., category_n + 2] * self.__pred_out_h
         width = predicts[..., category_n + 3] * self.__pred_out_w
 
-        count = 0
+        box_and_score_all = np.array([])
 
         # In our case category_n = 1, so category=0 (just one cycle)
         for category in range(category_n):
@@ -142,27 +260,27 @@ class BBoxesHandler:
                                                    width[mask],
                                                    iou_thresh)
 
-            # Insert <category> into box_and_score, which has structure: <score> <ymin> <xmin> <ymax> <xmax>
-            box_and_score = np.insert(box_and_score, 0, category, axis=1)
+            # box_and_score has structure: <score> <ymin> <xmin> <ymax> <xmax>
 
-            box_and_score_all = box_and_score if count == 0 else np.concatenate((box_and_score_all,
-                                                                                 box_and_score),
-                                                                                axis=0)
+            # Insert <category> into
+            # box_and_score = np.insert(box_and_score, 0, category, axis=1)
 
-            count += 1
+            box_and_score_all = box_and_score if box_and_score_all.size == 0 else \
+                np.concatenate((box_and_score_all, box_and_score), axis=0)
 
         # Get indexes to sort by score descending order
-        score_sort = np.argsort(box_and_score_all[:, 1])[::-1]
+        score_sort = np.argsort(box_and_score_all[:, 0])[::-1]
         box_and_score_all = box_and_score_all[score_sort]
 
         # If there are more than one box starting at same coordinate (ymin) remove it
         # So it keeps the one with the highest score
-        _, unique_idx = np.unique(box_and_score_all[:, 2], return_index=True)
+        _, unique_idx = np.unique(box_and_score_all[:, 1], return_index=True)
 
         # Sorted preserves original order of boxes
         return box_and_score_all[sorted(unique_idx)]
 
-    def __boxes_image_nms(self, score, y_c, x_c, height, width, iou_thresh) -> np.array:
+    def __boxes_image_nms(self, score, y_c, x_c, height, width, iou_thresh,
+                          tiled_mode=False) -> np.array:
         """
         Performs the non-maximum suppression on the given bboxes
 
@@ -172,34 +290,42 @@ class BBoxesHandler:
         :param height: the height of the bbox (flatten array)
         :param width: the width of the bbox (flatten array)
         :param iou_thresh: the minimum IoU threshold for the suppression
+        :param tiled_mode:
         :return: an array of bboxes with the following structure: <score> <top> <left> <bottom> <right>
         """
 
-        # --- Flattening ---
+        if tiled_mode:
+            score = score
+            ymin = y_c
+            xmin = x_c
+            ymax = height
+            xmax = width
+        else:
+            # --- Flattening ---
 
-        score = score.reshape(-1)
-        y_c = y_c.reshape(-1)
-        x_c = x_c.reshape(-1)
-        height = height.reshape(-1)
-        width = width.reshape(-1)
-        size = height * width
+            score = score.reshape(-1)
+            y_c = y_c.reshape(-1)
+            x_c = x_c.reshape(-1)
+            height = height.reshape(-1)
+            width = width.reshape(-1)
+            size = height * width
 
-        xmin = x_c - width / 2  # left
-        ymin = y_c - height / 2  # top
-        xmax = x_c + width / 2  # right
-        ymax = y_c + height / 2  # bottom
+            xmin = x_c - width / 2  # left
+            ymin = y_c - height / 2  # top
+            xmax = x_c + width / 2  # right
+            ymax = y_c + height / 2  # bottom
 
-        # Take only boxes inside picture
-        inside_pic = (ymin > 0) * (xmin > 0) * (ymax < self.__pred_out_h) * (
-                xmax < self.__pred_out_w)
+            # Take only boxes inside picture
+            inside_pic = (ymin > 0) * (xmin > 0) * (ymax < self.__pred_out_h) * (
+                    xmax < self.__pred_out_w)
 
-        # Take only boxes of reasonable size
-        normal_size = (size < (np.mean(size) * 10)) * (size > (np.mean(size) / 10))
-        score = score[inside_pic * normal_size]
-        ymin = ymin[inside_pic * normal_size]
-        xmin = xmin[inside_pic * normal_size]
-        ymax = ymax[inside_pic * normal_size]
-        xmax = xmax[inside_pic * normal_size]
+            # Take only boxes of reasonable size
+            normal_size = (size < (np.mean(size) * 10)) * (size > (np.mean(size) / 10))
+            score = score[inside_pic * normal_size]
+            ymin = ymin[inside_pic * normal_size]
+            xmin = xmin[inside_pic * normal_size]
+            ymax = ymax[inside_pic * normal_size]
+            xmax = xmax[inside_pic * normal_size]
 
         # --- Non maximum suppression ---
 
@@ -223,21 +349,23 @@ class BBoxesHandler:
 
         # Remove overlapping
         box_idx = np.arange(len(ymin))
-        alive_box = []
+        boxes_to_keep = []
 
         while len(box_idx) > 0:
-            # Take the index of the best bbox
-            alive_box.append(box_idx[0])
+            # Insert the index of the best bbox in the list of boxes to keep
+            boxes_to_keep.append(box_idx[0])
 
+            # y2 - y1 is an array with the distance (element-wise) between boxes on y coord
             y1 = np.maximum(ymin[0], ymin)
             x1 = np.maximum(xmin[0], xmin)
             y2 = np.minimum(ymax[0], ymax)
             x2 = np.minimum(xmax[0], xmax)
 
+            # Bbox-wise area
             cross_h = np.maximum(0, y2 - y1)
             cross_w = np.maximum(0, x2 - x1)
 
-            # Keep just the boxes which overlap with best box for less than threshold
+            # Mask to keep just the boxes which overlap with best box for less than threshold
             still_alive = (((cross_h * cross_w) / area[0]) < iou_thresh)
 
             assert np.sum(still_alive) != len(box_idx), \
@@ -251,13 +379,22 @@ class BBoxesHandler:
             area = area[still_alive]
             box_idx = box_idx[still_alive]
 
-        return boxes[alive_box]
+        return boxes[boxes_to_keep]
 
     @staticmethod
-    def __draw_rectangle(box_and_score, img, color):
+    def __draw_rectangle(box_and_score: np.array, img: Image, color: str):
+        """
+        Utility to draw a bbox
+
+        :param box_and_score: bidimensional array when each element are in shape <ymin, xmin, ymax, xmax>
+        :param img: the PIL image object in which to draw
+        :param color: color of the box
+        :return:
+        """
         number_of_rect = np.minimum(500, len(box_and_score))
 
         for i in reversed(list(range(number_of_rect))):
+            # top = box_n_score[i, 0]
             top, left, bottom, right = box_and_score[i, :]
 
             top = np.floor(top + 0.5).astype('int32')
@@ -312,89 +449,3 @@ class BBoxesHandler:
         print("score:{}".format(np.round(score, 3)))
 
         return score
-
-    # IMPLEMENTATION OF PAPER NMS VERION
-    #
-    # def __boxes_with_pooling(self, predicts, category_n):
-    #     """
-    #     TEST
-    #     :param predicts:
-    #     :param category_n:
-    #     :return:
-    #     """
-    #     first: bool = True
-    #     # In our case category_n = 1, so category=0 (just one cycle)
-    #     for category in range(category_n):
-    #         k, s = 5, 5
-    #         bb = predicts[..., category:category + 1]
-    #         cc = predicts[..., category + 1:]
-    #         print(bb.shape, cc.shape)
-    #         r = MaxPooling2D(pool_size=k, strides=s, padding='same')(np.array([bb]))
-    #         r = r[0].numpy()
-    #         o = AveragePooling2D(pool_size=k, strides=s, padding='same')(
-    #             np.array([cc]))
-    #         o = o[0].numpy()
-    #         r = np.concatenate((r, o), axis=2)
-    #         print(r.shape)
-    #
-    #         out_w = (self.__pred_out_w + 2 * (k // 2) - k) // s + 1
-    #         out_h = (self.__pred_out_h + 2 * (k // 2) - k) // s + 1
-    #
-    #         # Filter
-    #
-    #         score = r[..., category]
-    #         y_c = r[..., category_n] + np.arange(out_h).reshape(-1, 1)
-    #         x_c = r[..., category_n + 1] + np.arange(out_w).reshape(1, -1)
-    #         height = r[..., category_n + 2] * out_h
-    #         width = r[..., category_n + 3] * out_w
-    #
-    #         score = score.reshape(-1)
-    #         y_c = y_c.reshape(-1)
-    #         x_c = x_c.reshape(-1)
-    #         height = height.reshape(-1)
-    #         width = width.reshape(-1)
-    #         size = height * width
-    #
-    #         xmin = x_c - width / 2  # left
-    #         ymin = y_c - height / 2  # top
-    #         xmax = x_c + width / 2  # right
-    #         ymax = y_c + height / 2  # bottom
-    #
-    #         # Take only boxes inside picture
-    #         inside_pic = (ymin > 0) * (xmin > 0) * (ymax < out_h) * (
-    #                 xmax < out_w)
-    #
-    #         # Take only boxes of reasonable size
-    #         normal_size = (size < (np.mean(size) * 10)) * (size > (np.mean(size) / 10))
-    #         score = score[inside_pic * normal_size]
-    #         ymin = ymin[inside_pic * normal_size]
-    #         xmin = xmin[inside_pic * normal_size]
-    #         ymax = ymax[inside_pic * normal_size]
-    #         xmax = xmax[inside_pic * normal_size]
-    #
-    #         boxes = np.concatenate((score.reshape(-1, 1),
-    #                                 ymin.reshape(-1, 1),
-    #                                 xmin.reshape(-1, 1),
-    #                                 ymax.reshape(-1, 1),
-    #                                 xmax.reshape(-1, 1)),
-    #                                axis=1)
-    #
-    #         # Insert <category> into box_and_score, which has structure: <score> <ymin> <xmin> <ymax> <xmax>
-    #         box_and_score = np.insert(boxes, 0, category, axis=1)
-    #
-    #         box_and_score_all = box_and_score if first else np.concatenate((box_and_score_all,
-    #                                                                         box_and_score),
-    #                                                                        axis=0)
-    #
-    #         first = False
-    #
-    #     # Get indexes to sort by score descending order
-    #     score_sort = np.argsort(box_and_score_all[:, 1])[::-1]
-    #     box_and_score_all = box_and_score_all[score_sort]
-    #
-    #     # If there are more than one box starting at same coordinate (ymin) remove it
-    #     # So it keeps the one with the highest score
-    #     _, unique_idx = np.unique(box_and_score_all[:, 2], return_index=True)
-    #
-    #     # Sorted preserves original order of boxes
-    #     return box_and_score_all[sorted(unique_idx)]
