@@ -5,6 +5,7 @@ import tensorflow as tf
 from typing import Dict, List, Union, Generator
 
 from tensorflow.python.keras.optimizers import Adam
+
 from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 from networks.classes.centernet.utils.ImageCropper import ImageCropper
@@ -103,7 +104,7 @@ class Classifier:
                                  'sparse_categorical_accuracy     : {}'
                                  .format(metrics[0], metrics[1]))
 
-    def __generate_predictions(self, test_list):
+    def __generate_predictions(self, test_list) -> Generator:
 
         self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
 
@@ -115,7 +116,7 @@ class Classifier:
                      num_parallel_calls=tf.data.experimental.AUTOTUNE) \
                 .batch(1)
 
-            prediction = self.__model_utils.predict(model=self.__model, dataset=img_dataset)
+            prediction = self.__model_utils.predict(model=self.__model, dataset=img_dataset, verbose=0)
 
             yield prediction
 
@@ -146,7 +147,7 @@ class Classifier:
                                                      crop_char_path=os.path.join('datasets', 'char_cropped_test'),
                                                      regenerate=self.__model_params['regenerate_crops_test'],
                                                      mode='test')
-            
+
             self.__write_test_list_to_csv(test_list[:10], bbox_predictions)
 
         dataset_classification = ClassificationDataset(self.__model_params)
