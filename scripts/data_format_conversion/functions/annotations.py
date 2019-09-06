@@ -167,9 +167,6 @@ def generate_annotations(path_to_annotations, path_to_images, path_to_map, path_
         # Print the first 5 rows of the annotation
         if not annotation.empty:
             print(annotation.head())
-        # elif ann_format == 'frcnn':
-        # No negative examples
-        #   continue
 
         write_as = {
             'YOLOv2': write_as_yolov2,

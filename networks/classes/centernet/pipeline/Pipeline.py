@@ -7,7 +7,7 @@ from networks.classes.centernet.datasets.PreprocessingDataset import Preprocessi
 from networks.classes.centernet.pipeline.Preprocessor import Preprocessor
 from networks.classes.centernet.pipeline.Detector import Detector
 from networks.classes.centernet.pipeline.Classifier import Classifier
-from networks.classes.centernet.pipeline.SubmissionWriter import SubmissionWriter
+from networks.classes.centernet.pipeline.SubmissionHandler import SubmissionHandler
 from networks.classes.centernet.pipeline.Visualizer import Visualizer
 from networks.classes.general_utilities import Params
 
@@ -127,8 +127,9 @@ class CenterNetPipeline:
         :param predictions_gen: a list of class predictions for the cropped characters
         """
 
-        sub_writer = SubmissionWriter(dict_cat=self.__dict_cat, log=self.__logs['execution'])
+        sub_writer = SubmissionHandler(dict_cat=self.__dict_cat, log=self.__logs['execution'])
         sub_writer.write(predictions_gen)
+        sub_writer.test(max_visualizations=5)
 
     def __visualize_final_results(self, max_visualizations: int = 5):
         """

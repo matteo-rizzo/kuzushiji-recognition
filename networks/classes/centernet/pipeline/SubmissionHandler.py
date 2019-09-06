@@ -4,9 +4,12 @@ from typing import Generator
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import regex as re
+
+from networks.classes.centernet.utils.BBoxesVisualizer import BBoxesVisualizer
 
 
-class SubmissionWriter:
+class SubmissionHandler:
 
     def __init__(self, dict_cat, log):
         self.__log = log
@@ -82,3 +85,38 @@ class SubmissionWriter:
         submission.to_csv(path_to_submission)
 
         self.__log.info('Written submission data at {}'.format(path_to_submission))
+
+    def test(self, max_visualizations=5):
+
+        self.__log.info('Testing the submission...')
+
+        # Read the submission data from csv file
+        path_to_submission = os.path.join('datasets', 'submission.csv')
+        try:
+            submission = pd.read_csv(path_to_submission, usecols=['image_id', 'labels'])
+        except FileNotFoundError:
+            raise Exception(
+                'Cannot fetch data for visualization because no submission was written at {}\n'
+                'Probably predict_on_test param was set to False, thus no submission has been written'
+                    .format(path_to_submission))
+
+        # Initialize a bboxes visualizer object to print bboxes on images
+        bbox_visualizer = BBoxesVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
+
+        # i counts the number of images that can be visualized
+        i = 0
+
+        # Iterate over the images
+        for _, sub_data in submission.iterrows():
+
+            if i == max_visualizations:
+                break
+
+            labels = [label.strip().split(' ') for label in re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
+            labels = [[label[0], int(label[1]), int(label[2]), 5, 5] for label in labels]
+
+            img_id = sub_data['image_id']
+            self.__log.info('Visualizing image {}'.format(img_id))
+            bbox_visualizer.visualize_bboxes(image_id=img_id, labels=labels)
+
+            i += 1

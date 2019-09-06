@@ -146,7 +146,7 @@ class Classifier:
                                                      crop_char_path=os.path.join('datasets', 'char_cropped_test'),
                                                      regenerate=self.__model_params['regenerate_crops_test'],
                                                      mode='test')
-
+            
             self.__write_test_list_to_csv(test_list[:10], bbox_predictions)
 
         dataset_classification = ClassificationDataset(self.__model_params)
@@ -162,7 +162,7 @@ class Classifier:
 
         # Generate predictions
         if self.__model_params['predict_on_test']:
-            self.__generate_predictions(test_list)
+            return self.__generate_predictions(test_list)
 
         return None
 
@@ -211,13 +211,11 @@ class Classifier:
 
         original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in original_img_to_bbox.items()}
 
-        test_dict = {
+        test_list_df = pd.DataFrame({
             'original_image': [original_img_name for original_img_name in original_img_to_cropped.keys()],
             'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in original_img_to_cropped.values()],
             'bboxes': [bbox for bbox in original_img_to_bbox.values()]
-        }
-
-        test_list_df = pd.DataFrame(test_dict)
+        })
 
         path_to_test_list = os.path.join('datasets', 'test_list.csv')
         test_list_df.to_csv(path_to_test_list)

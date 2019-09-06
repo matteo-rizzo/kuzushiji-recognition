@@ -75,8 +75,15 @@ def main():
     pipeline = CenterNetPipeline(dataset_params=dataset_params,
                                  logs=logs)
 
+    common_operations = {
+        'test_bboxes': ['visualization'],
+        'prep_det_class': ['preprocessing', 'detection', 'classification'],
+        'write_submission': ['preprocessing', 'detection', 'classification', 'submission'],
+        'all': ['preprocessing', 'detection', 'classification', 'submission', 'visualization']
+    }
+
     # Run the pipeline
-    pipeline.run_pipeline(operations=['preprocessing', 'detection', 'classification', 'submission'],
+    pipeline.run_pipeline(operations=common_operations['all'],
                           params=centernet_params,
                           experiment_path=os.path.join(base_experiments_path, run_id))
 

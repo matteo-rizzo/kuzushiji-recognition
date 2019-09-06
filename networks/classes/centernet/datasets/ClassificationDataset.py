@@ -104,8 +104,7 @@ class ClassificationDataset:
     #
     #     return image_resized / 255
 
-    def generate_dataset(self,
-                         train_list: List[Tuple[str, int]]) -> Tuple[List[List], List[List], List[List]]:
+    def generate_dataset(self, train_list: List[Tuple[str, int]]) -> Tuple[List[List], List[List], List[List]]:
 
         """
         Generate the tf.data.Dataset containing all the objects.

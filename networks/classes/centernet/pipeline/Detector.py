@@ -188,11 +188,11 @@ class Detector:
 
         # Pass the list of test images if we are in test mode,
         # otherwise pass None, so that the test set will not be generated
-        test_list = self.__test_list if self.__model_params['predict_on_test'] else None
+        self.__test_list = self.__test_list if self.__model_params['predict_on_test'] else None
 
         # Generate the dataset for detection
         dataset_detection = DetectionDataset(self.__model_params)
-        xy_train, xy_val, xy_eval = dataset_detection.generate_dataset(train_list, test_list)
+        xy_train, xy_val, xy_eval = dataset_detection.generate_dataset(train_list, self.__test_list[:10])
 
         # Train the model
         if self.__model_params['train']:
