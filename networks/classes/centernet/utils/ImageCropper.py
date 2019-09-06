@@ -15,19 +15,6 @@ class ImageCropper:
     def __init__(self, log):
         self.__log = log
 
-    def __regenerate_crops_train(self, train_list, crop_char_path_train):
-        self.__log.info('Starting procedure to regenerate cropped train character images')
-
-        self.__log.info('Getting bounding boxes from annotations...')
-        crop_formatted_list = self.__annotations_to_bounding_boxes(train_list)
-
-        self.__log.info('Cropping images to characters...')
-        train_list: List[Tuple[str, int]] = self.__create_crop_characters_train(crop_formatted_list,
-                                                                                crop_char_path_train)
-        self.__log.info('Cropping done successfully!')
-
-        return train_list
-
     def get_crops(self, img_data: any, crop_char_path: str, mode='train', regenerate: bool = False):
 
         regenerate_crops = {
@@ -39,6 +26,20 @@ class ImageCropper:
             return regenerate_crops[mode](img_data, crop_char_path)
         else:
             return self.__load_crop_characters(crop_char_path, mode=mode)
+
+    def __regenerate_crops_train(self, train_list, crop_char_path_train):
+
+        self.__log.info('Starting procedure to regenerate cropped train character images')
+
+        self.__log.info('Getting bounding boxes from annotations...')
+        crop_formatted_list = self.__annotations_to_bounding_boxes(train_list)
+
+        self.__log.info('Cropping images to characters...')
+        train_list: List[Tuple[str, int]] = self.__create_crop_characters_train(crop_formatted_list,
+                                                                                crop_char_path_train)
+        self.__log.info('Cropping done successfully!')
+
+        return train_list
 
     def __regenerate_crops_test(self, bbox_predictions, crop_char_path_test):
 
@@ -82,13 +83,7 @@ class ImageCropper:
 
             assert ymin.shape == xmin.shape == ymax.shape == xmax.shape, 'Shape can\'t be different'
 
-            # Create a column long as the number of bounding boxes and fill it with the image path
-            # paths = np.full((ymin.shape[0], 1), img_path)
-
-            dict_key = img_path
-            dict_value = np.concatenate((ann[:, 0:1], ymin, xmin, ymax, xmax), axis=1)
-
-            all_images_boxes[dict_key] = dict_value
+            all_images_boxes[img_path] = np.concatenate((ann[:, 0:1], ymin, xmin, ymax, xmax), axis=1)
 
         return all_images_boxes
 
@@ -120,7 +115,7 @@ class ImageCropper:
         :param images_to_split: dict of {image_path: ndarray([ymin, xmin, ymax, xmax])}
         :param save_dir: directory where to save cropped images
         """
-        # TODO: save on csv original images and their bounding box
+
         self.__user_check(save_dir)
 
         # ---- Cropping ----
@@ -139,15 +134,13 @@ class ImageCropper:
                 box_n = 0
 
                 for box in boxes:
-                    ymin = float(box[0])  # top
-                    xmin = float(box[1])  # left
-                    ymax = float(box[2])  # bottom
-                    xmax = float(box[3])  # right
+                    ymin = float(box[0])
+                    xmin = float(box[1])
+                    ymax = float(box[2])
+                    xmax = float(box[3])
 
                     filepath = img_name_path + '_' + str(box_n) + '.jpg'
-
                     img.crop((xmin, ymin, xmax, ymax)).save(filepath)
-
                     cropped_list.append(filepath)
                     box_n += 1
 
@@ -183,15 +176,13 @@ class ImageCropper:
 
                 for box in boxes:
                     char_class = int(box[0])
-                    ymin = float(box[1])  # top
-                    xmin = float(box[2])  # left
-                    ymax = float(box[3])  # bottom
-                    xmax = float(box[4])  # right
+                    ymin = float(box[1])
+                    xmin = float(box[2])
+                    ymax = float(box[3])
+                    xmax = float(box[4])
 
                     filepath = img_name_path + '_' + str(box_n) + '.jpg'
-
                     img.crop((xmin, ymin, xmax, ymax)).save(filepath)
-
                     cropped_list.append((filepath, char_class))
                     box_n += 1
 
@@ -206,7 +197,7 @@ class ImageCropper:
     @staticmethod
     def __load_crop_characters(save_dir: str, mode: str) -> Union[List[Tuple[str, int]], List[str]]:
         """
-        Loads the list of characters from file system. Useful to avoid regenerating cropped characters every time.
+        Loads the list of characters from file system. Useful to avoid regenerating cropped characters every time
 
         :param mode: strings 'train' or 'test':
             - 'test': returned list will be a list of file paths to cropped images.
@@ -224,9 +215,8 @@ class ImageCropper:
                 csv_path), "Error: csv file 'crop_list.csv' doesn't exists in path {}".format(csv_path)
 
             csv_df = pd.read_csv(csv_path, delimiter=',')
-            n_rows = len(csv_df.index)
 
-            assert len(os.listdir(save_dir)) - 1 == n_rows, \
+            assert len(os.listdir(save_dir)) - 1 == len(csv_df.index), \
                 "Error: csv and save_dir contains different number of items"
 
             return [tuple(c) for c in csv_df.values]
@@ -264,9 +254,8 @@ class ImageCropper:
                                'Do you wish to delete all existing files and proceed with the operation?\n'
                                'Please refuse to abort the execution.\n'
                                'Confirm? [Y/n]\n'.format(save_dir))
-            confirmations = ['y', 'Y', 'yes', 'ok']
 
-            user_ok = True if user_input in confirmations else False
+            user_ok = True if user_input in ['y', 'Y', 'yes', 'ok'] else False
 
             if user_ok:
                 # Remove directory and all its files

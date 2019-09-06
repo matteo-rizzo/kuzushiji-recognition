@@ -30,9 +30,11 @@ class ClassificationDataset:
         self.__output_height = params['output_height']
         self.__output_width = params['output_width']
 
+        self.__x_train: List[str]
+        self.__y_train: List[int]
+        self.__training_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__validation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__evaluation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
-        self.__training_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__test_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
 
     def __dataset_generator(self,
@@ -42,9 +44,7 @@ class ClassificationDataset:
 
         input_width, input_height = self.__input_width, self.__input_height
 
-        x = []
-        y = []
-
+        x, y = [], []
         count = 0
 
         while True:
@@ -127,6 +127,8 @@ class ClassificationDataset:
                                             train_size=int(self.__training_ratio * len(train_list)),
                                             shuffle=True)
 
+        self.__x_train, self.__y_train = zip(*xy_train)
+
         self.__training_set = (
             tf.data.Dataset.from_generator(
                 lambda: self.__dataset_generator(xy_train,
@@ -175,3 +177,6 @@ class ClassificationDataset:
 
     def get_test_set(self) -> Tuple[Union[tf.data.Dataset, None], int]:
         return self.__test_set
+
+    def get_xy_training(self) -> Tuple[List[str], List[int]]:
+        return self.__x_train, self.__y_train

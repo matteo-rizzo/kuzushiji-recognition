@@ -17,21 +17,20 @@ class Detector:
 
     def __init__(self, model_params, dataset_params, weights_path, logs):
         self.__logs = logs
+        self.__weights_path = weights_path
 
         self.__model_params = model_params
         self.__model_params.update(dataset_params)
 
         self.__loss = LossFunctionsGenerator()
-        self.__model_utils = ModelCenterNet(logs=self.__logs)
         self.__bb_handler = BBoxesHandler()
+        self.__model_utils = ModelCenterNet(logs=self.__logs)
 
-        self.__weights_path = weights_path
         self.__model = self.__build_and_compile_model()
 
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = dataset_params['test_images_path']
-        self.__test_list = natsort. \
-            natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
+        self.__test_list = natsort.natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
 
     @staticmethod
     def __resize_fn(path: str, input_h, input_w):
@@ -77,12 +76,8 @@ class Detector:
 
         return model
 
-    def __train_model(self, dataset_detection):
-        self.__logs['execution'].info(
-            'Starting the training procedure for the object detection model...')
-
-        detection_ts, detection_ts_size = dataset_detection.get_training_set()
-        detection_vs, detection_vs_size = dataset_detection.get_validation_set()
+    def __train_model(self, dataset):
+        self.__logs['execution'].info('Starting the training procedure for the object detection model...')
 
         # Set up the callbacks
         callbacks = self.__model_utils.setup_callbacks(weights_log_path=self.__weights_path,
@@ -90,22 +85,18 @@ class Detector:
                                                        lr=self.__model_params['learning_rate'])
 
         # Start the training procedure
-        self.__model_utils.train(model=self.__model,
+        self.__model_utils.train(dataset=dataset,
+                                 model=self.__model,
                                  init_epoch=self.__model_params['initial_epoch'],
                                  epochs=self.__model_params['epochs'],
-                                 training_set=detection_ts,
-                                 validation_set=detection_vs,
-                                 training_steps=int(
-                                     detection_ts_size // self.__model_params['batch_size']) + 1,
-                                 validation_steps=int(
-                                     detection_vs_size // self.__model_params['batch_size']) + 1,
+                                 batch_size=self.__model_params['batch_size'],
                                  callbacks=callbacks)
 
-    def __evaluate_model(self, dataset_detection, xy_eval):
+    def __evaluate_model(self, dataset, xy_eval):
 
         self.__logs['test'].info('Evaluating the model...')
 
-        detection_es, detection_es_size = dataset_detection.get_evaluation_set()
+        detection_es, detection_es_size = dataset.get_evaluation_set()
 
         metrics = self.__model_utils.evaluate(model=self.__model,
                                               evaluation_set=detection_es,
@@ -151,9 +142,9 @@ class Detector:
                                                mode='train',
                                                show=True)
 
-    def __generate_test_predictions(self, dataset_detection) -> Dict[str, np.array]:
+    def __generate_test_predictions(self, dataset) -> Dict[str, np.array]:
 
-        detection_ps, _ = dataset_detection.get_test_set()
+        detection_ps, _ = dataset.get_test_set()
 
         self.__logs['execution'].info('Predicting test bounding boxes (takes time)...')
         test_predictions = self.__model_utils.predict(model=self.__model, dataset=detection_ps)
@@ -201,20 +192,20 @@ class Detector:
         self.__test_list = self.__test_list if self.__model_params['predict_on_test'] else None
 
         # Generate the dataset for detection
-        dataset_detection = DetectionDataset(self.__model_params)
-        xy_train, xy_val, xy_eval = dataset_detection.generate_dataset(train_list, self.__test_list)
+        dataset = DetectionDataset(self.__model_params)
+        _, _, xy_eval = dataset.generate_dataset(train_list, self.__test_list)
 
         # Train the model
         if self.__model_params['train']:
-            self.__train_model(dataset_detection)
+            self.__train_model(dataset)
 
         # Evaluate the model
         if self.__model_params['evaluate']:
-            self.__evaluate_model(dataset_detection, xy_eval)
+            self.__evaluate_model(dataset, xy_eval)
 
         # Generate the test predictions
         predicted_test_bboxes: Union[Dict[str, np.ndarray], None] = None
         if self.__model_params['predict_on_test']:
-            predicted_test_bboxes = self.__generate_test_predictions(dataset_detection)
+            predicted_test_bboxes = self.__generate_test_predictions(dataset)
 
         return train_list, predicted_test_bboxes

@@ -25,6 +25,63 @@ class Classifier:
 
         self.__model = self.__build_and_compile_model(num_categories)
 
+    def __write_test_list_to_csv(self, test_list: List, bbox_predictions: Dict):
+
+        self.__logs['execution'].info('Writing test data to csv...')
+
+        # Get all the names of the cropped images
+        cropped_img_names = [cropped_img_path.split(os.sep)[-1] for cropped_img_path in test_list]
+
+        # Get all the original names of the cropped images
+        original_img_names = []
+        for cropped_img_name, cropped_img_path in zip(cropped_img_names, test_list):
+            original_img_name = '_'.join(cropped_img_name.split('_')[:-1])
+            original_img_names.append(original_img_name)
+
+        # Initialize a mapping <original image name> -> <list of cropped images names>
+        original_img_to_cropped = {original_img_name: [] for original_img_name in original_img_names}
+
+        # Initialize a mapping <cropped image name> -> <bbox coordinates>
+        cropped_img_to_bbox = {cropped_img_name: None for cropped_img_name in cropped_img_names}
+
+        # Initialize a mapping <original image name> -> <bbox coordinates>
+        original_img_to_bbox = {original_img_name: [] for original_img_name in original_img_names}
+
+        for cropped_img_name in cropped_img_names:
+            # Map each original image to its cropped characters
+            original_img_name = '_'.join(cropped_img_name.split('_')[:-1])
+            original_img_to_cropped[original_img_name].append(cropped_img_name)
+
+            # Map each cropped image to its bounding box
+            cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
+
+            # Set the relative path to the original image
+            original_img_path = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
+
+            # Convert the coords of the bboxes from float to string
+            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][
+                                                       cropped_img_id][1:]]
+
+            # Join the coordinates in a single string, in format ymin:xmin:ymax:xmax
+            cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
+
+        for original_img_name, cropped_img_names in original_img_to_cropped.items():
+            for cropped_img_name in cropped_img_names:
+                original_img_to_bbox[original_img_name].append(cropped_img_to_bbox[cropped_img_name])
+
+        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in original_img_to_bbox.items()}
+
+        test_list_df = pd.DataFrame({
+            'original_image': [original_img_name for original_img_name in original_img_to_cropped.keys()],
+            'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in original_img_to_cropped.values()],
+            'bboxes': [bbox for bbox in original_img_to_bbox.values()]
+        })
+
+        path_to_test_list = os.path.join('datasets', 'test_list.csv')
+        test_list_df.to_csv(path_to_test_list)
+
+        self.__logs['execution'].info('Written test data at {}'.format(path_to_test_list))
+
     @staticmethod
     def __resize_fn(path: str, input_h, input_w):
         """
@@ -68,39 +125,32 @@ class Classifier:
 
         return model
 
-    def __train_model(self, dataset_classification):
+    def __train_model(self, dataset):
 
         self.__logs['execution'].info('Starting the training procedure for the classification model...')
-
-        classification_ts, classification_ts_size = dataset_classification.get_training_set()
-        classification_vs, classification_vs_size = dataset_classification.get_validation_set()
 
         callbacks = self.__model_utils.setup_callbacks(weights_log_path=self.__weights_path,
                                                        batch_size=int(self.__model_params['batch_size']),
                                                        lr=self.__model_params['learning_rate'])
 
-        self.__model_utils.train(model=self.__model,
+        self.__model_utils.train(dataset=dataset,
+                                 model=self.__model,
                                  init_epoch=self.__model_params['initial_epoch'],
                                  epochs=self.__model_params['epochs'],
-                                 training_set=classification_ts,
-                                 validation_set=classification_vs,
-                                 training_steps=classification_ts_size // self.__model_params[
-                                     'batch_size'] + 1,
-                                 validation_steps=classification_vs_size // self.__model_params[
-                                     'batch_size'] + 1,
-                                 callbacks=callbacks)
+                                 batch_size=self.__model_params['batch_size'],
+                                 callbacks=callbacks,
+                                 augmentation=True)
 
-    def __evaluate_model(self, dataset_classification):
+    def __evaluate_model(self, dataset):
 
         self.__logs['execution'].info('Evaluating the classification model...')
 
-        classification_es, classification_es_size = dataset_classification.get_evaluation_set()
+        evaluation_set, evaluation_set_size = dataset.get_evaluation_set()
 
         metrics = self.__model_utils.evaluate(model=self.__model,
-                                              evaluation_set=classification_es,
-                                              evaluation_steps=classification_es_size //
-                                                               self.__model_params[
-                                                                   'batch_size'] + 1)
+                                              evaluation_set=evaluation_set,
+                                              evaluation_steps=evaluation_set_size // self.__model_params[
+                                                  'batch_size'] + 1)
 
         self.__logs['test'].info('Evaluation metrics:\n'
                                  'sparse_categorical_crossentropy : {}\n'
@@ -109,8 +159,7 @@ class Classifier:
 
     def __generate_predictions(self, test_list) -> Generator:
 
-        self.__logs['execution'].info(
-            'Starting the predict procedure of char class (takes much time)...')
+        self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
 
         input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
 
@@ -140,98 +189,33 @@ class Classifier:
 
         # Train mode cropping
         train_list = self.__img_cropper.get_crops(img_data=train_list,
-                                                  crop_char_path=os.path.join('datasets',
-                                                                              'char_cropped_train'),
-                                                  regenerate=self.__model_params[
-                                                      'regenerate_crops_train'],
+                                                  crop_char_path=os.path.join('datasets', 'char_cropped_train'),
+                                                  regenerate=self.__model_params['regenerate_crops_train'],
                                                   mode='train')
 
         # Test mode cropping
         test_list: Union[List[str], None] = None
         if self.__model_params['predict_on_test']:
             test_list = self.__img_cropper.get_crops(img_data=bbox_predictions,
-                                                     crop_char_path=os.path.join('datasets',
-                                                                                 'char_cropped_test'),
-                                                     regenerate=self.__model_params[
-                                                         'regenerate_crops_test'],
+                                                     crop_char_path=os.path.join('datasets', 'char_cropped_test'),
+                                                     regenerate=self.__model_params['regenerate_crops_test'],
                                                      mode='test')
 
             self.__write_test_list_to_csv(test_list, bbox_predictions)
 
-        dataset_classification = ClassificationDataset(self.__model_params)
-        _, _, xy_eval = dataset_classification.generate_dataset(train_list)
+        dataset = ClassificationDataset(self.__model_params)
+        _, _, xy_eval = dataset.generate_dataset(train_list)
 
         # Train the model
         if self.__model_params['train']:
-            self.__train_model(dataset_classification)
+            self.__train_model(dataset)
 
         # Evaluate the model
         if self.__model_params['evaluate']:
-            self.__evaluate_model(dataset_classification)
+            self.__evaluate_model(dataset)
 
         # Generate predictions
         if self.__model_params['predict_on_test']:
             return self.__generate_predictions(test_list)
 
         return None
-
-    def __write_test_list_to_csv(self, test_list: List, bbox_predictions: Dict[str, np.array]):
-
-        self.__logs['execution'].info('Writing test data to csv...')
-
-        # Get all the names of the cropped images
-        cropped_img_names = [cropped_img_path.split(os.sep)[-1] for cropped_img_path in test_list]
-
-        # Get all the original names of the cropped images
-        original_img_names = []
-        for cropped_img_name, cropped_img_path in zip(cropped_img_names, test_list):
-            original_img_name = '_'.join(cropped_img_name.split('_')[:-1])
-            original_img_names.append(original_img_name)
-
-        # Initialize a mapping <original image name> -> <list of cropped images names>
-        original_img_to_cropped = {original_img_name: [] for original_img_name in original_img_names}
-
-        # Initialize a mapping <cropped image name> -> <bbox coordinates>
-        cropped_img_to_bbox = {cropped_img_name: None for cropped_img_name in cropped_img_names}
-
-        # Initialize a mapping <original image name> -> <bbox coordinates>
-        original_img_to_bbox = {original_img_name: [] for original_img_name in original_img_names}
-
-        for cropped_img_name in cropped_img_names:
-            # Map each original image to its cropped characters
-            original_img_name = '_'.join(cropped_img_name.split('_')[:-1])
-            original_img_to_cropped[original_img_name].append(cropped_img_name)
-
-            # Map each cropped image to its bounding box
-            cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
-
-            # Set the relative path to the original image
-            original_img_path = os.path.join(self.__model_params['test_images_path'],
-                                             original_img_name + '.jpg')
-
-            # Convert the coords of the bboxes from float to string
-            bbox_coords = [str(coord) for coord in
-                           bbox_predictions[original_img_path][cropped_img_id][1:]]
-
-            # Join the coordinates in a single string, in format ymin:xmin:ymax:xmax
-            cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
-
-        for original_img_name, cropped_img_names in original_img_to_cropped.items():
-            for cropped_img_name in cropped_img_names:
-                original_img_to_bbox[original_img_name].append(cropped_img_to_bbox[cropped_img_name])
-
-        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in
-                                original_img_to_bbox.items()}
-
-        test_list_df = pd.DataFrame({
-            'original_image': [original_img_name for original_img_name in
-                               original_img_to_cropped.keys()],
-            'cropped_images': [' '.join(cropped_img_names) for cropped_img_names in
-                               original_img_to_cropped.values()],
-            'bboxes': [bbox for bbox in original_img_to_bbox.values()]
-        })
-
-        path_to_test_list = os.path.join('datasets', 'test_list.csv')
-        test_list_df.to_csv(path_to_test_list)
-
-        self.__logs['execution'].info('Written test data at {}'.format(path_to_test_list))

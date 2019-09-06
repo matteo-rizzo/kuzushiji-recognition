@@ -1,13 +1,14 @@
 import glob
 import os
-from tqdm import tqdm
+
+import pandas as pd
+from keras_preprocessing.image import ImageDataGenerator
 from typing import Dict, List, Union
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
 # from networks.classes.centernet.models.ModelGenerator import ModelGenerator
-from networks.classes.centernet.datasets.DataAugmentation import DataAugmentation
 
 
 from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
@@ -106,14 +107,13 @@ class ModelCenterNet:
         model.load_weights(restore_path)
 
     def train(self,
+              dataset: any,
               model: tf.keras.Model,
               init_epoch: int,
               epochs: int,
-              training_set: tf.data.Dataset,
-              validation_set: tf.data.Dataset,
-              training_steps: int,
-              validation_steps: int,
-              callbacks: List[tf.keras.callbacks.Callback]):
+              batch_size: int,
+              callbacks: List[tf.keras.callbacks.Callback],
+              augmentation: bool = False):
         """
         Compiles and trains the model for the specified number of epochs.
         """
@@ -129,16 +129,44 @@ class ModelCenterNet:
         self.__logs['training'].info('* Total number of epochs:   ' + str(epochs))
         self.__logs['training'].info('* Initial epoch:            ' + str(init_epoch) + '\n')
 
-        # da = DataAugmentation(augmentations=['flip', 'color', 'zoom', 'rotate'])
-        # training_set = da.augment_dataset(training_set)
+        training_set, training_set_size = dataset.get_training_set()
+        validation_set, validation_set_size = dataset.get_validation_set()
+        training_steps = training_set_size // batch_size + 1
+        validation_steps = validation_set_size // batch_size + 1
 
-        model.fit(training_set,
-                  epochs=epochs,
-                  steps_per_epoch=training_steps,
-                  validation_data=validation_set,
-                  validation_steps=validation_steps,
-                  callbacks=callbacks,
-                  initial_epoch=init_epoch)
+        if augmentation:
+            x, y = dataset.get_xy_training()
+
+            image_data_generator = ImageDataGenerator(brightness_range=[0.2, 1.0],
+                                                      rotation_range=10,
+                                                      width_shift_range=0.1,
+                                                      height_shift_range=0.1,
+                                                      zoom_range=.1)
+
+            generator = image_data_generator.flow_from_dataframe(
+                dataframe=pd.DataFrame({'image': x, 'class': y}),
+                directory='',
+                x_col='image',
+                y_col='class',
+                class_mode="other",
+                target_size=(32, 32),
+                batch_size=batch_size)
+
+            model.fit_generator(generator,
+                                epochs=epochs,
+                                steps_per_epoch=training_steps,
+                                validation_data=validation_set,
+                                validation_steps=validation_steps,
+                                callbacks=callbacks,
+                                initial_epoch=init_epoch)
+        else:
+            model.fit(training_set,
+                      epochs=epochs,
+                      steps_per_epoch=training_steps,
+                      validation_data=validation_set,
+                      validation_steps=validation_steps,
+                      callbacks=callbacks,
+                      initial_epoch=init_epoch)
 
         self.__logs['training'].info('Training procedure performed successfully!\n')
 
@@ -159,22 +187,6 @@ class ModelCenterNet:
             return None
 
         return model.evaluate(evaluation_set, verbose=1, steps=evaluation_steps)
-
-        # predictions = model.predict(evaluation_set, steps=evaluation_steps)
-        #
-        # # True values
-        # target_labels = []
-        # batch_count = 0
-        # for batch_samples in evaluation_set:
-        #     batch_count += 1
-        #     target_labels.extend(batch_samples[1].numpy())
-        #     if batch_count == evaluation_steps:
-        #         # Seen all examples, so exit the dataset iteration
-        #         break
-        #
-        # plt.scatter(predictions, target_labels[:len(predictions)])
-        # plt.title('---Letter_size/picture_size--- estimated vs target ', loc='center', fontsize=10)
-        # plt.show()
 
     def predict(self,
                 model: tf.keras.Model,
