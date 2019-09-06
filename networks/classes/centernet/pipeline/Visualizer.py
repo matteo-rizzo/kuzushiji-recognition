@@ -50,8 +50,7 @@ class Visualizer:
             if i == max_visualizations:
                 break
 
-            classes = [label.strip().split(' ')[0] for label in
-                       re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
+            classes = [label.strip().split(' ')[0] for label in re.findall(r"(?:\s?\S*\s){2}\S*", sub_data['labels'])]
             bboxes = test_data['bboxes'].split(' ')
 
             # Iterate over the predicted classes and corresponding bboxes

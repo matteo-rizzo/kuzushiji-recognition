@@ -192,7 +192,7 @@ class Detector:
 
         # Generate the dataset for detection
         dataset_detection = DetectionDataset(self.__model_params)
-        xy_train, xy_val, xy_eval = dataset_detection.generate_dataset(train_list, self.__test_list[:10])
+        xy_train, xy_val, xy_eval = dataset_detection.generate_dataset(train_list, self.__test_list)
 
         # Train the model
         if self.__model_params['train']:

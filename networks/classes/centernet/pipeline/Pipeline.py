@@ -129,7 +129,7 @@ class CenterNetPipeline:
 
         sub_writer = SubmissionHandler(dict_cat=self.__dict_cat, log=self.__logs['execution'])
         sub_writer.write(predictions_gen)
-        sub_writer.test(max_visualizations=5)
+        # sub_writer.test(max_visualizations=5)
 
     def __visualize_final_results(self, max_visualizations: int = 5):
         """

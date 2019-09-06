@@ -114,7 +114,7 @@ class SubmissionHandler:
             if i == max_visualizations:
                 break
 
-            labels = [label.strip().split(' ') for label in re.findall(r"(?:\S*\s){3}", sub_data['labels'])]
+            labels = [label.strip().split(' ') for label in re.findall(r"(?:\s?\S*\s){2}\S*", sub_data['labels'])]
             labels = [[label[0], int(label[1]), int(label[2]), 5, 5] for label in labels]
 
             img_id = sub_data['image_id']
