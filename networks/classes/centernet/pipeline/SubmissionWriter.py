@@ -38,19 +38,22 @@ class SubmissionWriter:
                             'Probably predict_on_test param was set to False, thus no prediction has been made on test'
                             .format(path_to_test_list))
 
-        # Initialize an index to iterate over the predictions
-        # i = 0
-        prediction = next(predictions_gen)
-
         # Iterate over all the predicted original images
-        for _, img_data in tqdm(test_list.iterrows()):
+        for _, img_data in tqdm(test_list.iterrows(), total=len(test_list.index)):
 
             cropped_images = list(img_data['cropped_images'].split(' '))
             bboxes = list(img_data['bboxes'].split(' '))
 
             for cropped_image, bbox in zip(cropped_images, bboxes):
+
+                # Get prediction from generator
+                try:
+                    prediction = next(predictions_gen)
+                except StopIteration:
+                    break
+
                 # Get the unicode class from the predictions
-                class_index = np.where(prediction == max(prediction))[0][0]
+                class_index = np.argmax(prediction)
                 unicode = list(self.__dict_cat.keys())[list(self.__dict_cat.values()).index(class_index)]
 
                 # Get the coordinates of the bbox
@@ -65,9 +68,8 @@ class SubmissionWriter:
                 y = str(ymin + ((ymax - ymin) // 2))
 
                 # Append the current label to the list of the labels of the current images
-                submission_dict.setdefault(img_data['original_image'], []).append(' '.join([unicode, x, y]))
-
-                prediction = next(predictions_gen)
+                submission_dict.setdefault(img_data['original_image'], []).append(
+                    ' '.join([unicode, x, y]))
 
         # Convert the row in format: <image_id>, <label 1> <X_1> <Y_1> <label_2> <X_2> <Y_2> ...
         for original_image, labels in submission_dict.items():

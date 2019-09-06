@@ -117,7 +117,7 @@ class CenterNetPipeline:
                                 logs=self.__logs)
 
         return classifier.classify(train_list=train_list,
-                                   bbox_predictions=bbox_predictions, )
+                                   bbox_predictions=bbox_predictions)
 
     def __write_submission(self, predictions_gen: Generator):
         """

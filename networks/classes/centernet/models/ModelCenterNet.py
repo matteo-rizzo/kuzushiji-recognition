@@ -178,11 +178,12 @@ class ModelCenterNet:
 
     def predict(self,
                 model: tf.keras.Model,
-                dataset: tf.data.Dataset) -> Union[np.ndarray, List[np.ndarray]]:
+                dataset: tf.data.Dataset,
+                verbose: int = 1) -> Union[np.ndarray, List[np.ndarray]]:
         """
         Performs a prediction on a given dataset
         """
 
         self.__logs['test'].info("Predicting...")
 
-        return model.predict(dataset, verbose=1)
+        return model.predict(dataset, verbose=verbose)
