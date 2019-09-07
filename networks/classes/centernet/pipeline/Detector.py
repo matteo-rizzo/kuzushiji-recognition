@@ -30,8 +30,7 @@ class Detector:
 
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = dataset_params['test_images_path']
-        self.__test_list = natsort.natsorted(
-            [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
+        self.__test_list = natsort.natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
 
     @staticmethod
     def __resize_fn(path: str, input_h, input_w):
@@ -166,11 +165,11 @@ class Detector:
 
         return predicted_test_bboxes
 
-    def detect(self, dataset_avg_size) -> (List[List], Union[Dict[str, np.ndarray], None]):
+    def detect(self, preprocessed_dataset) -> (List[List], Union[Dict[str, np.ndarray], None]):
         """
         Creates and runs a CenterNet to perform the image detection
 
-        :param dataset_avg_size: a ratio predictor
+        :param preprocessed_dataset: a ratio predictor
         :return: a couple of lists with train and bbox data. Bbox data are available only if
                  model_params['predict_on_test] is true. Otherwise return None
 
@@ -189,10 +188,7 @@ class Detector:
          {<image_path>: np.array[<score>, <ymin>, <xmin>, <ymax>, <xmax>]}
         """
 
-        # Get labels from dataset and compute the recommended split,
-        # format is: [ [image path, annotations, height split, width split] ]
-        avg_sizes: List[float] = dataset_avg_size.get_dataset_labels()
-        train_list: List[List] = dataset_avg_size.get_recommended_splits(avg_sizes)
+        train_list: List[List] = preprocessed_dataset.get_recommended_splits()
 
         # Pass the list of test images if we are in test mode,
         # otherwise pass None, so that the test set will not be generated

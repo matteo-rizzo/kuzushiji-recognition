@@ -27,9 +27,6 @@ class PreprocessingDataset:
         self.__training_ratio = params['training_ratio']
         self.__batch_size = params['batch_size']
 
-    def get_dataset_labels(self) -> List[float]:
-        return [el[1] for el in self.__train_image_avg_char_area_ratios]
-
     def get_categories_dict(self) -> Dict[str, int]:
         return self.__dict_cat
 
@@ -43,6 +40,9 @@ class PreprocessingDataset:
 
         # Generate the tf.data.Dataset containing all the objects
         self.__compose_dataset_object()
+
+    def __get_dataset_labels(self) -> List[float]:
+        return [el[1] for el in self.__train_image_avg_char_area_ratios]
 
     def __parse_train_csv(self):
         """
@@ -67,8 +67,7 @@ class PreprocessingDataset:
         category_names = sorted(category_names)
 
         # Make a dict assigning an integer to each category
-        self.__dict_cat: Dict[str, int] = \
-            {list(category_names)[j]: j for j in range(len(category_names))}
+        self.__dict_cat: Dict[str, int] = {list(category_names)[j]: j for j in range(len(category_names))}
         self.__parsed_train_list: List[Tuple[str, np.array]] = []
 
         for i in range(len(df_train)):
@@ -103,12 +102,8 @@ class PreprocessingDataset:
             #    ann[:, 3] = x width
             #    ann[:, 4] = y height
 
-            self.__parsed_train_list.append(("{}/{}.jpg".format(self.__train_images_path,
-                                                                df_train.loc[i, "image_id"]),
+            self.__parsed_train_list.append(("{}/{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]),
                                              ann))
-
-        # __annotation_list_train is a list of list where each row represent an image and
-        # the list of the characters within it with relative coordinates of bbox
 
     def __annotate_char_area_ratio(self, show_plot: bool = False):
         """
@@ -137,12 +132,13 @@ class PreprocessingDataset:
                 # List of ratios for each character
                 char_area_ratio = char_area / img_area
 
-                # Take the mean and append to list
+                # Take the mean and append it to a list
                 avg_char_area_ratio = np.mean(char_area_ratio)
                 all_avg_char_area_ratio.append(avg_char_area_ratio)
 
                 # Add example for training with image path and log average bbox size for objects in it
                 self.__train_image_avg_char_area_ratios.append((img_path, np.log(avg_char_area_ratio)))
+
                 # Add aspect ratio
                 self.__aspect_ratios.append(aspect_ratio)
 
@@ -151,16 +147,17 @@ class PreprocessingDataset:
             plt.title('log(ratio of char_area / picture_size)', loc='center', fontsize=12)
             plt.show()
 
-    def get_recommended_splits(self, avg_log_char_area_ratios: List[float]) \
-            -> List[Tuple[str, np.array, float, float]]:
+    def get_recommended_splits(self) -> List[Tuple[str, np.array, float, float]]:
         """
         Given a list of sizes of bboxes for each train image,
         computes the best size according to the image must be split
 
-        :param avg_log_char_area_ratios: list of bbox areas for all characters (prediction or from train data)
         :return: extended annotation list with recommended splits in format:
             [image path, annotations, height split, width split]
         """
+
+        # Initialize a list of bbox areas for all characters (prediction or from train data)
+        avg_log_char_area_ratios: List[float] = self.__get_dataset_labels()
 
         base_stretch_factor_h, base_stretch_factor_w = 25, 25
 
@@ -212,8 +209,7 @@ class PreprocessingDataset:
             pic_height, pic_width, _ = image_decoded.get_shape().as_list()
 
             # Compute the offsets
-            top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (
-                    pic_height - 1)
+            top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (pic_height - 1)
             left_offset = np.random.randint(0, pic_width - int(crop_ratio * pic_width)) / (pic_width - 1)
             bottom_offset = top_offset + int(crop_ratio * pic_height) / (pic_height - 1)
             right_offset = left_offset + int(crop_ratio * pic_width) / (pic_width - 1)
@@ -226,6 +222,7 @@ class PreprocessingDataset:
                                                              bottom_offset,
                                                              right_offset]],
                                                      crop_size=[input_width, input_height])
+
             # Update average bbox size after cropping
             label -= np.log(crop_ratio)
         else:
@@ -246,7 +243,7 @@ class PreprocessingDataset:
         Generates the tf.data.Dataset containing all the objects
         """
 
-        # Iterate over paths of samples
+        # Iterate over paths of images
         image_paths = [sample[0] for sample in self.__train_image_avg_char_area_ratios]
 
         # Iterate over avg bbox ratios
@@ -259,10 +256,10 @@ class PreprocessingDataset:
                           len(image_paths))
 
     def get_training_set(self) -> Tuple[tf.data.Dataset, int]:
-        TRAIN_SIZE = int(self.__training_ratio * self.__dataset[1])
+        train_size = int(self.__training_ratio * self.__dataset[1])
 
         return (self.__dataset[0]
-                .take(TRAIN_SIZE)
+                .take(train_size)
                 .map(lambda path, label: tf.py_function(self.__preprocess_image,
                                                         [path, label, True, True],
                                                         (tf.float32, tf.float64)),
@@ -270,7 +267,7 @@ class PreprocessingDataset:
                 .batch(self.__batch_size)
                 .repeat()
                 .prefetch(AUTOTUNE),
-                TRAIN_SIZE)
+                train_size)
 
     def get_validation_set(self) -> Tuple[tf.data.Dataset, int]:
         train_size = int(self.__training_ratio * self.__dataset[1])

@@ -61,19 +61,19 @@ class CenterNetPipeline:
             self.__check_no_weights_in_run_folder(weights_path)
 
         preprocessor = Preprocessor(dataset_params=self.__dataset_params, log=self.__logs['execution'])
-        dataset_avg_size, self.__dict_cat = preprocessor.preprocess_data(model_params)
+        preprocessed_dataset, self.__dict_cat = preprocessor.preprocess_data(model_params)
 
-        return dataset_avg_size
+        return preprocessed_dataset
 
     def __run_detection(self,
                         model_params: Dict,
-                        dataset_avg_size,
+                        preprocessed_dataset,
                         weights_path: str) -> (List[List], Union[Dict[str, np.ndarray], None]):
         """
         Creates and runs a CenterNet to perform the image detection
 
         :param model_params: the parameters related to the network
-        :param dataset_avg_size: a ratio predictor
+        :param preprocessed_dataset: a ratio predictor
         :param weights_path: the path to the saved weights (if present)
         :return: a couple of lists with train and bbox data. Bbox data are available only if
                  model_params['predict_on_test] is true. Otherwise return None
@@ -88,7 +88,7 @@ class CenterNetPipeline:
                             weights_path=weights_path,
                             logs=self.__logs)
 
-        return detector.detect(dataset_avg_size)
+        return detector.detect(preprocessed_dataset)
 
     def __run_classification(self,
                              model_params: Dict,
@@ -159,7 +159,7 @@ class CenterNetPipeline:
 
         # --- STEP 1: Pre-processing (Check Object Size) ---
         if 'preprocessing' in operations:
-            dataset_avg_size = self.__run_preprocessing(model_params=params.model_1,
+            preprocessed_dataset = self.__run_preprocessing(model_params=params.model_1,
                                                         weights_path=os.path.join(experiment_path + '_1', 'weights'))
 
         # --- STEP 2: Detection by CenterNet ---
@@ -170,7 +170,7 @@ class CenterNetPipeline:
                                 'Please specify "preprocessing" in the list of operations')
 
             train_list, bbox_predictions = self.__run_detection(model_params=params.model_2,
-                                                                dataset_avg_size=dataset_avg_size,
+                                                                preprocessed_dataset=preprocessed_dataset,
                                                                 weights_path=os.path.join(experiment_path + '_2',
                                                                                           'weights'))
 

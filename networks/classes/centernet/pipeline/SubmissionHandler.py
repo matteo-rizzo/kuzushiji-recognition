@@ -1,5 +1,6 @@
 import csv
 import os
+from itertools import islice
 from typing import Generator, List
 
 import numpy as np
@@ -69,7 +70,14 @@ class SubmissionHandler:
 
         # Delete the previous submission
         if os.path.isfile(path_to_submission):
-            os.remove(path_to_submission)
+            # Remove last row (because may be partial)
+            partial_submission = pd.read_csv(path_to_submission, usecols=['image_id', 'labels'])
+            partial_submission.drop(partial_submission.tail(1).index, inplace=True)
+            partial_submission.to_csv(path_to_submission)
+
+            images_data = [img_data for _, img_data in islice(partial_submission.iterrows(), len(partial_submission)-1, None)]
+        else:
+            images_data = [img_data for _, img_data in test_list.iterrows()]
 
         # Write the header
         pd.DataFrame(columns=['image_id', 'labels']).to_csv(path_to_submission)
@@ -77,7 +85,7 @@ class SubmissionHandler:
         self.__log.info('Writing images with characters...')
 
         # Iterate over all the predicted original images
-        for _, img_data in tqdm(test_list.iterrows(), total=len(test_list.index)):
+        for img_data in tqdm(images_data, total=len(test_list.index)):
 
             cropped_images = list(img_data['cropped_images'].split(' '))
             bboxes = list(img_data['bboxes'].split(' '))

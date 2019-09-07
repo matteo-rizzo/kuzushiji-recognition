@@ -23,10 +23,10 @@ class Preprocessor:
         self.__log.info('Preprocessing the data...')
 
         # Build dataset for the preprocessing model
-        dataset_avg_size = PreprocessingDataset(model_params)
-        dataset_avg_size.generate_dataset()
+        preprocessed_dataset = PreprocessingDataset(model_params)
+        preprocessed_dataset.generate_dataset()
 
         # Dictionary that map each char category into an integer value
-        dict_cat = dataset_avg_size.get_categories_dict()
+        dict_cat = preprocessed_dataset.get_categories_dict()
 
-        return dataset_avg_size, dict_cat
+        return preprocessed_dataset, dict_cat
