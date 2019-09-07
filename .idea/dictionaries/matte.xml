@@ -23,6 +23,7 @@
       <w>preinit</w>
       <w>preprocessing</w>
       <w>selu</w>
+      <w>softmax</w>
       <w>tensorboard</w>
       <w>tensorflow</w>
       <w>unicodes</w>
