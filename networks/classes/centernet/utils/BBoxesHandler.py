@@ -179,6 +179,12 @@ class BBoxesHandler:
                     all_tile_boxes = boxes if all_tile_boxes.size == 0 else \
                         np.concatenate((all_tile_boxes, boxes), axis=0)
 
+            if all_tile_boxes.size == 0:
+                continue
+
+            assert all_tile_boxes.ndim == 2, \
+                'Error: numpy dimension must be 2, not {}'.format(all_tile_boxes.ndim)
+
             box_and_score_all = self.__boxes_image_nms(all_tile_boxes[:, 0], all_tile_boxes[:, 1],
                                                        all_tile_boxes[:, 2], all_tile_boxes[:, 3],
                                                        all_tile_boxes[:, 4], iou_thresh=0.4,
