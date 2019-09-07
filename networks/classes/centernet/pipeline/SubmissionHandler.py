@@ -1,5 +1,6 @@
+import csv
 import os
-from typing import Generator
+from typing import Generator, List
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,34 @@ class SubmissionHandler:
         self.__log = log
         self.__dict_cat = dict_cat
 
+    def __get_class(self, prediction: List):
+        """
+        Gets the unicode class from the predictions
+        :param prediction: a list of class predictions
+        :return:
+        """
+
+        class_index = np.argmax(prediction)
+        return list(self.__dict_cat.keys())[list(self.__dict_cat.values()).index(class_index)]
+
+    @staticmethod
+    def __get_center_coords(bbox: str):
+        """
+        Gets the coordinates of the center of the bbox
+        :param bbox: a string representing the coordinates of the bbox
+        :return:
+        """
+
+        # Get the coordinates of the bbox
+        ymin, xmin, ymax, xmax = bbox.split(':')
+
+        ymin = round(float(ymin))
+        xmin = round(float(xmin))
+        ymax = round(float(ymax))
+        xmax = round(float(xmax))
+
+        return str(xmin + ((xmax - xmin) // 2)), str(ymin + ((ymax - ymin) // 2))
+
     def write(self, predictions_gen: Generator):
         """
         Writes a submission csv file in the format:
@@ -24,12 +53,6 @@ class SubmissionHandler:
         """
 
         self.__log.info('Writing submission data...')
-
-        # Initialize an empty dataset for submission
-        submission = pd.DataFrame(columns=['image_id', 'labels'])
-
-        # Initialize an empty dict with the data for the submission
-        submission_dict = {}
 
         # Read the test data from csv file
         path_to_test_list = os.path.join('datasets', 'test_list.csv')
@@ -41,11 +64,24 @@ class SubmissionHandler:
                             'Probably predict_on_test param was set to False, thus no prediction has been made on test'
                             .format(path_to_test_list))
 
+        # Set the path to the submission
+        path_to_submission = os.path.join('datasets', 'submission.csv')
+
+        # Delete the previous submission
+        if os.path.isfile(path_to_submission):
+            os.remove(path_to_submission)
+
+        # Write the header
+        pd.DataFrame(columns=['image_id', 'labels']).to_csv(path_to_submission)
+
+        self.__log.info('Writing images with characters...')
+
         # Iterate over all the predicted original images
         for _, img_data in tqdm(test_list.iterrows(), total=len(test_list.index)):
 
             cropped_images = list(img_data['cropped_images'].split(' '))
             bboxes = list(img_data['bboxes'].split(' '))
+            labels = []
 
             for cropped_image, bbox in zip(cropped_images, bboxes):
 
@@ -56,35 +92,41 @@ class SubmissionHandler:
                     break
 
                 # Get the unicode class from the predictions
-                class_index = np.argmax(prediction)
-                unicode = list(self.__dict_cat.keys())[list(self.__dict_cat.values()).index(class_index)]
+                unicode = self.__get_class(prediction)
 
-                # Get the coordinates of the bbox
-                ymin, xmin, ymax, xmax = bbox.split(':')
+                # Get the coordinates of the center of the bbox
+                x, y = self.__get_center_coords(bbox)
 
-                ymin = round(float(ymin))
-                xmin = round(float(xmin))
-                ymax = round(float(ymax))
-                xmax = round(float(xmax))
+                # Append the current label to the list of the labels of the current image
+                labels.append(' '.join([unicode, x, y]))
 
-                x = str(xmin + ((xmax - xmin) // 2))
-                y = str(ymin + ((ymax - ymin) // 2))
+            # Gather the data for the submission of the current image
+            img_submission = pd.DataFrame(data={'image_id': img_data['original_image'],
+                                                'labels': ' '.join(labels)},
+                                          columns=['image_id', 'labels'],
+                                          index=[0])
 
-                # Append the current label to the list of the labels of the current images
-                submission_dict.setdefault(img_data['original_image'], []).append(
-                    ' '.join([unicode, x, y]))
+            # Write the submission to csv
+            img_submission.to_csv(path_to_submission, mode='a', header=False)
 
-        # Convert the row in format: <image_id>, <label 1> <X_1> <Y_1> <label_2> <X_2> <Y_2> ...
-        for original_image, labels in submission_dict.items():
-            submission_dict[original_image] = ' '.join(labels)
+        self.__log.info('Writing images with no characters...')
 
-        # Fill the dataframe with the data from the dict
-        submission['image_id'] = submission_dict.keys()
-        submission['labels'] = submission_dict.values()
+        submission = pd.read_csv(path_to_submission)
+        submitted_images = submission['image_id'].tolist()
 
-        # Write the submission to csv
-        path_to_submission = os.path.join('datasets', 'submission.csv')
-        submission.to_csv(path_to_submission)
+        for img_path in tqdm(os.listdir(os.path.join('datasets', 'kaggle', 'testing', 'images'))):
+
+            img_id = img_path.split(os.sep)[-1].split('.')[0]
+
+            if img_id not in submitted_images:
+                # Gather the data for the submission of the empty image
+                img_submission = pd.DataFrame(data={'image_id': img_id,
+                                                    'labels': ''},
+                                              columns=['image_id', 'labels'],
+                                              index=[0])
+
+                # Write the submission to csv
+                img_submission.to_csv(path_to_submission, mode='a', header=False)
 
         self.__log.info('Written submission data at {}'.format(path_to_submission))
 

@@ -35,7 +35,7 @@ gcloud compute scp --recurse Folder/ tensorflow-gpu-p4-vm:~ # Copia la cartella 
 ## Connettersi in SSH
 
 ```bash
-gcloud compute ssh instance_name
+gcloud compute ssh tensorflow-gpu-p4-vm
 ```
 
 Nota: la prima volta chiede una passphrase. Se ti riconnetti ti chiede di reinserirla quindi ricordatela.
