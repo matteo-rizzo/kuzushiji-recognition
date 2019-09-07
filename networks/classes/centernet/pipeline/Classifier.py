@@ -59,7 +59,8 @@ class Classifier:
             original_img_path = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
 
             # Convert the coords of the bboxes from float to string
-            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][cropped_img_id][2:]]
+            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][
+                                                       cropped_img_id][1:]]
 
             # Join the coordinates in a single string, in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
@@ -182,7 +183,7 @@ class Classifier:
 
         :param train_list: a train data list predicted at the object detection step
         :param bbox_predictions: the bbox data predicted at the object detection step or None if
-                                predictions were not done.
+                                predictions were not done. dict as {path: score, xmin, ymin, xmax, ymax}
         :return: a couple of list with train and bbox data.
         """
 

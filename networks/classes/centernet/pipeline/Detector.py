@@ -30,7 +30,8 @@ class Detector:
 
         test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
         base_path = dataset_params['test_images_path']
-        self.__test_list = natsort.natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
+        self.__test_list = natsort.natsorted(
+            [str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
 
     @staticmethod
     def __resize_fn(path: str, input_h, input_w):
@@ -77,7 +78,8 @@ class Detector:
         return model
 
     def __train_model(self, dataset):
-        self.__logs['execution'].info('Starting the training procedure for the object detection model...')
+        self.__logs['execution'].info(
+            'Starting the training procedure for the object detection model...')
 
         # Set up the callbacks
         callbacks = self.__model_utils.setup_callbacks(weights_log_path=self.__weights_path,
@@ -119,34 +121,47 @@ class Detector:
             input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
             self.__logs['test'].info('Showing prediction examples...')
 
+            # OLD STANDARD MODE
             # Prepare a test dataset from the evaluation set taking its first 10 values
-            test_path_list = [ann[0] for ann in xy_eval[:10]]
-            mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
-                .map(lambda i: self.__resize_fn(i, input_h, input_w),
-                     num_parallel_calls=tf.data.experimental.AUTOTUNE) \
-                .batch(1) \
-                .prefetch(tf.data.experimental.AUTOTUNE)
+            # test_path_list = [ann[0] for ann in xy_eval[:10]]
+            # mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
+            #     .map(lambda i: self.__resize_fn(i, input_h, input_w),
+            #          num_parallel_calls=tf.data.experimental.AUTOTUNE) \
+            #     .batch(1) \
+            #     .prefetch(tf.data.experimental.AUTOTUNE)
+            #
+            # # Perform the prediction on the newly created dataset and show images
+            # detected_predictions = self.__model_utils.predict(self.__model, mini_test)
+            # self.__bb_handler.get_bboxes(detected_predictions,
+            #                              mode='train',
+            #                              annotation_list=xy_eval[:10],
+            #                              show=True)
+            #
+            # NEW TILE MODE
+            self.__bb_handler.get_tiled_bboxes(xy_eval[:10],
+                                               model=self.__model,
+                                               n_tiles=3,
+                                               mode='train',
+                                               show=True)
 
-            # Perform the prediction on the newly created dataset and show images
-            detected_predictions = self.__model_utils.predict(self.__model, mini_test)
-            self.__bb_handler.get_bboxes(detected_predictions,
-                                         mode='train',
-                                         annotation_list=xy_eval[:10],
-                                         show=True)
-
-    def __generate_test_predictions(self, dataset):
+    def __generate_test_predictions(self, dataset) -> Dict[str, np.array]:
 
         detection_ps, _ = dataset.get_test_set()
 
         self.__logs['execution'].info('Predicting test bounding boxes (takes time)...')
-        test_predictions = self.__model_utils.predict(model=self.__model, dataset=detection_ps)
-        self.__logs['execution'].info('Predictions completed.')
+        # test_predictions = self.__model_utils.predict(model=self.__model, dataset=detection_ps)
+        # self.__logs['execution'].info('Predictions completed.')
 
         self.__logs['execution'].info('Converting test predictions into bounding boxes...')
-        predicted_test_bboxes = self.__bb_handler.get_bboxes(test_predictions,
-                                                             mode='test',
-                                                             test_images_path=self.__test_list,
-                                                             show=False)
+        # predicted_test_bboxes = self.__bb_handler.get_bboxes(test_predictions,
+        #                                                      mode='test',
+        #                                                      test_images_path=self.__test_list,
+        #                                                      show=False)
+        predicted_test_bboxes = self.__bb_handler.get_tiled_bboxes(self.__test_list,
+                                                                   mode='test',
+                                                                   model=self.__model,
+                                                                   n_tiles=3,
+                                                                   show=False)
         self.__logs['execution'].info('Conversion completed.')
 
         return predicted_test_bboxes
@@ -170,10 +185,8 @@ class Detector:
             - ann[:, 3] = x width
             - ann[:, 4] = y height
 
-        The bbox data consists of a list with the following structure (note that all are non numeric types):
-         [<image_path>, <category>, <score>, <ymin>, <xmin>, <ymax>, <xmax>]
-
-        The <category> value is always 0, because it is not the character category but the category of the center.
+        The returned bbox data consists of a dict with the following structure:
+         {<image_path>: np.array[<score>, <ymin>, <xmin>, <ymax>, <xmax>]}
         """
 
         # Get labels from dataset and compute the recommended split,

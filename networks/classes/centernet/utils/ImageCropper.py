@@ -93,7 +93,7 @@ class ImageCropper:
         Utility to convert from prediction output to input array of get_crop_characters_train
 
         :param predictions: list of boxes as predicted by the detection model. So a dict
-                            {image: np.array[(category, score, xmin, ymin, xmax, ymax)]}
+                            {image: np.array[(score, xmin, ymin, xmax, ymax)]}
         :return: dict {image: np.array[xmin, ymin, xmax, ymax]}
         """
 
@@ -102,7 +102,7 @@ class ImageCropper:
 
         result = dict()
         for k, v in tqdm(predictions.items()):
-            result[k] = v[:, 2:]
+            result[k] = v[:, 1:]
 
         return result
 
@@ -222,7 +222,8 @@ class ImageCropper:
             return [tuple(c) for c in csv_df.values]
 
         if mode == 'test':
-            assert not os.path.isfile(csv_path), "Error: there is an unexpected csv file in save_dir at {}." \
+            assert not os.path.isfile(
+                csv_path), "Error: there is an unexpected csv file in save_dir at {}." \
                 .format(save_dir)
 
             # Sort the images
