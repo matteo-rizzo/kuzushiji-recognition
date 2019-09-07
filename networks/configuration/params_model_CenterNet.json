@@ -1,5 +1,5 @@
 {
-  "run_id": "test_centernet",
+  "run_id": "test_mio",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "train_images_path": "datasets/kaggle/training/images",
@@ -27,7 +27,7 @@
     "batch_size": 16,
     "batch_size_predict": 64,
     "restore_weights": true,
-    "initial_epoch": 138,
+    "initial_epoch": 130,
     "train": false,
     "epochs": 139,
     "learning_rate": 1e-4,
@@ -53,7 +53,7 @@
     "decay": "",
     "predict_on_test": true,
     "evaluate": false,
-    "regenerate_crops_test": false,
+    "regenerate_crops_test": true,
     "input_width": 32,
     "input_height": 32,
     "input_channels": 3,
