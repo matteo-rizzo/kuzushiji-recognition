@@ -32,6 +32,9 @@ class ClassificationDataset:
 
         self.__x_train: List[str]
         self.__y_train: List[int]
+        self.__x_val: List[str]
+        self.__y_val: List[int]
+
         self.__training_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__validation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
         self.__evaluation_set: Tuple[Union[tf.data.Dataset, None], int] = (None, 0)
@@ -128,6 +131,7 @@ class ClassificationDataset:
                                             shuffle=True)
 
         self.__x_train, self.__y_train = zip(*xy_train)
+        self.__x_val, self.__y_val = zip(*xy_val)
 
         self.__training_set = (
             tf.data.Dataset.from_generator(
@@ -180,3 +184,6 @@ class ClassificationDataset:
 
     def get_xy_training(self) -> Tuple[List[str], List[int]]:
         return self.__x_train, self.__y_train
+
+    def get_xy_validation(self) -> Tuple[List[str], List[int]]:
+        return self.__x_val, self.__y_val

@@ -87,7 +87,8 @@ class ModelGenerator:
 
         return x_1, x_2, x_3, x
 
-    def __generate_pretrained_encoder(self, input_layer: Model):
+    @staticmethod
+    def __generate_pretrained_encoder(input_layer: Model):
         resnet = ResNet50(include_top=False, weights='imagenet',
                           input_tensor=input_layer, input_shape=(512, 512, 3),
                           pooling=None)

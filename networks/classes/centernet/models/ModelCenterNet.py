@@ -135,16 +135,17 @@ class ModelCenterNet:
         validation_steps = validation_set_size // batch_size + 1
 
         if augmentation:
-            x, y = dataset.get_xy_training()
+            x_train, y_train = dataset.get_xy_training()
+            x_val, y_val = dataset.get_xy_validation()
 
-            image_data_generator = ImageDataGenerator(brightness_range=[0.2, 1.0],
+            image_data_generator = ImageDataGenerator(brightness_range=[0.5, 1.0],
                                                       rotation_range=10,
                                                       width_shift_range=0.1,
                                                       height_shift_range=0.1,
                                                       zoom_range=.1)
 
             generator = image_data_generator.flow_from_dataframe(
-                dataframe=pd.DataFrame({'image': x, 'class': y}),
+                dataframe=pd.DataFrame({'image': x_train, 'class': y_train}),
                 directory='',
                 x_col='image',
                 y_col='class',
@@ -155,7 +156,7 @@ class ModelCenterNet:
             model.fit_generator(generator,
                                 epochs=epochs,
                                 steps_per_epoch=training_steps,
-                                validation_data=validation_set,
+                                validation_data=(x_val, y_val),
                                 validation_steps=validation_steps,
                                 callbacks=callbacks,
                                 initial_epoch=init_epoch)
