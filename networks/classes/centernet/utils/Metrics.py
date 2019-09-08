@@ -1,7 +1,9 @@
+import numpy as np
+import tensorflow as tf
 import tensorflow.keras.backend as K
 
 
-class LossFunctionsGenerator:
+class Metrics:
 
     def __init__(self, category_n=1):
         self.__category_n = category_n
@@ -52,10 +54,13 @@ class LossFunctionsGenerator:
         # Column 0 (score of predicted centers)
         heatmap_pred = K.flatten(y_pred[..., :self.__category_n])
 
-        return -K.sum(
-            heatmap_true * ((1 - heatmap_pred) ** alpha) * K.log(heatmap_pred + 1e-6) +
-            (1 - heatmap_true) * ((1 - heatmap_true_rate) ** beta) * (heatmap_pred ** alpha) *
-            K.log(1 - heatmap_pred + 1e-6))
+        return -K.sum(heatmap_true *
+                      ((1 - heatmap_pred) ** alpha) *
+                      K.log(heatmap_pred + 1e-6) +
+                      (1 - heatmap_true) *
+                      ((1 - heatmap_true_rate) ** beta) *
+                      (heatmap_pred ** alpha) *
+                      K.log(1 - heatmap_pred + 1e-6))
 
     def heatmap_loss(self, y_true, y_pred):
         mask = K.sign(y_true[..., 2 * self.__category_n + 2])

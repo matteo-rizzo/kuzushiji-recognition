@@ -18,12 +18,12 @@ class BBoxesHandler:
         self.__pred_in_w = in_w
         self.__pred_in_h = in_h
 
-    def get_bboxes(self,
-                   predictions: np.ndarray,
-                   mode: str,
-                   annotation_list: np.array = None,
-                   test_images_path: List[str] = None,
-                   show: bool = False) -> Dict[str, np.ndarray]:
+    def get_standard_bboxes(self,
+                            predictions: np.ndarray,
+                            mode: str,
+                            annotation_list: np.array = None,
+                            test_images_path: List[str] = None,
+                            show: bool = False) -> Dict[str, np.ndarray]:
         """
         Computes the bounding boxes and perform non maximum suppression
 
@@ -111,8 +111,8 @@ class BBoxesHandler:
 
     def get_tiled_bboxes(self, dataset: np.array, model: Model, n_tiles: int, mode: str, show: bool):
         """
-        This functions behaves similarly to get_bboxes, but it compute bboxes direcly from each image
-        using tiling to improve accuracy.
+        This functions behaves similarly to get_standard_bboxes, but it compute bboxes directly
+         from each image using tiling to improve accuracy.
 
         :param dataset: the dataset in the format [[image path, annotations, height split, width split]]
         :param model: a trained keras model
@@ -156,19 +156,18 @@ class BBoxesHandler:
                     tile = np.array(tile, dtype=np.float32)
                     tile /= 255
 
-                    predictions = model.predict(
-                        tile.reshape((1, self.__pred_in_h, self.__pred_in_w, 3)),
-                        batch_size=1,
-                        steps=1)
                     # Output shape is (1, 128, 128, 5)
+                    predictions = model.predict(tile.reshape((1, self.__pred_in_h, self.__pred_in_w, 3)),
+                                                batch_size=1,
+                                                steps=1)
 
+                    # Boxes have format: <category> <score> <top> <left> <bot> <right>
                     boxes = self.__boxes_for_image(predictions, 1, 0.3, 0.4)
-                    # cat, score, top, left, bot, right
 
                     if len(boxes) == 0:
                         continue
 
-                    # reshape and add the offset
+                    # Reshape and add the offset
                     boxes = boxes * [1,
                                      k_h / self.__pred_out_h,
                                      k_w / self.__pred_out_w,
@@ -226,10 +225,8 @@ class BBoxesHandler:
                 plt.imshow(image_show)
                 plt.show()
 
-        # return the dict
+        # Return the dict
         return all_boxes
-
-    # -------------- PRIVATE MEMBERS --------------
 
     def __boxes_for_image(self, predicts, category_n, score_thresh, iou_thresh) -> np.ndarray:
         """

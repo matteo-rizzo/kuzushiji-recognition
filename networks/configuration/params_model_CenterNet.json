@@ -18,8 +18,8 @@
     "output_height": 128
   },
   "detector": {
-    "train": false,
-    "evaluate": false,
+    "train": true,
+    "evaluate": true,
     "predict_on_test": true,
     "show_prediction_examples": false,
     "restore_weights": true,

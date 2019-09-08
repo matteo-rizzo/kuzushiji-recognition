@@ -10,7 +10,7 @@ from tensorflow.python.keras.optimizers import Adam
 from networks.classes.centernet.datasets.DetectionDataset import DetectionDataset
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 from networks.classes.centernet.utils.BBoxesHandler import BBoxesHandler
-from networks.classes.centernet.utils.LossFunctionsGenerator import LossFunctionsGenerator
+from networks.classes.centernet.utils.Metrics import Metrics
 from networks.classes.centernet.models.ModelGeneratorStandard import ModelGeneratorStandard
 from networks.classes.centernet.models.ModelGeneratorTile import ModelGeneratorTile
 
@@ -24,7 +24,7 @@ class Detector:
         self.__model_params = model_params
         self.__model_params.update(dataset_params)
 
-        self.__loss = LossFunctionsGenerator()
+        self.__metrics = Metrics()
         self.__bb_handler = BBoxesHandler()
         self.__model_utils = ModelCenterNet(logs=self.__logs)
 
@@ -79,10 +79,10 @@ class Detector:
         # Compile the model
         model.compile(optimizer=Adam(lr=self.__model_params['learning_rate'],
                                      decay=decay if decay else 0.0),
-                      loss=self.__loss.all_loss,
-                      metrics=[self.__loss.size_loss,
-                               self.__loss.heatmap_loss,
-                               self.__loss.offset_loss])
+                      loss=self.__metrics.all_loss,
+                      metrics=[self.__metrics.size_loss,
+                               self.__metrics.heatmap_loss,
+                               self.__metrics.offset_loss])
 
         return model
 
@@ -125,22 +125,21 @@ class Detector:
             .prefetch(tf.data.experimental.AUTOTUNE)
 
         # Perform the prediction on the newly created dataset and show images
-        self.__bb_handler.get_bboxes(self.__model_utils.predict(self.__model, mini_test),
-                                     mode='train',
-                                     annotation_list=xy_eval[:10],
-                                     show=True)
+        self.__bb_handler.get_standard_bboxes(self.__model_utils.predict(self.__model, mini_test),
+                                              mode='train',
+                                              annotation_list=xy_eval[:10],
+                                              show=True)
 
     def __evaluate_model(self, dataset, xy_eval):
 
         self.__logs['test'].info('Evaluating the model...')
 
-        detection_es, detection_es_size = dataset.get_evaluation_set()
+        evaluation_set, evaluation_set_size = dataset.get_evaluation_set()
+        evaluation_steps = evaluation_set_size // self.__model_params['batch_size'] + 1
 
         metrics = self.__model_utils.evaluate(model=self.__model,
-                                              evaluation_set=detection_es,
-                                              evaluation_steps=int(
-                                                  detection_es_size // self.__model_params[
-                                                      'batch_size']) + 1)
+                                              evaluation_set=evaluation_set,
+                                              evaluation_steps=evaluation_steps)
 
         self.__logs['test'].info('Evaluation metrics:\n'
                                  'all_loss     : {}\n'
@@ -176,10 +175,10 @@ class Detector:
         self.__logs['execution'].info('Predictions completed.')
 
         self.__logs['execution'].info('Converting test predictions into bounding boxes...')
-        return self.__bb_handler.get_bboxes(test_predictions,
-                                            mode='test',
-                                            test_images_path=self.__test_list,
-                                            show=False)
+        return self.__bb_handler.get_standard_bboxes(test_predictions,
+                                                     mode='test',
+                                                     test_images_path=self.__test_list,
+                                                     show=False)
 
     def __generate_test_predictions(self, dataset) -> Dict[str, np.array]:
 
@@ -226,7 +225,7 @@ class Detector:
 
         # Generate the dataset for detection
         dataset = DetectionDataset(self.__model_params)
-        _, _, xy_eval = dataset.generate_dataset(train_list, self.__test_list[:10])
+        _, _, xy_eval = dataset.generate_dataset(train_list[:10], self.__test_list[:10])
 
         # Train the model
         if self.__model_params['train']:

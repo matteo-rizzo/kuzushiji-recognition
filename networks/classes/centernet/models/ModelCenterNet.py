@@ -60,18 +60,8 @@ class ModelCenterNet:
                                   batch_size=batch_size,
                                   update_freq=batch_size * 10)
 
-        # Setup early stopping to stop training if val_loss is not increasing after 3 epochs
-        # early_stopping = EarlyStopping(
-        #    monitor='val_loss',
-        #    patience=2,
-        #    mode='min',
-        # )
-
         def lrs(epoch):
-            lrate = lr
-            if epoch > 20:
-                lrate = lr / 10
-            return lrate
+            return lr / 10 if epoch > 20 else lr
 
         lr_schedule = LearningRateScheduler(lrs)
 
