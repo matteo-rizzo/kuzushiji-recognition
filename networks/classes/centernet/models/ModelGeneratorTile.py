@@ -1,7 +1,9 @@
 import tensorflow as tf
 from tensorflow.python.keras import Model
-from tensorflow.python.keras.layers import Conv2DTranspose, BatchNormalization, LeakyReLU, Concatenate, Conv2D, Add
-from tensorflow.python.keras.layers import Input, GlobalAveragePooling2D, Dense, Dropout, Activation, ZeroPadding2D, \
+from tensorflow.python.keras.layers import Conv2DTranspose, BatchNormalization, LeakyReLU, Concatenate, \
+    Conv2D, Add
+from tensorflow.python.keras.layers import Input, GlobalAveragePooling2D, Dense, Dropout, Activation, \
+    ZeroPadding2D, \
     MaxPooling2D
 
 from tensorflow.python.keras.applications.resnet50 import ResNet50
@@ -155,6 +157,7 @@ class ModelGeneratorTile:
         x = Concatenate()([x_3, x])
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
+        x = Dropout(0.2)(x)
 
         # Deconvolution block 2: (32, 32, 512) -> (64, 64, 256)
         x = Conv2D(filters=128, kernel_size=3, strides=1, padding='same')(x)
@@ -162,6 +165,7 @@ class ModelGeneratorTile:
         x = Concatenate()([x_2, x])
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
+        x = Dropout(0.2)(x)
 
         # Deconvolution block 3: (64, 64, 256) -> (128, 128, 128)
         x = Conv2D(filters=64, kernel_size=3, strides=1, padding='same')(x)
