@@ -107,7 +107,7 @@ class Detector:
         _, avg_iou = self.__bb_handler.get_train_tiled_bboxes(xy_eval[:10],
                                                               model=self.__model,
                                                               n_tiles=3,
-                                                              show=True)
+                                                              show=False)
         self.__logs['execution'].info('The average IoU score using standard model is: {}'.format(avg_iou))
 
     def __show_standard_predictions(self, xy_eval):
@@ -126,7 +126,7 @@ class Detector:
         # Perform the prediction on the newly created dataset and show images
         _, avg_iou = self.__bb_handler.get_train_standard_bboxes(self.__model_utils.predict(self.__model, mini_test),
                                                                  annotation_list=xy_eval[:10],
-                                                                 show=True)
+                                                                 show=False)
         self.__logs['execution'].info('The average IoU score using standard model is: {}'.format(avg_iou))
 
     def __evaluate_model(self, dataset, xy_eval):
@@ -175,7 +175,7 @@ class Detector:
         self.__logs['execution'].info('Converting test predictions into bounding boxes...')
         return self.__bb_handler.get_test_standard_bboxes(test_predictions,
                                                           test_images_path=self.__test_list,
-                                                          show=True)
+                                                          show=False)
 
     def __generate_test_predictions(self, dataset) -> Dict[str, np.array]:
 

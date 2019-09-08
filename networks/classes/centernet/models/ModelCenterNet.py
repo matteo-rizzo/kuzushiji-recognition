@@ -132,13 +132,14 @@ class ModelCenterNet:
             x_train, y_train = dataset.get_xy_training()
             x_val, y_val = dataset.get_xy_validation()
 
-            image_data_generator = ImageDataGenerator(brightness_range=[0.5, 1.0],
-                                                      rotation_range=10,
-                                                      width_shift_range=0.1,
-                                                      height_shift_range=0.1,
-                                                      zoom_range=.1)
+            train_image_data_generator = ImageDataGenerator(brightness_range=[0.5, 1.0],
+                                                            rotation_range=10,
+                                                            width_shift_range=0.1,
+                                                            height_shift_range=0.1,
+                                                            zoom_range=.1)
+            val_image_data_generator = ImageDataGenerator()
 
-            generator = image_data_generator.flow_from_dataframe(
+            train_generator = train_image_data_generator.flow_from_dataframe(
                 dataframe=pd.DataFrame({'image': x_train, 'class': y_train}),
                 directory='',
                 x_col='image',
@@ -147,10 +148,19 @@ class ModelCenterNet:
                 target_size=(32, 32),
                 batch_size=batch_size)
 
-            model.fit_generator(generator,
+            val_generator = val_image_data_generator.flow_from_dataframe(
+                dataframe=pd.DataFrame({'image': x_val, 'class': y_val}),
+                directory='',
+                x_col='image',
+                y_col='class',
+                class_mode="other",
+                target_size=(32, 32),
+                batch_size=batch_size)
+
+            model.fit_generator(train_generator,
                                 epochs=epochs,
                                 steps_per_epoch=training_steps,
-                                validation_data=(x_val, y_val),
+                                validation_data=val_generator,
                                 validation_steps=validation_steps,
                                 callbacks=callbacks,
                                 initial_epoch=init_epoch)
