@@ -11,11 +11,6 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 class ClassificationDataset:
     def __init__(self, params: Dict):
-        self.__train_csv_path = params['train_csv_path']
-        self.__train_images_path = params['train_images_path']
-        self.__test_images_path = params['test_images_path']
-        self.__sample_submission = params['sample_submission']
-
         self.__training_ratio = params['training_ratio']
         self.__validation_ratio = params['validation_ratio']
         self.__evaluation_ratio = params['evaluation_ratio']

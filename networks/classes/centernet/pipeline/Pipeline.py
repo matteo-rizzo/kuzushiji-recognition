@@ -46,19 +46,14 @@ class CenterNetPipeline:
                     self.__logs['execution'].info('Aborting after user command!')
                     sys.exit(0)
 
-    def __run_preprocessing(self, model_params: Dict, weights_path: str) -> PreprocessingDataset:
+    def __run_preprocessing(self, model_params: Dict) -> PreprocessingDataset:
         """
         Creates and runs a CNN which takes an image/page of manuscript as input and predicts the
         average dimensional ratio between the characters and the image itself
 
         :param model_params: the parameters related to the network
-        :param weights_path: the path to the saved weights (if present)
         :return: a ratio predictor
         """
-
-        # Check weights folder is not full of previous stuff
-        if model_params['train'] and not model_params['restore_weights']:
-            self.__check_no_weights_in_run_folder(weights_path)
 
         preprocessor = Preprocessor(dataset_params=self.__dataset_params, log=self.__logs['execution'])
         preprocessed_dataset, self.__dict_cat = preprocessor.preprocess_data(model_params)
@@ -159,8 +154,7 @@ class CenterNetPipeline:
 
         # --- STEP 1: Pre-processing (Check Object Size) ---
         if 'preprocessing' in operations:
-            preprocessed_dataset = self.__run_preprocessing(model_params=params.model_1,
-                                                        weights_path=os.path.join(experiment_path + '_1', 'weights'))
+            preprocessed_dataset = self.__run_preprocessing(model_params=params.preprocessor)
 
         # --- STEP 2: Detection by CenterNet ---
         if 'detection' in operations:
@@ -169,7 +163,7 @@ class CenterNetPipeline:
                 raise Exception('ERROR: Cannot perform detection without preprocessing!'
                                 'Please specify "preprocessing" in the list of operations')
 
-            train_list, bbox_predictions = self.__run_detection(model_params=params.model_2,
+            train_list, bbox_predictions = self.__run_detection(model_params=params.detector,
                                                                 preprocessed_dataset=preprocessed_dataset,
                                                                 weights_path=os.path.join(experiment_path + '_2',
                                                                                           'weights'))
@@ -181,7 +175,7 @@ class CenterNetPipeline:
                 raise Exception('ERROR: Cannot perform classification without detection!'
                                 'Please specify "detection" in the list of operations')
 
-            predictions = self.__run_classification(model_params=params.model_3,
+            predictions = self.__run_classification(model_params=params.classifier,
                                                     train_list=train_list,
                                                     bbox_predictions=bbox_predictions,
                                                     weights_path=os.path.join(experiment_path + '_3', 'weights'))

@@ -3,15 +3,11 @@ import os
 
 import pandas as pd
 from keras_preprocessing.image import ImageDataGenerator
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
-from networks.classes.centernet.models.ModelGenerator import ModelGenerator
-
-
-# from networks.classes.centernet.models.ModelGeneratorNew import ModelGenerator
 
 
 class ModelCenterNet:
@@ -19,10 +15,14 @@ class ModelCenterNet:
     def __init__(self, logs: Dict):
         self.__logs = logs
 
-    def build_model(self, input_shape, mode: str, n_category: int = 1) -> tf.keras.Model:
+    def build_model(self,
+                    model_generator,
+                    input_shape: Tuple[int, int, int], mode: str,
+                    n_category: int = 1) -> tf.keras.Model:
         """
         Builds the network.
 
+        :param model_generator: a generator for the network
         :param input_shape: the shape of the input images
         :param mode: the type of model that must be generated
         :param n_category: the number of categories (possible classes). Defaults to 1 in order to detect the
@@ -31,8 +31,7 @@ class ModelCenterNet:
         """
 
         self.__logs['execution'].info('Building {} model...'.format(mode))
-
-        return ModelGenerator().generate_model(input_shape, mode, n_category)
+        return model_generator.generate_model(input_shape, mode, n_category)
 
     @staticmethod
     def setup_callbacks(weights_log_path: str, batch_size: int, lr: float) -> List[tf.keras.callbacks.Callback]:

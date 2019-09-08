@@ -1,14 +1,13 @@
 import tensorflow as tf
 from tensorflow.python.keras import Model
-from tensorflow.python.keras.layers import Conv2DTranspose, BatchNormalization, \
-    LeakyReLU, Concatenate, Conv2D, Add
-from tensorflow.python.keras.layers import UpSampling2D, Input, AveragePooling2D, \
-    GlobalAveragePooling2D, Dense, Dropout, Activation, ZeroPadding2D, MaxPooling2D
+from tensorflow.python.keras.layers import Conv2DTranspose, BatchNormalization, LeakyReLU, Concatenate, Conv2D, Add
+from tensorflow.python.keras.layers import Input, GlobalAveragePooling2D, Dense, Dropout, Activation, ZeroPadding2D, \
+    MaxPooling2D
 
 from tensorflow.python.keras.applications.resnet50 import ResNet50
 
 
-class ModelGenerator:
+class ModelGeneratorTile:
 
     @staticmethod
     def __cbr(x, filter_n, kernel, strides):
@@ -179,16 +178,16 @@ class ModelGenerator:
 
     def __generate_classification_model(self, input_layer, n_category):
         x = self.__cbr(input_layer, 64, 3, 1)
-        x = self.__preactivated_res_block(x, 64)
+        x = self.__alt_res_block(x, 64)
         x = self.__alt_res_block(x, 64)
 
         x = self.__cbr(x, 128, 3, 2)  # 16
-        x = self.__preactivated_res_block(x, 128)
-        x = self.__preactivated_res_block(x, 128)
+        x = self.__alt_res_block(x, 128)
+        x = self.__alt_res_block(x, 128)
 
         x = self.__cbr(x, 256, 3, 2)  # 8
-        x = self.__preactivated_res_block(x, 256)
-        x = self.__preactivated_res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
+        x = self.__alt_res_block(x, 256)
 
         x = GlobalAveragePooling2D()(x)
         x = Dropout(0.2)(x)

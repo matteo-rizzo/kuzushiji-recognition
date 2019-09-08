@@ -6,7 +6,7 @@ from tensorflow.python.keras.layers import UpSampling2D, Input, AveragePooling2D
     GlobalAveragePooling2D, Dense, Dropout, Activation
 
 
-class ModelGenerator:
+class ModelGeneratorStandard:
 
     def __aggregation_block(self, x_shallow, x_deep, deep_ch, out_ch):
         x_deep = Conv2DTranspose(deep_ch,
@@ -86,18 +86,6 @@ class ModelGenerator:
 
         return x_1, x_2, x_3, x_4, x
 
-    def __generate_preprocessing_model(self, input_layer, n_category=None):
-        input_layer_1, input_layer_2 = self.__resize_input_layers(input_layer)
-
-        _, _, _, _, x = self.__generate_encoder(input_layer, input_layer_1, input_layer_2)
-
-        x = GlobalAveragePooling2D()(x)
-        x = Dropout(0.2)(x)
-
-        out = Dense(1, activation="linear")(x)
-
-        return Model(input_layer, out)
-
     def __generate_detection_model(self, input_layer, n_category=None):
         output_layer_n = n_category + 4
 
@@ -171,7 +159,6 @@ class ModelGenerator:
         """
 
         modes = {
-            'preprocessing': self.__generate_preprocessing_model,
             'detection': self.__generate_detection_model,
             'classification': self.__generate_classification_model
         }

@@ -9,6 +9,8 @@ from tensorflow.python.keras.optimizers import Adam
 from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 from networks.classes.centernet.utils.ImageCropper import ImageCropper
+from networks.classes.centernet.models.ModelGeneratorStandard import ModelGeneratorStandard
+from networks.classes.centernet.models.ModelGeneratorTile import ModelGeneratorTile
 
 
 class Classifier:
@@ -59,8 +61,7 @@ class Classifier:
             original_img_path = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
 
             # Convert the coords of the bboxes from float to string
-            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][
-                                                       cropped_img_id][1:]]
+            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][cropped_img_id][1:]]
 
             # Join the coordinates in a single string, in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
@@ -98,8 +99,15 @@ class Classifier:
         return image_resized / 255
 
     def __build_and_compile_model(self, num_categories):
+
+        model_generator = {
+            'tile': ModelGeneratorTile(),
+            'standard': ModelGeneratorStandard()
+        }
+
         # Generate a model
-        model = self.__model_utils.build_model(input_shape=(self.__model_params['input_width'],
+        model = self.__model_utils.build_model(model_generator=model_generator[self.__model_params['model']],
+                                               input_shape=(self.__model_params['input_width'],
                                                             self.__model_params['input_height'],
                                                             self.__model_params['input_channels']),
                                                mode='classification',
@@ -201,7 +209,7 @@ class Classifier:
                                                      regenerate=self.__model_params['regenerate_crops_test'],
                                                      mode='test')
 
-            self.__write_test_list_to_csv(test_list, bbox_predictions)
+            self.__write_test_list_to_csv(test_list[:10], bbox_predictions)
 
         dataset = ClassificationDataset(self.__model_params)
         _, _, xy_eval = dataset.generate_dataset(train_list)

@@ -11,6 +11,8 @@ from networks.classes.centernet.datasets.DetectionDataset import DetectionDatase
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 from networks.classes.centernet.utils.BBoxesHandler import BBoxesHandler
 from networks.classes.centernet.utils.LossFunctionsGenerator import LossFunctionsGenerator
+from networks.classes.centernet.models.ModelGeneratorStandard import ModelGeneratorStandard
+from networks.classes.centernet.models.ModelGeneratorTile import ModelGeneratorTile
 
 
 class Detector:
@@ -28,7 +30,7 @@ class Detector:
 
         self.__model = self.__build_and_compile_model()
 
-        test_list = pd.read_csv(dataset_params['sample_submission'])['image_id'].to_list()
+        test_list = pd.read_csv(dataset_params['test_csv_path'])['image_id'].to_list()
         base_path = dataset_params['test_images_path']
         self.__test_list = natsort.natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
 
@@ -48,7 +50,15 @@ class Detector:
         return image_resized / 255
 
     def __build_and_compile_model(self):
-        model = self.__model_utils.build_model(input_shape=(self.__model_params['input_width'],
+
+        model_generator = {
+            'tile': ModelGeneratorTile(),
+            'standard': ModelGeneratorStandard()
+        }
+
+        # Generate a model
+        model = self.__model_utils.build_model(model_generator=model_generator[self.__model_params['model']],
+                                               input_shape=(self.__model_params['input_width'],
                                                             self.__model_params['input_height'],
                                                             self.__model_params['input_channels']),
                                                mode='detection',
@@ -93,6 +103,33 @@ class Detector:
                                  batch_size=self.__model_params['batch_size'],
                                  callbacks=callbacks)
 
+    def __show_tile_predictions(self, xy_eval):
+        self.__logs['test'].info('Showing examples of tile predictions...')
+        self.__bb_handler.get_tiled_bboxes(xy_eval[:10],
+                                           model=self.__model,
+                                           n_tiles=3,
+                                           mode='train',
+                                           show=True)
+
+    def __show_standard_predictions(self, xy_eval):
+        self.__logs['test'].info('Showing examples of standard predictions...')
+
+        input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
+
+        # Prepare a test dataset from the evaluation set taking its first 10 values
+        test_path_list = [ann[0] for ann in xy_eval[:10]]
+        mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
+            .map(lambda i: self.__resize_fn(i, input_h, input_w),
+                 num_parallel_calls=tf.data.experimental.AUTOTUNE) \
+            .batch(1) \
+            .prefetch(tf.data.experimental.AUTOTUNE)
+
+        # Perform the prediction on the newly created dataset and show images
+        self.__bb_handler.get_bboxes(self.__model_utils.predict(self.__model, mini_test),
+                                     mode='train',
+                                     annotation_list=xy_eval[:10],
+                                     show=True)
+
     def __evaluate_model(self, dataset, xy_eval):
 
         self.__logs['test'].info('Evaluating the model...')
@@ -117,53 +154,46 @@ class Detector:
 
         # Show some examples of bounding boxes and heatmaps predictions
         if self.__model_params['show_prediction_examples']:
-            input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
-            self.__logs['test'].info('Showing prediction examples...')
+            show_predictions = {
+                'tile': self.__show_tile_predictions,
+                'standard': self.__show_standard_predictions
+            }
+            show_predictions[self.__model_params['model']](xy_eval)
 
-            # OLD STANDARD MODE
-            # Prepare a test dataset from the evaluation set taking its first 10 values
-            # test_path_list = [ann[0] for ann in xy_eval[:10]]
-            # mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
-            #     .map(lambda i: self.__resize_fn(i, input_h, input_w),
-            #          num_parallel_calls=tf.data.experimental.AUTOTUNE) \
-            #     .batch(1) \
-            #     .prefetch(tf.data.experimental.AUTOTUNE)
-            #
-            # # Perform the prediction on the newly created dataset and show images
-            # detected_predictions = self.__model_utils.predict(self.__model, mini_test)
-            # self.__bb_handler.get_bboxes(detected_predictions,
-            #                              mode='train',
-            #                              annotation_list=xy_eval[:10],
-            #                              show=True)
-            #
-            # NEW TILE MODE
-            self.__bb_handler.get_tiled_bboxes(xy_eval[:10],
-                                               model=self.__model,
-                                               n_tiles=3,
-                                               mode='train',
-                                               show=True)
+    def __generate_tile_predictions(self, test_set=None) -> Dict[str, np.array]:
+
+        self.__logs['execution'].info('Converting test predictions into bounding boxes...')
+        return self.__bb_handler.get_tiled_bboxes(self.__test_list,
+                                                  mode='test',
+                                                  model=self.__model,
+                                                  n_tiles=3,
+                                                  show=False)
+
+    def __generate_standard_predictions(self, test_set) -> Dict[str, np.array]:
+
+        self.__logs['execution'].info('Predicting test bounding boxes (takes time)...')
+        test_predictions = self.__model_utils.predict(model=self.__model, dataset=test_set)
+        self.__logs['execution'].info('Predictions completed.')
+
+        self.__logs['execution'].info('Converting test predictions into bounding boxes...')
+        return self.__bb_handler.get_bboxes(test_predictions,
+                                            mode='test',
+                                            test_images_path=self.__test_list,
+                                            show=False)
 
     def __generate_test_predictions(self, dataset) -> Dict[str, np.array]:
 
-        detection_ps, _ = dataset.get_test_set()
+        test_set, _ = dataset.get_test_set()
 
-        self.__logs['execution'].info('Predicting test bounding boxes (takes time)...')
-        # test_predictions = self.__model_utils.predict(model=self.__model, dataset=detection_ps)
-        # self.__logs['execution'].info('Predictions completed.')
+        generate_predictions = {
+            'tile': self.__generate_tile_predictions,
+            'standard': self.__generate_standard_predictions
+        }
 
-        self.__logs['execution'].info('Converting test predictions into bounding boxes...')
-        # predicted_test_bboxes = self.__bb_handler.get_bboxes(test_predictions,
-        #                                                      mode='test',
-        #                                                      test_images_path=self.__test_list,
-        #                                                      show=False)
-        predicted_test_bboxes = self.__bb_handler.get_tiled_bboxes(self.__test_list,
-                                                                   mode='test',
-                                                                   model=self.__model,
-                                                                   n_tiles=3,
-                                                                   show=False)
+        predictions = generate_predictions[self.__model_params['model']](test_set)
         self.__logs['execution'].info('Conversion completed.')
 
-        return predicted_test_bboxes
+        return predictions
 
     def detect(self, preprocessed_dataset) -> (List[List], Union[Dict[str, np.ndarray], None]):
         """
@@ -196,7 +226,7 @@ class Detector:
 
         # Generate the dataset for detection
         dataset = DetectionDataset(self.__model_params)
-        _, _, xy_eval = dataset.generate_dataset(train_list, self.__test_list)
+        _, _, xy_eval = dataset.generate_dataset(train_list, self.__test_list[:10])
 
         # Train the model
         if self.__model_params['train']:

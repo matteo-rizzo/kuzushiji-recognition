@@ -77,7 +77,9 @@ def main():
 
     common_operations = {
         'test_bboxes': ['visualization'],
-        'prep_det_class': ['preprocessing', 'detection', 'classification'],
+        'preprocess': ['preprocessing'],
+        'detect': ['preprocessing', 'detection'],
+        'classify': ['preprocessing', 'detection', 'classification'],
         'write_submission': ['preprocessing', 'detection', 'classification', 'submission'],
         'all': ['preprocessing', 'detection', 'classification', 'submission', 'visualization']
     }

@@ -14,18 +14,17 @@ class PreprocessingDataset:
     def __init__(self, params: Dict):
         self.__train_csv_path = params['train_csv_path']
         self.__train_images_path = params['train_images_path']
-        self.__test_images_path = params['test_images_path']
-        self.__sample_submission = params['sample_submission']
-
-        self.__parsed_train_list: List[Tuple[str, np.array]]
-        self.__aspect_ratios: List[float]
-        self.__dataset: Tuple[tf.data.Dataset, int]
-        self.__dict_cat: Dict[str, int]
 
         self.__input_height = params['input_height']
         self.__input_width = params['input_width']
         self.__training_ratio = params['training_ratio']
         self.__batch_size = params['batch_size']
+
+        self.__train_list: List[Tuple[str, np.array]] = []
+        self.__w_and_h: List[float] = []
+        self.__dict_cat: Dict[str, int] = {}
+
+        self.__dataset: Tuple[tf.data.Dataset, int]
 
     def get_categories_dict(self) -> Dict[str, int]:
         return self.__dict_cat
@@ -42,7 +41,7 @@ class PreprocessingDataset:
         self.__compose_dataset_object()
 
     def __get_dataset_labels(self) -> List[float]:
-        return [el[1] for el in self.__train_image_avg_char_area_ratios]
+        return [img_data[1] for img_data in self.__train_image_avg_char_area_ratios]
 
     def __parse_train_csv(self):
         """
@@ -68,7 +67,6 @@ class PreprocessingDataset:
 
         # Make a dict assigning an integer to each category
         self.__dict_cat: Dict[str, int] = {list(category_names)[j]: j for j in range(len(category_names))}
-        self.__parsed_train_list: List[Tuple[str, np.array]] = []
 
         for i in range(len(df_train)):
             # Get one row for each label character for image i, as: <category> <x> <y> <width> <height>
@@ -102,8 +100,8 @@ class PreprocessingDataset:
             #    ann[:, 3] = x width
             #    ann[:, 4] = y height
 
-            self.__parsed_train_list.append(("{}/{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]),
-                                             ann))
+            self.__train_list.append(("{}/{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]),
+                                      ann))
 
     def __annotate_char_area_ratio(self, show_plot: bool = False):
         """
@@ -113,18 +111,18 @@ class PreprocessingDataset:
         :param show_plot: whether to show histogram with average character size or not.
         """
 
-        self.__aspect_ratios: List[float] = []
+        self.__w_and_h: List[(float, float)] = []
         self.__train_image_avg_char_area_ratios: List[Tuple[str, np.array]] = []
         all_avg_char_area_ratio: List[np.array] = []
 
-        for img_path, ann in self.__parsed_train_list:
+        for img_path, ann in self.__train_list:
             with Image.open(img_path) as img:
                 # Image dimensions
                 width, height = img.size
 
                 # Image img_area
                 img_area = width * height
-                aspect_ratio = height / width
+                # aspect_ratio = height / width
 
                 # Bbox img_area for each character in image (width * height)
                 char_area = ann[:, 3] * ann[:, 4]
@@ -140,7 +138,7 @@ class PreprocessingDataset:
                 self.__train_image_avg_char_area_ratios.append((img_path, np.log(avg_char_area_ratio)))
 
                 # Add aspect ratio
-                self.__aspect_ratios.append(aspect_ratio)
+                self.__w_and_h.append((width, height))
 
         if show_plot:
             plt.hist(np.log(all_avg_char_area_ratio), bins=100)
@@ -159,19 +157,22 @@ class PreprocessingDataset:
         # Initialize a list of bbox areas for all characters (prediction or from train data)
         avg_log_char_area_ratios: List[float] = self.__get_dataset_labels()
 
+        # Set a base stretch factor
         base_stretch_factor_h, base_stretch_factor_w = 25, 25
 
+        # Initialize an empty list of annotations
         annotation_list_train_w_split = []
 
         # For each predicted bbox size calculate recommended height and width
-        for img_ann, area_ratio, aspect_ratio in zip(self.__parsed_train_list,
-                                                     avg_log_char_area_ratios,
-                                                     self.__aspect_ratios):
-            # stretch_factor_h = (h / w) * sqrt(h*w / char_h*char_w)
-            stretch_factor_h = aspect_ratio * exp(-area_ratio / 2)
+        for img_ann, avg_char_area_ratio, img_wh in zip(self.__train_list, avg_log_char_area_ratios, self.__w_and_h):
+            # Get width and height of the image
+            w, h = img_wh
 
-            # stretch_factor_w = sqrt(h*w / char_h*char_w)
-            stretch_factor_w = exp(-area_ratio / 2)
+            # stretch_factor_h = (h / w) * sqrt(h*w / mean_char_h*mean_char_w)
+            stretch_factor_h = (h / w) * np.sqrt(h * w / avg_char_area_ratio)
+
+            # stretch_factor_w = sqrt(h*w / mean_char_h*mean_char_w)
+            stretch_factor_w = np.sqrt(h * w / avg_char_area_ratio)
 
             # If image is too big w.r.t. mean char size then stretch it with factor > 1
             h_split_recommend = max([1, stretch_factor_h / base_stretch_factor_h])
