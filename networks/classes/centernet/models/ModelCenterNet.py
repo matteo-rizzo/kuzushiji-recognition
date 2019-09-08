@@ -8,6 +8,7 @@ from typing import Dict, List, Union, Tuple
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
+from sklearn.utils import class_weight
 
 
 class ModelCenterNet:
@@ -62,9 +63,9 @@ class ModelCenterNet:
 
         def lrs(epoch):
             if epoch > 70:
-                return lr / 16
-            elif epoch > 10:
                 return lr / 10
+            elif epoch > 10:
+                return lr / 5
             else:
                 return lr
 
@@ -131,6 +132,11 @@ class ModelCenterNet:
         if augmentation:
             x_train, y_train = dataset.get_xy_training()
             x_val, y_val = dataset.get_xy_validation()
+
+            # we = list(y_train)
+            # we.extend(y_val)
+            # class_weights = class_weight.compute_class_weight('balanced', np.unique(we), we)
+            # class_weights = dict(enumerate(class_weights))
 
             train_image_data_generator = ImageDataGenerator(brightness_range=[0.5, 1.0],
                                                             rotation_range=10,
