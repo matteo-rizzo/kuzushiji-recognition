@@ -61,9 +61,14 @@ class ModelCenterNet:
                                   update_freq=batch_size * 10)
 
         def lrs(epoch):
-            return lr / 10 if epoch > 20 else lr
+            if epoch > 70:
+                return lr / 16
+            elif epoch > 10:
+                return lr / 10
+            else:
+                return lr
 
-        lr_schedule = LearningRateScheduler(lrs)
+        lr_schedule = LearningRateScheduler(lrs, verbose=1)
 
         return [tensorboard, checkpointer, lr_schedule]
 
