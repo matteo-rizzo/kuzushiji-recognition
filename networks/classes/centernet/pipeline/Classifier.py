@@ -209,7 +209,7 @@ class Classifier:
                                                      regenerate=self.__model_params['regenerate_crops_test'],
                                                      mode='test')
 
-            self.__write_test_list_to_csv(test_list[:10], bbox_predictions)
+            self.__write_test_list_to_csv(test_list, bbox_predictions)
 
         dataset = ClassificationDataset(self.__model_params)
         _, _, xy_eval = dataset.generate_dataset(train_list)

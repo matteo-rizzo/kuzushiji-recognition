@@ -87,8 +87,7 @@ class Detector:
         return model
 
     def __train_model(self, dataset):
-        self.__logs['execution'].info(
-            'Starting the training procedure for the object detection model...')
+        self.__logs['execution'].info('Starting the training procedure for the object detection model...')
 
         # Set up the callbacks
         callbacks = self.__model_utils.setup_callbacks(weights_log_path=self.__weights_path,
@@ -104,15 +103,15 @@ class Detector:
                                  callbacks=callbacks)
 
     def __show_tile_predictions(self, xy_eval):
-        self.__logs['test'].info('Showing examples of tile predictions...')
-        self.__bb_handler.get_tiled_bboxes(xy_eval[:10],
-                                           model=self.__model,
-                                           n_tiles=3,
-                                           mode='train',
-                                           show=True)
+        self.__logs['execution'].info('Showing examples of tile predictions...')
+        _, avg_iou = self.__bb_handler.get_train_tiled_bboxes(xy_eval[:10],
+                                                              model=self.__model,
+                                                              n_tiles=3,
+                                                              show=True)
+        self.__logs['execution'].info('The average IoU score using standard model is: {}'.format(avg_iou))
 
     def __show_standard_predictions(self, xy_eval):
-        self.__logs['test'].info('Showing examples of standard predictions...')
+        self.__logs['execution'].info('Showing examples of standard predictions...')
 
         input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
 
@@ -125,14 +124,14 @@ class Detector:
             .prefetch(tf.data.experimental.AUTOTUNE)
 
         # Perform the prediction on the newly created dataset and show images
-        self.__bb_handler.get_standard_bboxes(self.__model_utils.predict(self.__model, mini_test),
-                                              mode='train',
-                                              annotation_list=xy_eval[:10],
-                                              show=True)
+        _, avg_iou = self.__bb_handler.get_train_standard_bboxes(self.__model_utils.predict(self.__model, mini_test),
+                                                                 annotation_list=xy_eval[:10],
+                                                                 show=True)
+        self.__logs['execution'].info('The average IoU score using standard model is: {}'.format(avg_iou))
 
     def __evaluate_model(self, dataset, xy_eval):
 
-        self.__logs['test'].info('Evaluating the model...')
+        self.__logs['execution'].info('Evaluating the model...')
 
         evaluation_set, evaluation_set_size = dataset.get_evaluation_set()
         evaluation_steps = evaluation_set_size // self.__model_params['batch_size'] + 1
@@ -162,11 +161,10 @@ class Detector:
     def __generate_tile_predictions(self, test_set=None) -> Dict[str, np.array]:
 
         self.__logs['execution'].info('Converting test predictions into bounding boxes...')
-        return self.__bb_handler.get_tiled_bboxes(self.__test_list,
-                                                  mode='test',
-                                                  model=self.__model,
-                                                  n_tiles=3,
-                                                  show=False)
+        return self.__bb_handler.get_test_tiled_bboxes(self.__test_list,
+                                                       model=self.__model,
+                                                       n_tiles=3,
+                                                       show=False)
 
     def __generate_standard_predictions(self, test_set) -> Dict[str, np.array]:
 
@@ -175,10 +173,9 @@ class Detector:
         self.__logs['execution'].info('Predictions completed.')
 
         self.__logs['execution'].info('Converting test predictions into bounding boxes...')
-        return self.__bb_handler.get_standard_bboxes(test_predictions,
-                                                     mode='test',
-                                                     test_images_path=self.__test_list,
-                                                     show=False)
+        return self.__bb_handler.get_test_standard_bboxes(test_predictions,
+                                                          test_images_path=self.__test_list,
+                                                          show=True)
 
     def __generate_test_predictions(self, dataset) -> Dict[str, np.array]:
 
@@ -225,7 +222,7 @@ class Detector:
 
         # Generate the dataset for detection
         dataset = DetectionDataset(self.__model_params)
-        _, _, xy_eval = dataset.generate_dataset(train_list[:10], self.__test_list[:10])
+        _, _, xy_eval = dataset.generate_dataset(train_list[:10], self.__test_list)
 
         # Train the model
         if self.__model_params['train']:
