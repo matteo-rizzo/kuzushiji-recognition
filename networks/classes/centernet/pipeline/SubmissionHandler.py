@@ -1,4 +1,5 @@
 import os
+import gc
 from itertools import islice
 from typing import Generator, List
 
@@ -79,10 +80,10 @@ class SubmissionHandler:
 
         return str(xmin + ((xmax - xmin) // 2)), str(ymin + ((ymax - ymin) // 2))
 
-    def __write_img_with_chars(self, images_data, predictions_gen, num_iterations, path_to_submission):
+    def __write_img_with_chars(self, images_data, predictions_gen, path_to_submission):
 
         # Iterate over all the predicted original images
-        for img_data in tqdm(images_data, total=num_iterations):
+        for img_data in tqdm(images_data, total=len(images_data)):
 
             cropped_images = list(img_data['cropped_images'].split(' '))
             bboxes = list(img_data['bboxes'].split(' '))
@@ -105,6 +106,9 @@ class SubmissionHandler:
                 # Append the current label to the list of the labels of the current image
                 labels.append(' '.join([unicode, x, y]))
 
+                del prediction
+                gc.collect()
+
             # Gather the data for the submission of the current image
             img_submission = pd.DataFrame(data={'image_id': img_data['original_image'],
                                                 'labels': ' '.join(labels)},
@@ -116,6 +120,7 @@ class SubmissionHandler:
 
             del img_submission
             del labels
+            gc.collect()
 
     @staticmethod
     def __write_img_with_no_chars(path_to_submission):
@@ -188,7 +193,6 @@ class SubmissionHandler:
         self.__log.info('Writing images with characters...')
         self.__write_img_with_chars(images_data=images_data,
                                     predictions_gen=predictions_gen,
-                                    num_iterations=len(test_list.index),
                                     path_to_submission=path_to_submission)
 
         self.__log.info('Writing images with no characters...')

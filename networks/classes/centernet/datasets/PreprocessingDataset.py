@@ -147,8 +147,7 @@ class PreprocessingDataset:
 
     def get_recommended_splits(self) -> List[Tuple[str, np.array, float, float]]:
         """
-        Given a list of sizes of bboxes for each train image,
-        computes the best size according to the image must be split
+        Given a list of sizes of bboxes for each train image, computes the best size the image must be split to
 
         :return: extended annotation list with recommended splits in format:
             [image path, annotations, height split, width split]

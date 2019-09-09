@@ -17,7 +17,7 @@ gcloud config set project cognitive-services-248116		# seleziona un progetto
 ## Trasferire file a VM con SCP
 
 ```bash
-gcloud compute scp file.txt instance_name:path_for_file
+gcloud compute scp file.txt tensorflow-gpu-p4-vm:path_for_file
 ```
 
 La nostra istanza si chiama: `tensorflow-gpu-p4-vm`.
