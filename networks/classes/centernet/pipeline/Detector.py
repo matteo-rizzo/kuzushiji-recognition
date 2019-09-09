@@ -214,7 +214,7 @@ class Detector:
          {<image_path>: np.array[<score>, <ymin>, <xmin>, <ymax>, <xmax>]}
         """
 
-        train_list: List[List] = preprocessed_dataset.get_recommended_splits()
+        train_list: List[List] = preprocessed_dataset.get_crop_values()
 
         # Pass the list of test images if we are in test mode,
         # otherwise pass None, so that the test set will not be generated

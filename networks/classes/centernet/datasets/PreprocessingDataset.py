@@ -145,7 +145,7 @@ class PreprocessingDataset:
             plt.title('log(ratio of char_area / picture_size)', loc='center', fontsize=12)
             plt.show()
 
-    def get_recommended_splits(self) -> List[Tuple[str, np.array, float, float]]:
+    def get_crop_values(self) -> List[Tuple[str, np.array, float, float]]:
         """
         Given a list of sizes of bboxes for each train image,
         computes the best size according to the image must be split
@@ -161,7 +161,7 @@ class PreprocessingDataset:
         base_stretch_factor_h, base_stretch_factor_w = 25, 25
 
         # Initialize an empty list of annotations
-        annotation_list_train_w_split = []
+        annotation_list_train_w_crops = []
 
         # For each predicted bbox size calculate recommended height and width
         for img_ann, avg_char_area_ratio, img_wh in zip(self.__train_list, avg_log_char_area_ratios, self.__w_and_h):
@@ -179,12 +179,12 @@ class PreprocessingDataset:
             w_split_recommend = max([1, stretch_factor_w / base_stretch_factor_w])
 
             # Format: <image path> <annotations> <height split> <width split>
-            annotation_list_train_w_split.append((img_ann[0],
+            annotation_list_train_w_crops.append((img_ann[0],
                                                   img_ann[1],
                                                   h_split_recommend,
                                                   w_split_recommend))
 
-        return annotation_list_train_w_split
+        return annotation_list_train_w_crops
 
     def __preprocess_image(self, image, label, is_train=True, random_crop=True):
         """

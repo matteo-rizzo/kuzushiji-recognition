@@ -15,6 +15,8 @@ class ModelCenterNet:
 
     def __init__(self, logs: Dict):
         self.__logs = logs
+        self.__input_width: int = None
+        self.__input_height: int = None
 
     def build_model(self,
                     model_generator,
@@ -30,12 +32,14 @@ class ModelCenterNet:
         presence or absence of an object only (and not its label).
         :return: a Keras model
         """
-
+        self.__input_width = input_shape[0]
+        self.__input_height = input_shape[1]
         self.__logs['execution'].info('Building {} model...'.format(mode))
         return model_generator.generate_model(input_shape, mode, n_category)
 
     @staticmethod
-    def setup_callbacks(weights_log_path: str, batch_size: int, lr: float) -> List[tf.keras.callbacks.Callback]:
+    def setup_callbacks(weights_log_path: str, batch_size: int, lr: float) -> List[
+        tf.keras.callbacks.Callback]:
         """
         Sets up the callbacks for the training of the model.
         """
@@ -62,7 +66,7 @@ class ModelCenterNet:
                                   update_freq=batch_size * 10)
 
         def lrs(epoch):
-            if epoch > 70:
+            if epoch > 30:
                 return lr / 10
             elif epoch > 10:
                 return lr / 5
@@ -138,7 +142,7 @@ class ModelCenterNet:
             # class_weights = class_weight.compute_class_weight('balanced', np.unique(we), we)
             # class_weights = dict(enumerate(class_weights))
 
-            train_image_data_generator = ImageDataGenerator(brightness_range=[0.5, 1.0],
+            train_image_data_generator = ImageDataGenerator(brightness_range=[0.7, 1.0],
                                                             rotation_range=10,
                                                             width_shift_range=0.1,
                                                             height_shift_range=0.1,
@@ -150,8 +154,8 @@ class ModelCenterNet:
                 directory='',
                 x_col='image',
                 y_col='class',
-                class_mode="other",
-                target_size=(32, 32),
+                class_mode='other',
+                target_size=(self.__input_width, self.__input_height),
                 batch_size=batch_size)
 
             val_generator = val_image_data_generator.flow_from_dataframe(
@@ -159,8 +163,8 @@ class ModelCenterNet:
                 directory='',
                 x_col='image',
                 y_col='class',
-                class_mode="other",
-                target_size=(32, 32),
+                class_mode='other',
+                target_size=(self.__input_width, self.__input_height),
                 batch_size=batch_size)
 
             model.fit_generator(train_generator,
