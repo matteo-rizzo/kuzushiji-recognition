@@ -127,6 +127,7 @@ class ClassificationDataset:
 
         self.__x_train, self.__y_train = zip(*xy_train)
         self.__x_val, self.__y_val = zip(*xy_val)
+        self.__x_eval, self.__y_eval = zip(*xy_eval)
 
         self.__training_set = (
             tf.data.Dataset.from_generator(
@@ -161,7 +162,7 @@ class ClassificationDataset:
                                   np.float32))
                     .repeat()
                     .prefetch(AUTOTUNE),
-                len(xy_val))
+                len(xy_eval))
 
         return xy_train, xy_val, xy_eval
 
@@ -182,3 +183,6 @@ class ClassificationDataset:
 
     def get_xy_validation(self) -> Tuple[List[str], List[int]]:
         return self.__x_val, self.__y_val
+
+    def get_xy_evaluation(self) -> Tuple[List[str], List[int]]:
+        return self.__x_eval, self.__y_eval

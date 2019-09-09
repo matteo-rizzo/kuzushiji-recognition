@@ -70,7 +70,8 @@ class Classifier:
             for cropped_img_name in cropped_img_names:
                 original_img_to_bbox[original_img_name].append(cropped_img_to_bbox[cropped_img_name])
 
-        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in original_img_to_bbox.items()}
+        original_img_to_bbox = {img_name: ' '.join(coords) for img_name, coords in
+                                original_img_to_bbox.items()}
 
         test_list_df = pd.DataFrame({
             'original_image': [original_img_name for original_img_name in original_img_to_cropped.keys()],
@@ -106,12 +107,13 @@ class Classifier:
         }
 
         # Generate a model
-        model = self.__model_utils.build_model(model_generator=model_generator[self.__model_params['model']],
-                                               input_shape=(self.__model_params['input_width'],
-                                                            self.__model_params['input_height'],
-                                                            self.__model_params['input_channels']),
-                                               mode='classification',
-                                               n_category=num_categories)
+        model = self.__model_utils.build_model(
+            model_generator=model_generator[self.__model_params['model']],
+            input_shape=(self.__model_params['input_width'],
+                         self.__model_params['input_height'],
+                         self.__model_params['input_channels']),
+            mode='classification',
+            n_category=num_categories)
 
         # Restore the weights, if required
         if self.__model_params['restore_weights']:
@@ -153,12 +155,10 @@ class Classifier:
 
         self.__logs['execution'].info('Evaluating the classification model...')
 
-        evaluation_set, evaluation_set_size = dataset.get_evaluation_set()
-
         metrics = self.__model_utils.evaluate(model=self.__model,
-                                              evaluation_set=evaluation_set,
-                                              evaluation_steps=evaluation_set_size // self.__model_params[
-                                                  'batch_size'] + 1)
+                                              evaluation_set=dataset,
+                                              batch_size=self.__model_params['batch_size'],
+                                              keras_mode=True)
 
         self.__logs['test'].info('Evaluation metrics:\n'
                                  'sparse_categorical_crossentropy : {}\n'

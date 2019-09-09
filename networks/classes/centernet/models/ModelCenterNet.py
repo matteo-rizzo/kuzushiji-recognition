@@ -10,6 +10,8 @@ import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
 from sklearn.utils import class_weight
 
+from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
+
 
 class ModelCenterNet:
 
@@ -187,8 +189,10 @@ class ModelCenterNet:
 
     def evaluate(self,
                  model: tf.keras.Model,
-                 evaluation_set: tf.data.Dataset,
-                 evaluation_steps: Union[int, None] = None) -> Union[float, List[float], None]:
+                 evaluation_set: Union[tf.data.Dataset, ClassificationDataset],
+                 evaluation_steps: Union[int, None] = None,
+                 batch_size: Union[int, None] = None,
+                 keras_mode: bool = False) -> Union[float, List[float], None]:
         """
         Evaluate the model on provided set.
         :return: the loss value if model has no other metrics, otw returns array with loss and metrics
@@ -197,9 +201,24 @@ class ModelCenterNet:
 
         self.__logs['training'].info('Evaluating the model...')
 
-        if evaluation_steps is not None and evaluation_steps == 0:
-            self.__logs['training'].warn('Skipping evaluation since provided set is empty')
-            return None
+        if keras_mode:
+            x_eval, y_eval = evaluation_set.get_xy_evaluation()
+
+            data_generator = ImageDataGenerator()
+
+            evaluation_set = data_generator.flow_from_dataframe(
+                dataframe=pd.DataFrame({'image': x_eval, 'class': y_eval}),
+                directory='',
+                x_col='image',
+                y_col='class',
+                class_mode='other',
+                target_size=(self.__input_width, self.__input_height),
+                batch_size=batch_size)
+
+        else:
+            if evaluation_steps is not None and evaluation_steps == 0:
+                self.__logs['training'].warn('Skipping evaluation since provided set is empty')
+                return None
 
         return model.evaluate(evaluation_set, verbose=1, steps=evaluation_steps)
 

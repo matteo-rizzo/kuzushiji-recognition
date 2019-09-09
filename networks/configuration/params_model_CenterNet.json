@@ -1,5 +1,5 @@
 {
-  "run_id": "test_classifier_new",
+  "run_id": "test_mio",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "test_csv_path": "datasets/kaggle/sample_submission.csv",
@@ -37,23 +37,23 @@
     "output_height": 128
   },
   "classifier": {
-    "train": true,
+    "train": false,
     "evaluate": true,
     "predict_on_test": false,
-    "restore_weights": false,
+    "restore_weights": true,
     "regenerate_crops_train": false,
     "regenerate_crops_test": false,
     "model": "tile",
     "batch_size": 64,
     "batch_size_predict": 64,
-    "initial_epoch": 0,
+    "initial_epoch": 8,
     "epochs": 60,
     "learning_rate": 5e-4,
     "decay": "",
-    "input_width": 48,
-    "input_height": 48,
+    "input_width": 40,
+    "input_height": 40,
     "input_channels": 3,
-    "output_width": 12,
-    "output_height": 12
+    "output_width": 10,
+    "output_height": 10
   }
 }
