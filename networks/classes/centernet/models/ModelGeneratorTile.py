@@ -157,7 +157,6 @@ class ModelGeneratorTile:
         x = Concatenate()([x_3, x])
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
-        x = Dropout(0.2)(x)
 
         # Deconvolution block 2: (32, 32, 512) -> (64, 64, 256)
         x = Conv2D(filters=128, kernel_size=3, strides=1, padding='same')(x)
@@ -165,7 +164,6 @@ class ModelGeneratorTile:
         x = Concatenate()([x_2, x])
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
-        x = Dropout(0.2)(x)
 
         # Deconvolution block 3: (64, 64, 256) -> (128, 128, 128)
         x = Conv2D(filters=64, kernel_size=3, strides=1, padding='same')(x)
@@ -181,17 +179,20 @@ class ModelGeneratorTile:
         return Model(input_layer, out)
 
     def __generate_classification_model(self, input_layer, n_category):
+        # (32, 32, 3) -> (32, 32, 64)
         x = self.__cbr(input_layer, 64, 3, 1)
-        x = self.__alt_res_block(x, 64)
-        x = self.__alt_res_block(x, 64)
+        x = self.__preactivated_res_block(x, 64)
+        x = self.__preactivated_res_block(x, 64)
 
-        x = self.__cbr(x, 128, 3, 2)  # 16
-        x = self.__alt_res_block(x, 128)
-        x = self.__alt_res_block(x, 128)
+        # (32, 32, 64) -> (16, 16, 128)
+        x = self.__cbr(x, 128, 3, 2)
+        x = self.__preactivated_res_block(x, 128)
+        x = self.__preactivated_res_block(x, 128)
 
-        x = self.__cbr(x, 256, 3, 2)  # 8
-        x = self.__alt_res_block(x, 256)
-        x = self.__alt_res_block(x, 256)
+        # (16, 16, 128) -> (8, 8, 256)
+        x = self.__cbr(x, 256, 3, 2)
+        x = self.__preactivated_res_block(x, 256)
+        x = self.__preactivated_res_block(x, 256)
 
         x = GlobalAveragePooling2D()(x)
         x = Dropout(0.2)(x)

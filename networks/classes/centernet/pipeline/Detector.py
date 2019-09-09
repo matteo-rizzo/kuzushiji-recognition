@@ -108,7 +108,7 @@ class Detector:
                                                               model=self.__model,
                                                               n_tiles=3,
                                                               show=False)
-        self.__logs['execution'].info('The average IoU score using standard model is: {}'.format(avg_iou))
+        self.__logs['execution'].info('The average IoU score using tile model is: {}'.format(avg_iou))
 
     def __show_standard_predictions(self, xy_eval):
         self.__logs['execution'].info('Showing examples of standard predictions...')
@@ -214,7 +214,7 @@ class Detector:
          {<image_path>: np.array[<score>, <ymin>, <xmin>, <ymax>, <xmax>]}
         """
 
-        train_list: List[List] = preprocessed_dataset.get_recommended_splits()
+        train_list: List[List] = preprocessed_dataset.get_crop_values()
 
         # Pass the list of test images if we are in test mode,
         # otherwise pass None, so that the test set will not be generated

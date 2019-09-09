@@ -8,12 +8,17 @@ from typing import Dict, List, Union, Tuple
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
+from sklearn.utils import class_weight
+
+from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
 
 
 class ModelCenterNet:
 
     def __init__(self, logs: Dict):
         self.__logs = logs
+        self.__input_width: int = None
+        self.__input_height: int = None
 
     def build_model(self,
                     model_generator,
@@ -29,12 +34,14 @@ class ModelCenterNet:
         presence or absence of an object only (and not its label).
         :return: a Keras model
         """
-
+        self.__input_width = input_shape[0]
+        self.__input_height = input_shape[1]
         self.__logs['execution'].info('Building {} model...'.format(mode))
         return model_generator.generate_model(input_shape, mode, n_category)
 
     @staticmethod
-    def setup_callbacks(weights_log_path: str, batch_size: int, lr: float) -> List[tf.keras.callbacks.Callback]:
+    def setup_callbacks(weights_log_path: str, batch_size: int, lr: float) -> List[
+        tf.keras.callbacks.Callback]:
         """
         Sets up the callbacks for the training of the model.
         """
@@ -61,10 +68,10 @@ class ModelCenterNet:
                                   update_freq=batch_size * 10)
 
         def lrs(epoch):
-            if epoch > 70:
-                return lr / 16
-            elif epoch > 10:
+            if epoch > 30:
                 return lr / 10
+            elif epoch > 10:
+                return lr / 5
             else:
                 return lr
 
@@ -132,7 +139,12 @@ class ModelCenterNet:
             x_train, y_train = dataset.get_xy_training()
             x_val, y_val = dataset.get_xy_validation()
 
-            train_image_data_generator = ImageDataGenerator(brightness_range=[0.5, 1.0],
+            # we = list(y_train)
+            # we.extend(y_val)
+            # class_weights = class_weight.compute_class_weight('balanced', np.unique(we), we)
+            # class_weights = dict(enumerate(class_weights))
+
+            train_image_data_generator = ImageDataGenerator(brightness_range=[0.7, 1.0],
                                                             rotation_range=10,
                                                             width_shift_range=0.1,
                                                             height_shift_range=0.1,
@@ -144,8 +156,8 @@ class ModelCenterNet:
                 directory='',
                 x_col='image',
                 y_col='class',
-                class_mode="other",
-                target_size=(32, 32),
+                class_mode='other',
+                target_size=(self.__input_width, self.__input_height),
                 batch_size=batch_size)
 
             val_generator = val_image_data_generator.flow_from_dataframe(
@@ -153,8 +165,8 @@ class ModelCenterNet:
                 directory='',
                 x_col='image',
                 y_col='class',
-                class_mode="other",
-                target_size=(32, 32),
+                class_mode='other',
+                target_size=(self.__input_width, self.__input_height),
                 batch_size=batch_size)
 
             model.fit_generator(train_generator,
@@ -177,8 +189,10 @@ class ModelCenterNet:
 
     def evaluate(self,
                  model: tf.keras.Model,
-                 evaluation_set: tf.data.Dataset,
-                 evaluation_steps: Union[int, None] = None) -> Union[float, List[float], None]:
+                 evaluation_set: Union[tf.data.Dataset, ClassificationDataset],
+                 evaluation_steps: Union[int, None] = None,
+                 batch_size: Union[int, None] = None,
+                 keras_mode: bool = False) -> Union[float, List[float], None]:
         """
         Evaluate the model on provided set.
         :return: the loss value if model has no other metrics, otw returns array with loss and metrics
@@ -187,9 +201,24 @@ class ModelCenterNet:
 
         self.__logs['training'].info('Evaluating the model...')
 
-        if evaluation_steps is not None and evaluation_steps == 0:
-            self.__logs['training'].warn('Skipping evaluation since provided set is empty')
-            return None
+        if keras_mode:
+            x_eval, y_eval = evaluation_set.get_xy_evaluation()
+
+            data_generator = ImageDataGenerator()
+
+            evaluation_set = data_generator.flow_from_dataframe(
+                dataframe=pd.DataFrame({'image': x_eval, 'class': y_eval}),
+                directory='',
+                x_col='image',
+                y_col='class',
+                class_mode='other',
+                target_size=(self.__input_width, self.__input_height),
+                batch_size=batch_size)
+
+        else:
+            if evaluation_steps is not None and evaluation_steps == 0:
+                self.__logs['training'].warn('Skipping evaluation since provided set is empty')
+                return None
 
         return model.evaluate(evaluation_set, verbose=1, steps=evaluation_steps)
 
