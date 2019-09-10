@@ -1,15 +1,9 @@
-% This is a sample LaTeX input file.
-%
-\documentclass{pasa}%
+\documentclass{pasa}
 
 \title[Kuzushiji Recognition]{Kuzushiji Recognition \\ \large Cognitive Services 2018-19 project report}
 
-\author[Matteo Rizzo, Alessandro Zangari]{\textbf{Matteo Rizzo} - id. xxxxxxx\\ \textbf{Alessandro Zangari} - id. 1207247\\}%
-%\date{September 2019}
-%%
-%\jid{PASA}
-%\doi{10.1017/pas.\the\year.xxx}
-%\jyear{\the\year}
+\author[Matteo Rizzo, Alessandro Zangari]{\textbf{Matteo Rizzo} - id. 1206694\\ \textbf{Alessandro Zangari} - id. 1207247\\}%
+\date{September 2019}
 
 % UNCOMMENT THE LINES BELOW IF YOU WISH TO USE BIBTEX
 %Citations may be made using the natbib commands \citet{},\citep{} etc.
@@ -20,100 +14,46 @@
 \usepackage{aas_macros}
 \usepackage{hyperref} 
 \hypersetup{colorlinks,citecolor=blue,linkcolor=blue,urlcolor=blue}
+\usepackage{graphicx}
+\graphicspath{{images/}}
+\begin{document}
 
-\begin{document}%
-%
-\begin{abstract}
-Now we are engaged in a great civil war, testing whether that nation, or any nation, so conceived, and so dedicated, can long endure. We are met here on a great battlefield of that war. We have come to dedicate a portion of it as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.
-\end{abstract}
-%
-%\begin{keywords}
-%kuzushiji - object detection
-%\end{keywords}
-%
-\maketitle%
-%
-\section{INTRODUCTION}
-\label{sec:intro}
 
-\section{RELATED WORK}
-\label{sec:relatedwork}
+\input{sections/abstract}
 
-\section{APPROACHES}
-\label{sec:approaches}
+\maketitle
 
-\subsection{Region-based}
-\label{ssec:regionbased}
+% --- INTRODUCTION ---
 
-\subsection{Single shot}
-\label{ssec:singleshot}
+\input{sections/introduction}
 
-\section{DATASET}
-\label{sec:dataset}
+% --- RELATED WORK ---
 
-\section{METHOD}
-\label{sec:method}
+\input{sections/related_work}
 
-\subsection{Character detection using CenterNet}
-\label{ssec:charactercenternet}
+% --- APPROACHES ---
 
-\subsubsection{Implementation}
-\label{sssec:implementationdet}
+\input{sections/approaches}
 
-\subsubsubsection{Description of the input samples}
-\label{ssssec:inputsamples}
+% --- DATASET ---
 
-\subsubsubsection{Loss function}
-\label{ssssec:lossfunctiondet}
+\input{sections/dataset}
 
-\subsubsubsection{Network architecture}
-\label{ssssec:networkarchitecturedet}
+% --- METHOD ---
 
-\subsubsection{Pre-processing and training}
-\label{sssec:preprocessingdet}
+\input{sections/method}
 
-\subsubsection{Post-processing: from centers to bounding boxes}
-\label{sssec:preprocessingandtraining}
+% --- EXPERIMENTS ---
 
-\subsection{Classification of characters using a standard CNN}
-\label{ssec:classificationcnn}
+\input{sections/experiments}
 
-\subsubsection{Implementation}
-\label{sssec:implementationclass}
+% --- CONCLUSION ---
 
-\subsubsubsection{Network architecture}
-\label{ssssec:networkarchitectureclass}
+\input{sections/conclusion}
 
-\subsubsubsection{Loss function}
-\label{ssssec:lossfunctionclass}
+% --- BIBLIOGRAPHY ---
 
-\subsubsection{Pre-processing and training}
-\label{sssec:preprocessingclass}
-
-\section{EXPERIMENTS}
-\label{sec:experiments}
-
-\subsection{Detector}
-\label{ssec:detectorexp}
-
-\subsection{Classifier}
-\label{ssec:classifierexp}
-
-\section{\uppercase{Similar results}}
-\label{sec:stateofart}
-
-\subsection{Handwritten text recognition on historical documents}
-\label{ssec:historicaldocuments}
-
-\subsection{Image classification on Kuzushiji-MNIST}
-\label{ssec:imagemnist}
-
-\section{CONCLUSION}
-\label{sec:conclusion}
-
-Four score and seven years ago our fathers brought forth, upon this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
-
-Now we are engaged in a great civil war, testing whether that nation, or any nation, so conceived, and so dedicated, can long endure. We are met here on a great battlefield of that war. We have come to dedicate a portion of it as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.
+\input{sections/bibliography}
 
 But in a larger sense we can not dedicate -- we can not consecrate -- we can not hallow this ground. The brave men, living and dead, who struggled, here, have consecrated it far above our poor power to add or detract. The world will little note, nor long remember, what we say here, but can never forget what they did here. It is for us, the living, rather to be dedicated here to the unfinished work which they have, thus far, so nobly carried on \cite{abt1961}. It is rather for us to be here dedicated to the great task remaining before us  that from these honoured dead we take increased devotion to that cause for which they here gave the last full measure of devotion  that we here highly resolve that these dead shall not have died in vain; that this nation shall have a new birth of freedom; and that this government \cite{abt1961} of the people, by the people, for the people, shall not perish from the earth.
 
@@ -201,65 +141,10 @@ data point of which is
 where $x_{ij}=(f_{ij}-\overline{f}_j)/\sigma_j $ and
 \[B=(X_1^T,\dots,X_m^T)^T.\]
  Then we can show that
-\[C=B^TB=\sum\limits_{i=1}^m X_i^TX_i=(C_{jk})_{n\times n},\]
-where $C_{jk}=\sum_{i=1}^mx_{ij}x_{ik}$ is the correlation matrix. Our goal is to find a normalized vector 
-$$a_1=(a_{11},a_{12},\dots,a_{1n})^T$$
- such that the projection of the standardized data
-\[X_ia_1=\sum\limits_{k=1}^n x_{ik}a_{1k},\]
-\noindent then $Ba_1$ 
- \[a_1^TB^T �� Ba_1=a_1^TCa_1.\]
  Our goal is to maximize this value under the constraint $a_1^Ta_1=1$. Let $\lambda_{\rm max}$ be the largest eigenvalue of
  $C$. According to the Rayleigh--Ritz theorem, $a_1$ can be obtained by solving
  \[Ca_1= \lambda_{\rm max}a_1.\]
 But in a larger sense we can not dedicate -- we can not consecrate -- we can not hallow this ground. The brave men, living and dead, who struggled, here, have consecrated it far above our poor power to add or detract. The world will little note, nor long remember, what we say here, but can never forget what they did here. It is for us, the living, rather to be dedicated here to the unfinished work which they have, thus far, so nobly carried on \cite{abt1981}. It is rather for us to be here dedicated to the great task remaining before us  that from these honoured dead we take increased devotion to that cause for which they here gave the last full measure of devotion  that we here highly resolve that these dead shall not have died in vain; that this nation shall have a new birth of freedom; and that this government \cite{abt1984b} of the people, by the people, for the people, shall not perish from the earth.
 \end{appendix}
-
-% UNCOMMENT THE LINES BELOW IF YOU WISH TO USE BIBTEX
-%\bibliographystyle{apj}
-%\bibliography{yourbibfile}
-
-%%\begin{thebibliography}{}
-%%
-%%\bibitem[\protect\citename{Afanas'ev et al. }1990]{afa}
-%%Afanas'ev, V. L., Vlasyuk, V. V., Dodonov, S. N., Lorentz, H., \& Terebizh, V. 1990, BSAO, 32, 51
-%%
-%%\bibitem[\protect\citename{Arp \& Duhalde }1985]{arp}
-%%Arp, H., \& Duhalde, O. 1985, PASP, 97, 1149
-%%
-%%\bibitem[\protect\citename{Burbidge, Crowne, \& Smith }1977]{bcs}
-%%Burbidge, G. R., Crowne, A. H., \& Smith, H. E. 1977, ApJS, 33, 113
-%%
-%%\bibitem[\protect\citename{Campusano \& Pedreros }1978]{cp}
-%%Campusano, L. E., \& Pedreros, M. 1978, Obs. Astron. Natl. Cerro Calan (Santiago: Dep. Astron. Publ. III), 315
-%%
-%%\bibitem[\protect\citename{Flesch }2010]{fls}
-%%Flesch, E. 2010, PASA, 27, 283
-%%
-%%\bibitem[\protect\citename{Knuth }1984]{DEK84}
-%%Knuth,~D.~E. 1984, Obs. Astron. Natl. Cerro Calan (Santiago: Dep. Astron. Publ. III), 315
-%%
-%%\bibitem[\protect\citename{Lamport }1986]{LaTeX}
-%%Lamport,~L. 1986, \LaTeX: A Document Preparation System (2nd edn; New York: Addison-Wesley) 
-%%
-%%\bibitem[\protect\citename{Lanzetta et al. }1991]{lwt}
-%%Lanzetta, K. M., Wolfe, A. M., Turnshek, D. A., Lu, L., McMahon, R. G., \& Hazard, C. 1991, ApJS, 77, 1
-%%
-%%\bibitem[\protect\citename{Reichert et al. }1982]{rmt}
-%%Reichert, G. A., Mason, K. O., Thorstensen, J. R., \& Bowyer, S. 1982, ApJ, 260, 437
-%%
-%%\bibitem[\protect\citename{Remillard }1993]{rem}
-%%Remillard, R. A., et al. 1993, AJ, 105, 2079
-%%
-%%\bibitem[\protect\citename{Sargent, Boksenberg, \& Steidel }1993]{sbs}
-%%Sargent, W. L., Boksenberg, A., \& Steidel, C. C. 1988, ApJS, 68, 539
-%%
-%%\bibitem[\protect\citename{Wolfe et al. }1986]{wts}
-%%Wolfe, A. M., Turnshek, D. A., Smith, H. E., \& Cohen, R. D. 1986, ApJS, 61, 249
-%%
-%%\end{thebibliography}
-
-\nocite*{}
-\bibliographystyle{pasa-mnras}
-\bibliography{1r_lamboo_notes}
 
 \end{document}
