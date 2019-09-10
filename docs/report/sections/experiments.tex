@@ -1,0 +1,33 @@
+\section{EXPERIMENTS}
+\label{sec:experiments}
+
+For the sake of comparing the results of the experiments, we divided the kaggle training set into a test and validation set (15\% of the whole dataset each) leaving the remaining 70\% of the examples for training. We then split the dataset for the classifier, consisting in the totality of the cropped detected characters, in the same way. The examples within the test set remain the same through each execution, and the loss and accuracy metrics reported further on are computed with respect to the test set. We list the metrics for the two models separately, adding the overall Kaggle rating received over submission of the predictions for the whole test set. Submissions to the competition are evaluated on a modified version of the F1 Score. To score a true positive, center point coordinates that are within the ground truth bounding box and a matching label must be provided. We used the ResNet34-encoded model for the final submission, since it was the one yielding the best results.
+
+\subsection{Detector}
+\label{ssec:detectorexp}
+
+All models were trained using Adam optimizer. For the ResNet34 network we used a learning rate of $1 \cdot 10^{-4}$ for the first 10 epochs, decreasing it to $5 \cdot 10^{-5}$ for the next 50 epochs and using $1 \cdot 10^{-5}$ for the last 80 epochs. The same values were used for pretrained ResNet50 network except that we further lowered the learning rate to $5 \cdot 10^{-6}$ after 50 epochs, since the loss function was not converging. Subsequent experiments restarting the training with lower learning rates did not improve the results. We also report some metrics obtained training the original Kaggle implementation we followed in order to set up the CenterNet network.
+
+\subsection{Classifier}
+\label{ssec:classifierexp}
+
+The classifier was trained for ?? epochs, using Adam optimizer and learning rate $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noted oscillations in the validation loss value. In table ?? are reported two experiments. The first model used an alternative architecture using standard residual blocks as depicted in fig ?? and was trained without data augmentation. The second one had the architecture described in sec ?? with preactivated residual blocks and was trained using data augmentation. The final submission has been done only using this last model.
+
+\section{\uppercase{Similar results}}
+\label{sec:stateofart}
+
+\subsection{Handwritten text recognition on historical documents}
+\label{ssec:historicaldocuments}
+
+A. Sànchez, Romero, H.Toselli, Villegas, Vidal  introduce four HTR (Handwritten Text Recognition) benchmarks aimed at HTR research for historical and legacy documents. These benchmarks are based on the datasets and rules previously adopted in well known open HTR competitions. The first two of these competitions (datasets ICFHR-2014, ICDAR-2015) were based on parts of the so called Bentham Papers, handwritten in English by several writers. The whole digitized collection encompasses 100000 page images of text authored by the renowned English philosopher and reformer Jeremy Bentham (1748–1832). It mainly contains legal forms and drafts in English, but also some pages are in French and Latin. Many images entail important pre-processing and layout analysis difficulties, like marginal notes, faint ink, stamps, skewed images, lines with large slope variation within the same page, slanted script, inter-line text, etc. An example of these documents is shown in figure ??.
+
+In the third competition, the Ratsprotokolle collection (ICFHR-2016), composed of handwritten minutes of council meetings held from 1470 to 1805, was considered, while the dataset of the fourth competition was a part of the Alfred Escher Letter Collection (AEC, ICDAR-2017) which is composed of letters handwritten mainly in German but it also has pages in French and Italian. Table ?? summaries the baselines achieved by A. Sánchez, Romero, H.Toselli, Villegas, Vidal and the best results achieved prior the publication of their paper.
+
+Note that the Word Error Rate (WER) and the Character Error Rate (CER) metrics are used. WER is defined as the minimum number of words that need to be substituted, deleted, or inserted to match the recognition output with the corresponding reference ground truth, divided by the total number of words in the reference transcripts. CER is defined in the same way but at character level.
+
+\subsection{Image classification on Kuzushiji-MNIST}
+\label{ssec:imagemnist}
+
+MNIST, a dataset with 70,000 labeled images of handwritten digits, has been one of the most popular datasets for image processing and classification for over twenty years. Despite its popularity, contemporary deep learning algorithms handle it easily, often surpassing an accuracy result of 99.5\%. Kuzushiji-MNIST is an alternative dataset to MNIST, more difficult than MNIST. The Kuzushiji dataset includes characters in both Kanji and Hiranaga, based on pre-processed images of characters from 35 books from the 18th century. It is constituted by three groups of data, as shown in table ??.
+
+The creators of the Kuzushiji-MNIST dataset created a baseline by training a few classification algorithms and comparing them to MNIST. The best algorithm (PreActResNet-18) achieved 99.56\% on MNIST, but only 98.83\% and 97.33\% on Kuzushiji-MNIST and Kuzushiji-49 respectively, as can be seen in table ??.
