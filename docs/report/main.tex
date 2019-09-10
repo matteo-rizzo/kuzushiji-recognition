@@ -2,24 +2,28 @@
 
 \title[Kuzushiji Recognition]{Kuzushiji Recognition \\ \large Cognitive Services 2018-19 project report}
 
-\author[Matteo Rizzo, Alessandro Zangari]{\textbf{Matteo Rizzo} - id. 1206694\\ \textbf{Alessandro Zangari} - id. 1207247\\}%
+\author[Matteo Rizzo, Alessandro Zangari]{\textbf{Matteo Rizzo} ~~~~~~~~~~~~~id. 1206694\\ \textbf{Alessandro Zangari} ~~~~id. 1207247\\}%
 \date{September 2019}
 
 % UNCOMMENT THE LINES BELOW IF YOU WISH TO USE BIBTEX
+\usepackage[backend=biber,bibencoding=utf8,style=numeric-comp,hyperref,backref]{biblatex}
 %Citations may be made using the natbib commands \citet{},\citep{} etc.
-\usepackage[authoryear]{natbib}
-\bibpunct{(}{)}{;}{a}{}{,}
-\setlength{\bibsep}{0.3mm}
+%\usepackage[authoryear,backend=biber]{natbib}
+%\bibpunct{(}{)}{;}{a}{}{,}
+%\setlength{\bibsep}{0.3mm}
 
+\usepackage[utf8]{inputenc}             % codifica di input; anche 
+\usepackage[english]{babel}
 \usepackage{aas_macros}
 \usepackage{hyperref} 
 \hypersetup{colorlinks,citecolor=blue,linkcolor=blue,urlcolor=blue}
 \usepackage{graphicx}
 \graphicspath{{images/}}
 \usepackage[table,xcdraw]{xcolor}
+\bibliography{bibliography.bib}
+\hypersetup{draft}
 
 \begin{document}
-
 
 \input{sections/abstract}
 
@@ -54,7 +58,7 @@
 \input{sections/conclusion}
 
 % --- BIBLIOGRAPHY ---
-
+\newpage
 \input{sections/bibliography}
 
 \end{document}

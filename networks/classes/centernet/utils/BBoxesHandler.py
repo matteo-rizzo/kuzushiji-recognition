@@ -26,7 +26,9 @@ class BBoxesHandler:
 
         # Plot the heatmap alongside the image with the bboxes
         fig, axes = plt.subplots(1, 2, figsize=(15, 15))
+        axes[0].axis('off')
         axes[0].imshow(img)
+        axes[1].axis('off')
         axes[1].imshow(heatmap)
 
         plt.show()
@@ -79,7 +81,9 @@ class BBoxesHandler:
                 true_bboxes, predicted_bboxes = self.__get_true_and_pred_bboxes(annotation_list[i], bbox_and_score)
 
                 # Append the IoU score of the current predictions to a list
-                iou_scores.append(self.__get_iou_score(true_bboxes, predicted_bboxes))
+                iou_score = self.__get_iou_score(true_bboxes, predicted_bboxes)
+                print(image_path.split('/')[-1] + ' IoU score: {}'.format(iou_score))
+                iou_scores.append(iou_score)
 
                 if show:
                     self.__show_train_standard_bboxes(true_bboxes=true_bboxes,
@@ -178,7 +182,8 @@ class BBoxesHandler:
 
         image_show = Image.open(image_path).convert("RGB")
         image_show = self.__draw_rectangle(predicted_bboxes, image_show, "red")
-        plt.subplots(1, 1, figsize=(15, 15))
+        f, ax = plt.subplots(1, 1, figsize=(15, 15))
+        ax.axis('off')
         plt.imshow(image_show)
         plt.show()
 
@@ -190,7 +195,8 @@ class BBoxesHandler:
         image_show = self.__draw_rectangle(predicted_bboxes, image_show, "red")
         image_show = self.__draw_rectangle(true_bboxes, image_show, "blue")
 
-        plt.subplots(1, 1, figsize=(15, 15))
+        f, ax = plt.subplots(1, 1, figsize=(15, 15))
+        ax.axis('off')
         plt.imshow(image_show)
         plt.show()
 
@@ -277,7 +283,9 @@ class BBoxesHandler:
             true_bboxes, predicted_bboxes = self.__get_true_and_pred_bboxes(example, bbox_and_score)
 
             # Append the IoU score of the current predictions to a list
-            iou_scores.append(self.__get_iou_score(true_bboxes, predicted_bboxes))
+            iou_score = self.__get_iou_score(true_bboxes, predicted_bboxes)
+            print(image_path.split('/')[-1] + ' IoU score: {}'.format(iou_score))
+            iou_scores.append(iou_score)
 
             if show:
                 self.__show_train_tiled_bboxes(true_bboxes, predicted_bboxes, image_path)

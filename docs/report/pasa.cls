@@ -4,7 +4,7 @@
 %% For CUP Journals
 %%
 \NeedsTeXFormat{LaTeX2e}[1997/12/01]
-\ProvidesClass{pas}[2013/04/01 v1.0 Publications of the Astronomical Society of Australia (PASA) document class]
+\ProvidesClass{pasa}[2013/04/01 v1.0 Publications of the Astronomical Society of Australia (PASA) document class]
 %%
 \@twosidetrue\@mparswitchtrue\@twocolumnfalse
 %%
@@ -95,8 +95,8 @@
 %% Section
 \def\sectionfont{\fontsize{10}{12}\selectfont\bfseries\rightskip1pc plus1fill\mathversion{bold}}
 \def\subsectionfont{\fontsize{10}{12}\selectfont\bfseries\rightskip1pc plus1fill\mathversion{bold}}
-\def\subsubsectionfont{\fontsize{10}{12}\selectfont\itshape\rightskip1pc plus1fill\mathversion{normal}}
-\def\paragraphfont{\fontsize{10}{12}\selectfont\itshape\mathversion{normal}}%
+\def\subsubsectionfont{\fontsize{10}{12}\selectfont\bfseries\rightskip1pc plus1fill\mathversion{normal}}
+\def\paragraphfont{\fontsize{10}{12}\selectfont\mathversion{normal}}%
 \def\subparagraphfont{\fontsize{10}{12}\selectfont}%
 \def\subsubparagraphfont{\fontsize{10}{12}\selectfont}%
 %% Figure
@@ -916,7 +916,7 @@
 \def\fps@figure{tbp}
 \def\ftype@figure{1}
 \def\ext@figure{lof}
-\def\fnum@figure{\figurename\nobreakspace\thefigure.}
+\def\fnum@figure{\figurename\nobreakspace\thefigure}
 
 \newenvironment{figure}
                {\@float{figure}}
@@ -1347,6 +1347,9 @@
 %
 \usepackage{graphicx}%,
 \usepackage{amsmath,amssymb}
+%\usepackage{caption}
+\usepackage{subcaption}
+\linespread{1.09}
 %%\usepackage{txfonts}
 %%
 \endinput

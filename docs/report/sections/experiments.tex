@@ -1,29 +1,30 @@
 \section{EXPERIMENTS}
 \label{sec:experiments}
 
-For the sake of comparing the results of the experiments, we divided the kaggle training set into a test and validation set (15\% of the whole dataset each) leaving the remaining 70\% of the examples for training. We then split the dataset for the classifier, consisting in the totality of the cropped detected characters, in the same way. The examples within the test set remain the same through each execution, and the loss and accuracy metrics reported further on are computed with respect to the test set. We list the metrics for the two models separately, adding the overall Kaggle rating received over submission of the predictions for the whole test set. Submissions to the competition are evaluated on a modified version of the F1 Score. To score a true positive, center point coordinates that are within the ground truth bounding box and a matching label must be provided. We used the ResNet34-encoded model for the final submission, since it was the one yielding the best results.
+For the sake of comparing the results of the experiments, we divided the Kaggle training set into a test and validation set (15\% of the whole dataset each) leaving the remaining 70\% of the examples for training. We then split the dataset for the classifier, consisting in the totality of the cropped detected characters, in the same way. The examples within the test set remain the same through each execution, and the loss and accuracy metrics reported further on are computed with respect to the test set. We list the metrics for the two models separately, adding the overall Kaggle rating received over submission of the predictions for the whole test set. Submissions to the competition are evaluated on a modified version of the F1 Score. To score a true positive, center point coordinates that are within the ground truth bounding box and a matching label must be provided. We used the ResNet34-encoded model for the final submission, since it was the one yielding the best results.
 
 \subsection{Detector}
 \label{ssec:detectorexp}
 
-All models were trained using Adam optimizer. For the ResNet34 network we used a learning rate of $1 \cdot 10^{-4}$ for the first 10 epochs, decreasing it to $5 \cdot 10^{-5}$ for the next 50 epochs and using $1 \cdot 10^{-5}$ for the last 80 epochs. The same values were used for pretrained ResNet50 network except that we further lowered the learning rate to $5 \cdot 10^{-6}$ after 50 epochs, since the loss function was not converging. Subsequent experiments restarting the training with lower learning rates did not improve the results. We also report some metrics obtained training the original Kaggle implementation we followed in order to set up the CenterNet network.
+All models were trained using Adam optimizer using the default Keras hyper-parameters. For the ResNet34 network we used a learning rate of $1 \cdot 10^{-4}$ for the first 10 epochs, decreasing it to $5 \cdot 10^{-5}$ for the next 50 epochs and using $1 \cdot 10^{-5}$ for the last 80 epochs. The same values were used for pretrained ResNet50 network except that we further lowered the learning rate to $5 \cdot 10^{-6}$ after 50 epochs, since the loss function was not converging. Subsequent experiments restarting the training with lower learning rates did not improve the results. We also report some metrics obtained training the original Kaggle implementation we followed in order to set up the CenterNet network.
 
-\begin{table}[h]
+\begin{table*}[h]
 	\begin{tabular}{lllllll}
 		\rowcolor[HTML]{EFEFEF} 
 		\textbf{Experiment}   & \textbf{Loss} & \textbf{Heatmap loss} & \textbf{Offset loss} & \textbf{Size loss} & \textbf{IoU (no tiling)} & \textbf{IoU (tiling)} \\
 		ResNet34 encoder      & 0.9619        & 0.5626                & 0.3324               & 0.0669             & 0.5112                   & 0.7658                \\
+		ResNet34 encoder new     & 0.6187        & 0.2291                & 0.2719               & 0.0477             & 0.5106                   & 0.7644                \\
 		ResNet50 encoder      & 1.1466        & 0.6712                & 0.3694               & 0.1060             & 0.4067                   & 0.6659                \\
 		Kaggle implementation &               &                       &                      &                    &                          &                      
 	\end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{Classifier}
 \label{ssec:classifierexp}
 
 The classifier was trained for ?? epochs, using Adam optimizer and learning rate $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noted oscillations in the validation loss value. In table \ref{tab:class_res} are reported two experiments. The first model used an alternative architecture using standard residual blocks as depicted in fig \ref{fig:resblock_1} and was trained without data augmentation. The second one had the architecture described in \ref{fig:preact_resblock} with preactivated residual blocks and was trained using data augmentation. The final submission has been done only using this last model.
 
-\begin{table}[h]
+\begin{table*}[h]
 	\begin{tabular}{llll}
 		\rowcolor[HTML]{EFEFEF} 
 		\textbf{Experiment} & \textbf{Loss} & \textbf{Accuracy} & \textbf{Kaggle score with ResNet34} \\
@@ -31,7 +32,7 @@ The classifier was trained for ?? epochs, using Adam optimizer and learning rate
 		Residual block 2    &               &                   &                                    
 	\end{tabular}
 	\label{tab:class_res}
-\end{table}
+\end{table*}
 
 \begin{figure}[h]
 	\caption{Preactivated residual block.}
@@ -52,7 +53,7 @@ A. Sànchez, Romero, H.Toselli, Villegas, Vidal  introduce four HTR (Handwritten
 \begin{figure}[h]
 	\caption{An example of image from the Bentham Papers.}
 	\centering
-	\includegraphics[width=0.4\textwidth]{various/HTR_benchmark.png}
+	\includegraphics[width=0.45\textwidth]{various/HTR_benchmark.png}
 	\label{fig:HTR_benchmark}
 \end{figure}
 
