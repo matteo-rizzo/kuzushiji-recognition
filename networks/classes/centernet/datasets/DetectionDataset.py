@@ -259,6 +259,7 @@ class DetectionDataset:
                                              train_size=int((1 - self.__evaluation_ratio) * len(train_list)))
 
         xy_train, xy_val = train_test_split(training,
+                                            random_state=55373,
                                             shuffle=True,
                                             train_size=int(self.__training_ratio * len(train_list)))
 
@@ -266,7 +267,7 @@ class DetectionDataset:
             tf.data.Dataset.from_generator(
                 lambda: self.__dataset_generator(xy_train,
                                                  self.__batch_size,
-                                                 random_crop=True),
+                                                 random_crop=False),
                 output_types=(np.float32,
                               np.float32))
                 .repeat()
@@ -278,7 +279,7 @@ class DetectionDataset:
                 tf.data.Dataset.from_generator(
                     lambda: self.__dataset_generator(xy_val,
                                                      self.__batch_size,
-                                                     random_crop=True),
+                                                     random_crop=False),
                     output_types=(np.float32,
                                   np.float32))
                     .repeat()
@@ -290,7 +291,7 @@ class DetectionDataset:
                 tf.data.Dataset.from_generator(
                     lambda: self.__dataset_generator(xy_eval,
                                                      self.__batch_size,
-                                                     random_crop=True),
+                                                     random_crop=False),
                     output_types=(np.float32,
                                   np.float32))
                     .repeat()
