@@ -106,8 +106,8 @@ class Detector:
         self.__logs['execution'].info('Showing examples of tile predictions...')
         _, avg_iou = self.__bb_handler.get_train_tiled_bboxes(xy_eval[:10],
                                                               model=self.__model,
-                                                              n_tiles=3,
-                                                              show=False)
+                                                              n_tiles=2,
+                                                              show=True)
         self.__logs['execution'].info('The average IoU score using tile model is: {}'.format(avg_iou))
 
     def __show_standard_predictions(self, xy_eval):
@@ -126,7 +126,7 @@ class Detector:
         # Perform the prediction on the newly created dataset and show images
         _, avg_iou = self.__bb_handler.get_train_standard_bboxes(self.__model_utils.predict(self.__model, mini_test),
                                                                  annotation_list=xy_eval[:10],
-                                                                 show=False)
+                                                                 show=True)
         self.__logs['execution'].info('The average IoU score using standard model is: {}'.format(avg_iou))
 
     def __evaluate_model(self, dataset, xy_eval):

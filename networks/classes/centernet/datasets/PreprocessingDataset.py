@@ -66,7 +66,8 @@ class PreprocessingDataset:
         category_names = sorted(category_names)
 
         # Make a dict assigning an integer to each category
-        self.__dict_cat: Dict[str, int] = {list(category_names)[j]: j for j in range(len(category_names))}
+        self.__dict_cat: Dict[str, int] = {list(category_names)[j]: j for j in
+                                           range(len(category_names))}
 
         for i in range(len(df_train)):
             # Get one row for each label character for image i, as: <category> <x> <y> <width> <height>
@@ -100,8 +101,9 @@ class PreprocessingDataset:
             #    ann[:, 3] = x width
             #    ann[:, 4] = y height
 
-            self.__train_list.append(("{}/{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]),
-                                      ann))
+            self.__train_list.append(
+                ("{}/{}.jpg".format(self.__train_images_path, df_train.loc[i, "image_id"]),
+                 ann))
 
     def __annotate_char_area_ratio(self, show_plot: bool = False):
         """
@@ -111,7 +113,7 @@ class PreprocessingDataset:
         :param show_plot: whether to show histogram with average character size or not.
         """
 
-        self.__w_and_h: List[(float, float)] = []
+        self.__aspect_ratios: List[float] = []
         self.__train_image_avg_char_area_ratios: List[Tuple[str, np.array]] = []
         all_avg_char_area_ratio: List[np.array] = []
 
@@ -122,7 +124,7 @@ class PreprocessingDataset:
 
                 # Image img_area
                 img_area = width * height
-                # aspect_ratio = height / width
+                aspect_ratio = height / width
 
                 # Bbox img_area for each character in image (width * height)
                 char_area = ann[:, 3] * ann[:, 4]
@@ -135,10 +137,10 @@ class PreprocessingDataset:
                 all_avg_char_area_ratio.append(avg_char_area_ratio)
 
                 # Add example for training with image path and log average bbox size for objects in it
-                self.__train_image_avg_char_area_ratios.append((img_path, np.log(avg_char_area_ratio)))
+                self.__train_image_avg_char_area_ratios.append((img_path, avg_char_area_ratio))
 
                 # Add aspect ratio
-                self.__w_and_h.append((width, height))
+                self.__aspect_ratios.append(aspect_ratio)
 
         if show_plot:
             plt.hist(np.log(all_avg_char_area_ratio), bins=100)
@@ -154,34 +156,33 @@ class PreprocessingDataset:
         """
 
         # Initialize a list of bbox areas for all characters (prediction or from train data)
-        avg_log_char_area_ratios: List[float] = self.__get_dataset_labels()
+        avg_char_area_ratios: List[float] = self.__get_dataset_labels()
 
         # Set a base stretch factor
-        base_stretch_factor_h, base_stretch_factor_w = 25, 25
+        base_split_factor_h, base_split_factor_w = 25, 25
 
         # Initialize an empty list of annotations
         annotation_list_train_w_crops = []
 
         # For each predicted bbox size calculate recommended height and width
-        for img_ann, avg_char_area_ratio, img_wh in zip(self.__train_list, avg_log_char_area_ratios, self.__w_and_h):
-            # Get width and height of the image
-            w, h = img_wh
+        for img_ann, avg_char_area_ratio, aspect_ratio in zip(self.__train_list,
+                                                              avg_char_area_ratios,
+                                                              self.__aspect_ratios):
+            # split_factor_w = sqrt(h*w / mean_char_h*mean_char_w)
+            split_factor_w = np.sqrt(1.0 / avg_char_area_ratio)
 
-            # stretch_factor_h = (h / w) * sqrt(h*w / mean_char_h*mean_char_w)
-            stretch_factor_h = (h / w) * np.sqrt(h * w / avg_char_area_ratio)
-
-            # stretch_factor_w = sqrt(h*w / mean_char_h*mean_char_w)
-            stretch_factor_w = np.sqrt(h * w / avg_char_area_ratio)
+            # split_factor_h = (h / w) * sqrt(h*w / mean_char_h*mean_char_w)
+            split_factor_h = aspect_ratio * split_factor_w
 
             # If image is too big w.r.t. mean char size then stretch it with factor > 1
-            h_split_recommend = max([1, stretch_factor_h / base_stretch_factor_h])
-            w_split_recommend = max([1, stretch_factor_w / base_stretch_factor_w])
+            h_crop_ratio = max([1, split_factor_h / base_split_factor_h])
+            w_crop_ratio = max([1, split_factor_w / base_split_factor_w])
 
             # Format: <image path> <annotations> <height split> <width split>
             annotation_list_train_w_crops.append((img_ann[0],
                                                   img_ann[1],
-                                                  h_split_recommend,
-                                                  w_split_recommend))
+                                                  h_crop_ratio,
+                                                  w_crop_ratio))
 
         return annotation_list_train_w_crops
 
@@ -209,7 +210,8 @@ class PreprocessingDataset:
             pic_height, pic_width, _ = image_decoded.get_shape().as_list()
 
             # Compute the offsets
-            top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (pic_height - 1)
+            top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (
+                        pic_height - 1)
             left_offset = np.random.randint(0, pic_width - int(crop_ratio * pic_width)) / (pic_width - 1)
             bottom_offset = top_offset + int(crop_ratio * pic_height) / (pic_height - 1)
             right_offset = left_offset + int(crop_ratio * pic_width) / (pic_width - 1)
