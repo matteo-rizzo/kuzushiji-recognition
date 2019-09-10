@@ -2,7 +2,7 @@ import glob
 import os
 
 import pandas as pd
-from keras_preprocessing.image import ImageDataGenerator
+from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
 from typing import Dict, List, Union, Tuple
 
 import numpy as np
@@ -67,19 +67,19 @@ class ModelCenterNet:
                                   batch_size=batch_size,
                                   update_freq=batch_size * 10)
 
-        def lrs(epoch):
-            if epoch > 50:
-                return lr / 20
-            elif epoch > 20:
-                return lr / 10
-            elif epoch > 10:
-                return lr / 5
-            else:
-                return lr
+        # def lrs(epoch):
+        #     if epoch > 50:
+        #         return lr / 20
+        #     elif epoch > 20:
+        #         return lr / 10
+        #     elif epoch > 10:
+        #         return lr / 5
+        #     else:
+        #         return lr
 
-        lr_schedule = LearningRateScheduler(lrs, verbose=1)
+        # lr_schedule = LearningRateScheduler(lrs, verbose=1)
 
-        return [tensorboard, checkpointer, lr_schedule]
+        return [tensorboard, checkpointer]
 
     def restore_weights(self,
                         model: tf.keras.Model,
