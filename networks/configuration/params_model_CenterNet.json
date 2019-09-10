@@ -1,5 +1,5 @@
 {
-  "run_id": "test_detector_nocrop",
+  "run_id": "test_centernet_new",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "test_csv_path": "datasets/kaggle/sample_submission.csv",
@@ -22,9 +22,9 @@
     "evaluate": false,
     "predict_on_test": false,
     "show_prediction_examples": false,
-    "restore_weights": false,
+    "restore_weights": true,
     "model": "tile",
-    "initial_epoch": 0,
+    "initial_epoch": 130,
     "epochs": 130,
     "batch_size": 32,
     "batch_size_predict": 32,

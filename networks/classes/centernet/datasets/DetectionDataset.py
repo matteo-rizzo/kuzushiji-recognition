@@ -80,7 +80,6 @@ class DetectionDataset:
                     pic_width, pic_height = f.size
 
                     if random_crop:
-                        # random crop
                         f = np.asarray(f.convert('RGB'), dtype=np.uint8)
 
                         top_offset = np.random.randint(0, pic_height - int(crop_ratio_h * pic_height))
@@ -173,56 +172,6 @@ class DetectionDataset:
 
                     yield inputs, targets
 
-    def __test_resize_fn_pro(self, path, prediction):
-        """
-        Utility function for image resizing UNTESTED SPECIAL EDITION
-
-        :param path: the path to the image to be resized
-        :return: a resized image
-        """
-
-        h_split = prediction[0]
-        w_split = prediction[1]
-
-        max_crop_ratio_h = tf.divide(1, h_split)
-        max_crop_ratio_w = tf.divide(1, w_split)
-
-        crop_ratio = tf.random.uniform(0.5, 1)
-        crop_ratio_h = tf.multiply(max_crop_ratio_h, crop_ratio)
-        crop_ratio_w = tf.multiply(max_crop_ratio_w, crop_ratio)
-
-        image_string = tf.read_file(path)
-        image_decoded = tf.image.decode_jpeg(image_string)
-
-        # Get image size
-        shape = tf.shape(image_decoded)
-        pic_h, pic_w = shape[0], shape[1]
-
-        # Compute the offsets
-        max_rand_h = tf.subtract(pic_h, tf.cast(tf.multiply(crop_ratio_h, pic_h), tf.int32))
-        top_offset = tf.divide(tf.random.uniform(0, maxval=max_rand_h), tf.subtract(pic_h, 1))
-
-        max_rand_w = tf.subtract(pic_w, tf.cast(tf.multiply(crop_ratio_w, pic_w), tf.int32))
-        left_offset = tf.divide(tf.random.uniform(0, max_rand_w), tf.subtract(pic_w, 1))
-
-        bottom_offset = tf.add(top_offset, tf.divide(tf.cast(tf.multiply(crop_ratio_h, pic_h),
-                                                             tf.int32), tf.subtract(pic_h, 1)))
-        right_offset = tf.add(left_offset, tf.divide(tf.cast(tf.multiply(crop_ratio_w, pic_w),
-                                                             tf.int32), tf.subtract(pic_w, 1)))
-
-        # Resize the image
-        image_resized = tf.image.crop_and_resize(image=[image_decoded],
-                                                 box_ind=[0],
-                                                 boxes=[[top_offset,
-                                                         left_offset,
-                                                         bottom_offset,
-                                                         right_offset]],
-                                                 crop_size=[self.__input_width, self.__input_height])
-
-        image_resized = tf.reshape(image_resized, image_resized.shape[1:])
-
-        return image_resized / 255
-
     def __test_resize_fn(self, path):
         """
         Utility function for image resizing
@@ -267,7 +216,7 @@ class DetectionDataset:
             tf.data.Dataset.from_generator(
                 lambda: self.__dataset_generator(xy_train,
                                                  self.__batch_size,
-                                                 random_crop=False),
+                                                 random_crop=True),
                 output_types=(np.float32,
                               np.float32))
                 .repeat()
@@ -279,7 +228,7 @@ class DetectionDataset:
                 tf.data.Dataset.from_generator(
                     lambda: self.__dataset_generator(xy_val,
                                                      self.__batch_size,
-                                                     random_crop=False),
+                                                     random_crop=True),
                     output_types=(np.float32,
                                   np.float32))
                     .repeat()
