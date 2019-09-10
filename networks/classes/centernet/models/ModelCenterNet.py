@@ -68,7 +68,9 @@ class ModelCenterNet:
                                   update_freq=batch_size * 10)
 
         def lrs(epoch):
-            if epoch > 30:
+            if epoch > 50:
+                return lr / 20
+            elif epoch > 20:
                 return lr / 10
             elif epoch > 10:
                 return lr / 5

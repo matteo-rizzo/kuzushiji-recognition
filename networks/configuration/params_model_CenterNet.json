@@ -1,5 +1,5 @@
 {
-  "run_id": "test_mio",
+  "run_id": "test_detector_nocrop",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "test_csv_path": "datasets/kaggle/sample_submission.csv",
@@ -18,17 +18,17 @@
     "output_height": 128
   },
   "detector": {
-    "train": false,
+    "train": true,
     "evaluate": false,
     "predict_on_test": false,
     "show_prediction_examples": false,
     "restore_weights": false,
     "model": "tile",
-    "initial_epoch": 130,
-    "epochs": 139,
+    "initial_epoch": 0,
+    "epochs": 130,
     "batch_size": 32,
     "batch_size_predict": 32,
-    "learning_rate": 1e-5,
+    "learning_rate": 1e-4,
     "decay": "",
     "input_width": 512,
     "input_height": 512,
@@ -38,9 +38,9 @@
   },
   "classifier": {
     "train": false,
-    "evaluate": true,
+    "evaluate": false,
     "predict_on_test": false,
-    "restore_weights": true,
+    "restore_weights": false,
     "regenerate_crops_train": false,
     "regenerate_crops_test": false,
     "model": "tile",
