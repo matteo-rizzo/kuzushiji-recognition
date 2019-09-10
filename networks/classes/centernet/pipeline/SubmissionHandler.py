@@ -15,7 +15,7 @@ class SubmissionHandler:
 
     def __init__(self, dict_cat, log):
         self.__log = log
-        self.__dict_cat = dict_cat
+        self.__dict_cat = {str(v): k for k, v in dict_cat.items()}
 
     def test(self, max_visualizations=5):
 
@@ -59,8 +59,7 @@ class SubmissionHandler:
         :return:
         """
 
-        class_index = np.argmax(prediction)
-        return list(self.__dict_cat.keys())[list(self.__dict_cat.values()).index(class_index)]
+        return self.__dict_cat[str(np.argmax(prediction))]
 
     @staticmethod
     def __get_center_coords(bbox: str):
@@ -82,16 +81,18 @@ class SubmissionHandler:
 
     def __write_img_with_chars(self, images_data, predictions_gen, path_to_submission):
 
+        submission_list = []
+
         # Iterate over all the predicted original images
         for img_data in tqdm(images_data, total=len(images_data)):
 
-            cropped_images = list(img_data['cropped_images'].split(' '))
-            bboxes = list(img_data['bboxes'].split(' '))
             labels = []
+            bboxes = list(img_data['bboxes'].split(' '))
 
-            for cropped_image, bbox in zip(cropped_images, bboxes):
+            # Iterate over all the bboxes of the current image
+            for bbox in tqdm(bboxes, total=len(bboxes)):
 
-                # Get prediction from generator
+                # Get a class prediction from the generator
                 try:
                     prediction = next(predictions_gen)
                 except StopIteration:
@@ -100,27 +101,22 @@ class SubmissionHandler:
                 # Get the unicode class from the predictions
                 unicode = self.__get_class(prediction)
 
+                del prediction
+                gc.collect()
+
                 # Get the coordinates of the center of the bbox
                 x, y = self.__get_center_coords(bbox)
 
                 # Append the current label to the list of the labels of the current image
                 labels.append(' '.join([unicode, x, y]))
 
-                del prediction
-                gc.collect()
-
             # Gather the data for the submission of the current image
-            img_submission = pd.DataFrame(data={'image_id': img_data['original_image'],
-                                                'labels': ' '.join(labels)},
-                                          columns=['image_id', 'labels'],
-                                          index=[0])
+            submission_list.append({'image_id': img_data['original_image'],
+                                    'labels': ' '.join(labels)})
 
-            # Write the submission to csv
-            img_submission.to_csv(path_to_submission, mode='a', header=False)
-
-            del img_submission
-            del labels
-            gc.collect()
+        # Write the submission to csv
+        img_submission = pd.DataFrame(submission_list, columns=['image_id', 'labels'])
+        img_submission.to_csv(path_to_submission, mode='a', header=False)
 
     @staticmethod
     def __write_img_with_no_chars(path_to_submission):
