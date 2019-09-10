@@ -85,7 +85,7 @@ def main():
     }
 
     # Run the pipeline
-    pipeline.run_pipeline(operations=common_operations['detect'],
+    pipeline.run_pipeline(operations=common_operations['write_submission'],
                           params=centernet_params,
                           experiment_path=os.path.join(base_experiments_path, run_id))
 
