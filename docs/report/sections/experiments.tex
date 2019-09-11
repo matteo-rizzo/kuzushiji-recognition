@@ -1,3 +1,4 @@
+% !TeX spellcheck = en_US
 \section{EXPERIMENTS}
 \label{sec:experiments}
 
@@ -6,23 +7,22 @@ For the sake of comparing the results of the experiments, we divided the Kaggle 
 \subsection{Detector}
 \label{ssec:detectorexp}
 
-All models were trained using Adam optimizer using the default Keras hyper-parameters. For the ResNet34 network we used a learning rate of $1 \cdot 10^{-4}$ for the first 10 epochs, decreasing it to $5 \cdot 10^{-5}$ for the next 50 epochs and using $1 \cdot 10^{-5}$ for the last 80 epochs. The same values were used for pretrained ResNet50 network except that we further lowered the learning rate to $5 \cdot 10^{-6}$ after 50 epochs, since the loss function was not converging. Subsequent experiments restarting the training with lower learning rates did not improve the results. We also report some metrics obtained training the original Kaggle implementation we followed in order to set up the CenterNet network.
+All models were trained using Adam optimizer using the default Keras hyper-parameters for 130 epochs. For the ResNet34 network we used a learning rate of $1 \cdot 10^{-4}$ for the first 10 epochs, decreasing it to $5 \cdot 10^{-5}$ for the next 50 epochs and using $1 \cdot 10^{-5}$ for the last 70 epochs. We used a single GPU Tesla T4 provided by Google Cloud Platform with batch size 32.\\
+The same values were used for pretrained ResNet50 network except for batch size, that we set to 16 because of the deeper architecture, and for learning rate that we further lowered to $5 \cdot 10^{-6}$ after 50 epochs, since the loss function was not converging. Subsequent experiments restarting the training with lower learning rates did not improve the results.
 
 \begin{table*}[h]
 	\begin{tabular}{lllllll}
 		\rowcolor[HTML]{EFEFEF} 
 		\textbf{Experiment}   & \textbf{Loss} & \textbf{Heatmap loss} & \textbf{Offset loss} & \textbf{Size loss} & \textbf{IoU (no tiling)} & \textbf{IoU (tiling)} \\
-		ResNet34 encoder      & 0.9619        & 0.5626                & 0.3324               & 0.0669             & 0.5112                   & 0.7658                \\
-		ResNet34 encoder new     & 0.6187        & 0.2291                & 0.2719               & 0.0477             & 0.5106                   & 0.7644                \\
-		ResNet50 encoder      & 1.1466        & 0.6712                & 0.3694               & 0.1060             & 0.4067                   & 0.6659                \\
-		Kaggle implementation &               &                       &                      &                    &                          &                      
+		ResNet34 encoder      & 1.2652        & 0.7887                & 0.3833               & 0.0932             & 0.5112                   & 0.7658                \\
+		ResNet50 encoder      & 1.3792        & 0.8417                & 0.4092               & 0.1284             & 0.4067                   & 0.6659                   
 	\end{tabular}
 \end{table*}
 
 \subsection{Classifier}
 \label{ssec:classifierexp}
 
-The classifier was trained for ?? epochs, using Adam optimizer and learning rate $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noted oscillations in the validation loss value. In table \ref{tab:class_res} are reported two experiments. The first model used an alternative architecture using standard residual blocks as depicted in fig \ref{fig:resblock_1} and was trained without data augmentation. The second one had the architecture described in \ref{fig:preact_resblock} with preactivated residual blocks and was trained using data augmentation. The final submission has been done only using this last model.
+The classifier was trained using Adam optimizer and learning rate $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noted oscillations in the validation loss value. In table \ref{tab:class_res} are reported two experiments. The first model used an alternative architecture using standard residual blocks as depicted in fig \ref{fig:resblock_1} and was trained without data augmentation. The second one had the architecture described in \ref{fig:preact_resblock} with preactivated residual blocks and was trained using data augmentation. The final submission has been done only using this last model.
 
 \begin{table*}[h]
 	\begin{tabular}{llll}
