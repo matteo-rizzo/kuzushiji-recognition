@@ -227,11 +227,29 @@ class ModelCenterNet:
     def predict(self,
                 model: tf.keras.Model,
                 dataset: tf.data.Dataset,
-                verbose: int = 1) -> Union[np.ndarray, List[np.ndarray]]:
+                verbose: int = 1,
+                batch_size: Union[int, None] = None,
+                keras_mode: bool = False) -> Union[np.ndarray, List[np.ndarray]]:
         """
         Performs a prediction on a given dataset
         """
 
         self.__logs['test'].info("Predicting...")
 
-        return model.predict(dataset, verbose=verbose)
+        if keras_mode:
+            data_generator = ImageDataGenerator()
+
+            generator = data_generator.flow_from_dataframe(
+                dataframe=pd.DataFrame({'image': dataset}),
+                directory='',
+                x_col='image',
+                y_col=None,
+                class_mode='other',
+                target_size=(self.__input_width, self.__input_height),
+                batch_size=batch_size)
+
+            steps = generator.n // batch_size + 1
+
+            return model.predict_generator(generator, steps=steps, verbose=verbose)
+        else:
+            return model.predict(dataset, verbose=verbose)

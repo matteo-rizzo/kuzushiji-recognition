@@ -179,17 +179,17 @@ class ModelGeneratorTile:
         return Model(input_layer, out)
 
     def __generate_classification_model(self, input_layer, n_category):
-        # (32, 32, 3) -> (32, 32, 64)
+        # (40, 40, 3) -> (40, 40, 64)
         x = self.__cbr(input_layer, 64, 3, 1)
         x = self.__preactivated_res_block(x, 64)
         x = self.__preactivated_res_block(x, 64)
 
-        # (32, 32, 64) -> (16, 16, 128)
+        # (40, 40, 64) -> (20, 20, 128)
         x = self.__cbr(x, 128, 3, 2)
         x = self.__preactivated_res_block(x, 128)
         x = self.__preactivated_res_block(x, 128)
 
-        # (16, 16, 128) -> (8, 8, 256)
+        # (20, 20, 128) -> (10, 10, 256)
         x = self.__cbr(x, 256, 3, 2)
         x = self.__preactivated_res_block(x, 256)
         x = self.__preactivated_res_block(x, 256)

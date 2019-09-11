@@ -81,8 +81,8 @@ The full architecture diagram using ResNet34 is shown in figure \ref{fig:detecto
 
 \noindent During the encoding phase, the input image of dimension $512 \times 512$ is shrunk through 5 convolutional blocks.\\
 The first block uses a convolution of size 7 and stride 2 and a max pooling operation to downsample the image by a factor of 4.\\
-The second block is built of 3 standard residual blocks with identity shortcut. Such a block can be visualized in figure \ref{fig:resblock_1}. These blocks do not change the image dimension and they just apply two convolutions to add more feature maps, with the addition block at the end.\\
-The third block halves the image size using a residual block with projection shortcut (in figure \ref{fig:resblock_2}) and three residual blocks with identity shortcut.\\
+The second block is built of 3 standard residual blocks with identity shortcut. Such a block can be visualized in figure \ref{fig:resblock1}. These blocks do not change the image dimension and they just apply two convolutions to add more feature maps, with the addition block at the end.\\
+The third block halves the image size using a residual block with projection shortcut (in figure \ref{fig:resblock2}) and three residual blocks with identity shortcut.\\
 Fourth and fifth blocks just repeat this steps with a different number of identity shortcut blocks. Note that each residual block double the number of channels in the image. For what concerns the decoder, the encoded input of size $(16, 16, 512)$ is passed to the decoder that uses three up-convolutional blocks to upsample it to the desired output dimension of $(128, 128, 5)$. Here, we made two major changes with respect to the standard CenterNet implementation of the decoder:
 
 \begin{enumerate}
@@ -94,14 +94,14 @@ Fourth and fifth blocks just repeat this steps with a different number of identi
 	\caption{Residual block with identity shortcut.}
 	\centering
 	\includegraphics[width=0.1\textwidth]{architectures/resblock_1.png}
-	\label{fig:resblock_1}
+	\label{fig:resblock1}
 \end{figure}
 
 \begin{figure}[h]
 	\caption{Residual block with projection shortcut.}
 	\centering
 	\includegraphics[width=0.2\textwidth]{architectures/resblock_2.png}
-	\label{fig:resblock_2}
+	\label{fig:resblock2}
 \end{figure}
 
 The difference between a standard convolution and deformable convolution is that using the former the receptive field and the sampling locations are fixed all over the top feature map, while using the latter they are adaptively adjusted according to the scale and shape of the objects in deformable convolution. This is implemented by augmenting the standard convolutional grid with a matrix of parameters called offsets, which must be learned in addition to the standard convolution weights \cite{DeformableConv2017}. The authors of the original paper reported an improvement over standard convolution for object detection tasks, in particular in the detection of irregular objects. On the other hand, the characters to be recognised in the Kuzushiji documents are arranged in adjacent columns, in a grid-like pattern. For this reason, and considering the additional computational time required to train a deformable convolutional network, we decided to replace them with their standard counterparts. \\
@@ -144,7 +144,7 @@ The previously described network predicts the location of the center of each cha
 \end{eqnarray*}
 Then, out-of-picture boxes and the ones with an area too different from the average area in the page (too big or too small) are removed. Finally overlap-based non maximum suppression is performed comparing the intersection area between the boxes. Each lower score bounding box sharing more than 40\% of the area of higher score boxes, or having more than 60\% of its area inside other higher score bounding boxes is removed.\\
 
-\noindent Despite the non-maximum-suppression, we noted that some small characters were not detected by the network. This happens because the feature map is, in some cases, too small with respect to the original image, and may lose some information, leading to lower IoU score with the ground truth bounding boxes. 
+\noindent Despite the non-maximum-suppression, we noticed that some small characters were not detected by the network. This happens because the feature map is, in some cases, too small with respect to the original image, and may lose some information, leading to lower IoU score with the ground truth bounding boxes. 
 Our solution was to divide each image into a number $n$ of smaller images (that we call \textit{tiles}) and use the model to predict bounding boxes in each one of the smaller images. A 25\% overlap between the tiles is used to preserve the objects along the tile boundaries and prevent any miss due to image partitioning. An example of partitioned image is shown in figure \ref{fig:tiles4}.
 
 \begin{figure}

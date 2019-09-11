@@ -14,7 +14,6 @@ from networks.classes.centernet.models.ModelGeneratorTile import ModelGeneratorT
 
 
 class Classifier:
-
     def __init__(self, model_params, dataset_params, num_categories, weights_path, logs):
         self.__logs = logs
         self.__weights_path = weights_path
@@ -58,10 +57,12 @@ class Classifier:
             cropped_img_id = int(cropped_img_name.split('_')[-1].split('.')[0])
 
             # Set the relative path to the original image
-            original_img_path = os.path.join(self.__model_params['test_images_path'], original_img_name + '.jpg')
+            original_img_path = os.path.join(self.__model_params['test_images_path'],
+                                             original_img_name + '.jpg')
 
             # Convert the coords of the bboxes from float to string
-            bbox_coords = [str(coord) for coord in bbox_predictions[original_img_path][cropped_img_id][1:]]
+            bbox_coords = [str(coord) for coord in
+                           bbox_predictions[original_img_path][cropped_img_id][1:]]
 
             # Join the coordinates in a single string, in format ymin:xmin:ymax:xmax
             cropped_img_to_bbox[cropped_img_name] = ':'.join(bbox_coords)
@@ -155,10 +156,13 @@ class Classifier:
 
         self.__logs['execution'].info('Evaluating the classification model...')
 
+        a, b = dataset.get_evaluation_set()
+
         metrics = self.__model_utils.evaluate(model=self.__model,
-                                              evaluation_set=dataset,
+                                              evaluation_set=a,
+                                              evaluation_steps=b,
                                               batch_size=self.__model_params['batch_size'],
-                                              keras_mode=True)
+                                              keras_mode=False)
 
         self.__logs['test'].info('Evaluation metrics:\n'
                                  'sparse_categorical_crossentropy : {}\n'
@@ -167,7 +171,8 @@ class Classifier:
 
     def __generate_predictions(self, test_list) -> Generator:
 
-        self.__logs['execution'].info('Starting the predict procedure of char class (takes much time)...')
+        self.__logs['execution'].info(
+            'Starting the predict procedure of char class (takes much time)...')
 
         input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
 

@@ -104,7 +104,7 @@ class Detector:
 
     def __show_tile_predictions(self, xy_eval):
         self.__logs['execution'].info('Showing examples of tile predictions...')
-        _, avg_iou = self.__bb_handler.get_train_tiled_bboxes(xy_eval[:10],
+        _, avg_iou = self.__bb_handler.get_train_tiled_bboxes(xy_eval,
                                                               model=self.__model,
                                                               n_tiles=2,
                                                               show=False)
@@ -116,7 +116,7 @@ class Detector:
         input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
 
         # Prepare a test dataset from the evaluation set taking its first 10 values
-        test_path_list = [ann[0] for ann in xy_eval[:10]]
+        test_path_list = [ann[0] for ann in xy_eval]
         mini_test = tf.data.Dataset.from_tensor_slices(test_path_list) \
             .map(lambda i: self.__resize_fn(i, input_h, input_w),
                  num_parallel_calls=tf.data.experimental.AUTOTUNE) \
@@ -125,7 +125,7 @@ class Detector:
 
         # Perform the prediction on the newly created dataset and show images
         _, avg_iou = self.__bb_handler.get_train_standard_bboxes(self.__model_utils.predict(self.__model, mini_test),
-                                                                 annotation_list=xy_eval[:10],
+                                                                 annotation_list=xy_eval,
                                                                  show=False)
         self.__logs['execution'].info('The average IoU score using standard model is: {}'.format(avg_iou))
 
