@@ -277,7 +277,6 @@ modules.xml
 !/libs/frcnn/
 
 # Models folder
-/models
 
 # Checkpoints
 /ckpt/
