@@ -44,7 +44,7 @@ The classifier was trained using Adam optimizer and learning rate $5 \cdot 10^{-
 \begin{figure}[h]
 	\caption{Preactivated residual block.}
 	\centering
-	\includegraphics[width=0.15\textwidth]{architectures/preactivated_resblock.png}
+	\includegraphics[width=0.35\textwidth]{architectures/resblock_pre.png}
 	\label{fig:preactresblock}
 \end{figure}
 
@@ -63,7 +63,7 @@ The classifier was trained using Adam optimizer and learning rate $5 \cdot 10^{-
 	\label{fig:HTRbenchmark}
 \end{figure}
 
-In the third competition, the Ratsprotokolle collection (ICFHR-2016), composed of handwritten minutes of council meetings held from 1470 to 1805, was considered, while the dataset of the fourth competition was a part of the Alfred Escher Letter Collection (AEC, ICDAR-2017) which is composed of letters handwritten mainly in German but it also has pages in French and Italian. Table \ref{tab:htr-benchmarks} summaries the baselines achieved by \cite{Sanchez2019-pi} and the best results achieved prior the publication of their paper. Note that the Word Error Rate (WER) and the Character Error Rate (CER) metrics are used. WER is defined as the minimum number of words that need to be substituted, deleted, or inserted to match the recognition output with the corresponding reference ground truth, divided by the total number of words in the reference transcripts. CER is defined in the same way but at character level.
+In the third competition, the Ratsprotokolle collection (ICFHR-2016), composed of handwritten minutes of council meetings held from 1470 to 1805, was considered, while the dataset of the fourth competition was a part of the Alfred Escher Letter Collection (AEC, ICDAR-2017) which is composed of letters handwritten mainly in German but it also has pages in French and Italian. Table \ref{tab:htr-benchmarks} summarizes the baselines achieved by \cite{Sanchez2019-pi} and the best results achieved prior the publication of their paper. Note that the Word Error Rate (WER) and the Character Error Rate (CER) metrics are used. WER is defined as the minimum number of words that need to be substituted, deleted, or inserted to match the recognition output with the corresponding reference ground truth, divided by the total number of words in the reference transcripts. CER is defined in the same way but at character level.
 
 \begin{table*}[h]
 	\begin{tabular}{ccccc}
@@ -77,6 +77,7 @@ In the third competition, the Ratsprotokolle collection (ICFHR-2016), composed o
 		ICDAR-2017 Traditional                                       & 7.0                             & 19.1                           & 5.8                                 & 17.6                                \\
 		ICDAR-2017 Advanced                                          & 6.4                             & 16.8                           & 6.3                                 & 18.5
 	\end{tabular}
+	\caption{\textcolor{red}{CAPTION}}
 	\label{tab:htr-benchmarks}
 \end{table*}
 

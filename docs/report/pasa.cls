@@ -1347,7 +1347,7 @@
 %
 \usepackage{graphicx}%,
 \usepackage{amsmath,amssymb}
-%\usepackage{caption}
+\usepackage{caption}
 \usepackage{subcaption}
 \linespread{1.09}
 %%\usepackage{txfonts}

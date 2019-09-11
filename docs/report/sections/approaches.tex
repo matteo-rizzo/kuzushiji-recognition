@@ -23,7 +23,7 @@ Note that this approach is considered more accurate, but it is quite slow if com
 Single shot detectors predict both the bounding box and the class of an object at the same time. Being a single step process, it is much faster and indicated for real-time object detection. Instead of having a network produce proposals, the single shot approach implies the exploitation of a set of predefined boxes to look for objects. In order to understand what is in an image, the input is fed through a standard convolutional network to build a rich feature representation of the original image. This part of the architecture is the "backbone" network, which is usually pre-trained as an image classifier to more cheaply learn how to extract features from an image. After pre-training the backbone architecture as an image classifier, its last few layers are removed, so that its output consists of a collection of stacked feature maps which describe the original image in a low spatial resolution but in a high feature (channel) resolution. In order to detect an object, another convolutional layer is added, and the kernel parameters must be learned, which combine the context of all the feature maps of the object in order to produce an activation corresponding with the grid cell which contains it \cite{Jordan2018}. This process is showed in figure \ref{fig:ssd} \\
 
 \begin{figure}[h]
-	\caption{Combination of the feature maps to produce an activation in the grid cell responsible for detecting an object in a single shot detector.}
+	\caption{Combination of the feature maps to produce an activation in the grid cell responsible for detecting an object in a single shot detector \cite{Jordan2018}.}
 	\centering
 	\includegraphics[width=0.5\textwidth]{approaches/SSD.jpg}
 	\label{fig:ssd}
@@ -32,7 +32,7 @@ Single shot detectors predict both the bounding box and the class of an object a
 Because of the convolutional nature of the detection process, multiple objects can be detected in parallel, substantially increasing the overall speed of the algorithm. However, the method also ends up predicting for a large number of grid cells where no object is found. Although the majority of the redundant bounding boxes could be filtered out by selecting a proper confidence threshold, multiple high-confidence predictions describing the same object may persist. Thus, a method is needed for removing redundant object predictions such that each object is described by a single bounding box. To accomplish this, a technique known as non-maximum suppression is used. At a high level, this technique will look at much overlapping bounding boxes and suppress all the predictions except the one with the highest confidence value. The strategy is schematized in figure \ref{fig:nms}.
 
 \begin{figure}[h]
-	\caption{Non-maximum suppression strategy.}
+	\caption{Non-maximum suppression strategy \cite{Jordan2018}.}
 	\centering
 	\includegraphics[width=0.5\textwidth]{approaches/nms.jpg}
 	\label{fig:nms}

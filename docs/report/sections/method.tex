@@ -17,7 +17,7 @@ In the referenced paper, the authors propose a deep neural network for object de
 \subsubsection{Implementation}
 \label{sssec:implementationdet}
 
-To implement the detection model we followed both the implementation described in the paper and an existing implementation created by a Kaggle user specifically for the purpose of the competition \cite{k-mat2019}.\\ We call this model the \textit{detector model}, since its purpose is detecting the center of each character to be recognised in the image. Note that in our implementation there is just one type of keypoint that should be recognised. However, as reported in the paper, CenterNet allows to use more keypoint types (e.g. it has been used in human pose recognition task, where each keypoint type represented a different human joint). Theoretically it may be possible to use this same architecture also for character classification, using a different keypoint type for each Kuzushiji character. However, the number of classes (in subset $C$) would be very high (i.e. $>$ 4200) and consequently the output of the model would be huge and impractical to manipulate, additionally resulting in a higher training and predict time. Thus, we preferred the two steps approach, using different models for detection and classification.
+To implement the detection model we followed both the implementation described in the paper and an existing implementation created by a Kaggle user specifically for the purpose of the competition (see \cite{k-mat2019}).\\ We call this model the \textit{detector model}, since its purpose is detecting the center of each character to be recognized in the image. Note that in our implementation there is just one type of keypoint that should be recognized. However, as reported in the paper, CenterNet allows to use more keypoint types (e.g. it has been used in human pose recognition task, where each keypoint type represented a different human joint). Theoretically it may be possible to use this same architecture also for character classification, using a different keypoint type for each Kuzushiji character. However, the number of classes (in subset $C$) would be very high (i.e. $>$ 4200) and consequently the output of the model would be huge and impractical to manipulate, additionally resulting in a higher training and predict time. Thus, we preferred the two steps approach, using different models for detection and classification.
 
 \subsubsubsection{Description of the input samples}
 \label{ssssec:inputsamples}
@@ -46,19 +46,23 @@ We followed the implementation on Kaggle adding in $Y_{x,y,1}$ the “ground tru
 \label{ssssec:lossfunctiondet}
 
 We used the loss functions provided in the Kaggle implementation, which follow the description of the paper. The main loss function is computed from three separate losses $L_h$, $L_o$, $L_s$, that measure the error on the heatmap, offset and size respectively. The heatmap loss is defined as (\ref{eq:heatloss}):
-\begin{equation}\label{eq:heatloss}
+\begin{gather}
+\begin{aligned}
 L_h=-\dfrac{1}{N}\sum_{x,y}
 \begin{cases}
-(1-\widehat{Y}_{x,y,0})^{\alpha} \\~~~~\cdot \log(\widehat{Y}_{x,y,0} + \epsilon)~~~~~~~~~~\text{if}~Y_{x,y,0} = 1 \vspace*{10pt} \\
-(1-Y_{x,y,0})^{\beta} \cdot (\widehat{Y}_{x,y,0})^\alpha \\ ~~~~\cdot \log(1-\widehat{Y}_{x,y,0} + \epsilon) ~~~~~~\text{if}~Y_{x,y,0}=0
+(1-\widehat{Y}_{x,y,0})^{\alpha} \\~~~~\cdot \log(\widehat{Y}_{x,y,0} + \epsilon)~~~~~~~~~\text{if}~Y_{x,y,0} = 1 \vspace*{10pt} \\
+(1-Y_{x,y,0})^{\beta} \cdot (\widehat{Y}_{x,y,0})^\alpha \\ ~~~~\cdot \log(1-\widehat{Y}_{x,y,0} + \epsilon) ~~~~\text{if}~Y_{x,y,0}=0
 \end{cases}
-\end{equation}
-where $\alpha=2$ and $\beta=4$ as suggested in the paper, while $\epsilon=1 \cdot 10-6$ is a small constant added to the log argument to avoid getting it to 0. Note that in the original paper the sum was done over all $x$, $y$, $c$, but in our implementation we want to predict one keypoint type only, so in the formula we substituted the c variable with 0.
-The other losses are defined as:
-\begin{equation}
+\end{aligned}
+\label{eq:heatloss}
+\raisetag{37pt}
+\end{gather}
+where $\alpha=2$ and $\beta=4$ as suggested in the paper, while $\epsilon=10^{-6}$ is a small constant added to prevent the $\log$ argument from becoming $0$. Note that in the original paper the sum was done over all $x$, $y$, $c$, but in our implementation we want to predict one keypoint type only, so in the definition we replaced the $c$ variable with $0$.\\
+Offset and size loss are defined in equations \ref{eq:offloss} and \ref{eq:sizeloss} as:
+\begin{equation}\label{eq:offloss}
 L_o = \dfrac{1}{N}\sum_{k=1}^{2}\sum_{x,y}\left|Y_{x,y,k+1} - \widehat{Y}_{x,y,k}\right|
 \end{equation}
-\begin{equation}
+\begin{equation}\label{eq:sizeloss}
 	L_s = \dfrac{1}{N}\sum_{k=3}^{4}\sum_{x,y}\left|Y_{x,y,k+1} - \widehat{Y}_{x,y,k}\right|
 \end{equation}
 
@@ -84,8 +88,8 @@ The full architecture diagram using ResNet34 is shown in figure \ref{fig:detecto
 
 \noindent During the encoding phase, the input image of dimension $512 \times 512$ is shrunk through 5 convolutional blocks.\\
 The first block uses a convolution of size 7 and stride 2 and a max pooling operation to downsample the image by a factor of 4.\\
-The second block is built of 3 standard residual blocks with identity shortcut. Such a block can be visualized in figure \ref{fig:resblock1}. These blocks do not change the image dimension and they just apply two convolutions to add more feature maps, with the addition block at the end.\\
-The third block halves the image size using a residual block with projection shortcut (in figure \ref{fig:resblock2}) and three residual blocks with identity shortcut.\\
+The second block is built of 3 standard residual blocks with identity shortcut. Such a block can be visualized in figure \ref{fig:resblock-id}. These blocks do not change the image dimension and they just apply two convolutions to add more feature maps, with the addition block at the end.\\
+The third block halves the image size using a residual block with projection shortcut and three residual blocks with identity shortcut. Projection shortcut block, shown in figure \ref{fig:resblock-proj}, does the same operations of identity shortcut, but adds a $1\times 1$ convolution to match the dimensions of the feature maps to be summed up.\\
 Fourth and fifth blocks just repeat this steps with a different number of identity shortcut blocks. Note that each residual block double the number of channels in the image. For what concerns the decoder, the encoded input of size $(16, 16, 512)$ is passed to the decoder that uses three up-convolutional blocks to upsample it to the desired output dimension of $(128, 128, 5)$. Here, we made two major changes with respect to the standard CenterNet implementation of the decoder:
 
 \begin{enumerate}
@@ -93,18 +97,18 @@ Fourth and fifth blocks just repeat this steps with a different number of identi
 	\item We replaced the deformable convolution layer with a simple convolution.
 \end{enumerate}
 
-\begin{figure}[h]
+\begin{figure}
 	\caption{Residual block with identity shortcut.}
 	\centering
-	\includegraphics[width=0.1\textwidth]{architectures/resblock_1.png}
-	\label{fig:resblock1}
+	\includegraphics[width=0.35\textwidth]{architectures/resblock_id.png}
+	\label{fig:resblock-id}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}
 	\caption{Residual block with projection shortcut.}
 	\centering
-	\includegraphics[width=0.2\textwidth]{architectures/resblock_2.png}
-	\label{fig:resblock2}
+	\includegraphics[width=0.45\textwidth]{architectures/resblock_proj.png}
+	\label{fig:resblock-proj}
 \end{figure}
 
 The difference between a standard convolution and deformable convolution is that using the former the receptive field and the sampling locations are fixed all over the top feature map, while using the latter they are adaptively adjusted according to the scale and shape of the objects in deformable convolution. This is implemented by augmenting the standard convolutional grid with a matrix of parameters called offsets, which must be learned in addition to the standard convolution weights \cite{DeformableConv2017}. The authors of the original paper reported an improvement over standard convolution for object detection tasks, in particular in the detection of irregular objects. On the other hand, the characters to be recognised in the Kuzushiji documents are arranged in adjacent columns, in a grid-like pattern. For this reason, and considering the additional computational time required to train a deformable convolutional network, we decided to replace them with their standard counterparts. \\
@@ -124,7 +128,7 @@ The last block is composed of a $1 \times 1$ convolution to reduce the number of
 \subsubsection{Pre-processing and training}
 \label{sssec:preprocessingdet}
 
-The input samples are firstly resized to $512 \times 512 \times 3$ and normalized, as well as random cropped for data augmentation. A maximum crop factor is determined considering the average character size in the page. This is determined separatedly for width and height as shown in equations \ref{eq:stretchw} and \ref{eq:stretchh}, where $w$ and $h$ are the dimensions of the original image and $char\_area$ is the average bounding box area within the page.
+The input samples are firstly resized to $512 \times 512 \times 3$ and normalized, as well as random cropped for data augmentation. A maximum crop factor is determined considering the average character size in the page. This is determined separately for width and height as shown in equations \ref{eq:stretchw} and \ref{eq:stretchh}, where $w$ and $h$ are the dimensions of the original image and $char\_area$ is the average bounding box area within the page.
 \begin{equation}\label{eq:stretchw}
 	c_w=\sqrt{\frac{w \cdot h}{char\_area}}
 \end{equation}
@@ -196,7 +200,7 @@ The classifier is a small convolutional model based on the one proposed in the K
 \begin{figure}[h]
 	\caption{Architecture of the classifier.}
 	\centering
-	\includegraphics[width=0.25\textwidth]{architectures/classifier.png}
+	\includegraphics[width=0.3\textwidth]{architectures/classifier.png}
 	\label{fig:classifier}
 \end{figure}
 
