@@ -1,11 +1,11 @@
-from math import exp
 from typing import Dict, List, Tuple
-
+from collections import OrderedDict
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from PIL import Image
+from math import log
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -23,11 +23,15 @@ class PreprocessingDataset:
         self.__train_list: List[Tuple[str, np.array]] = []
         self.__w_and_h: List[float] = []
         self.__dict_cat: Dict[str, int] = {}
+        self.__class_weights: Dict[int, float] = {}
 
         self.__dataset: Tuple[tf.data.Dataset, int]
 
     def get_categories_dict(self) -> Dict[str, int]:
         return self.__dict_cat
+
+    def get_class_weights(self) -> Dict[int, float]:
+        return self.__class_weights
 
     def generate_dataset(self):
         # Generate a train list of tuples where each row represents an image and the list of the
@@ -43,31 +47,69 @@ class PreprocessingDataset:
     def __get_dataset_labels(self) -> List[float]:
         return [img_data[1] for img_data in self.__train_image_avg_char_area_ratios]
 
+    def __set_class_encoding(self, df_train, show_frequency=False):
+        # Initialize an empty dictionary of <unicode> -> <class frequency>
+        class_frequencies = {}
+
+        # Iterate over the rows of the train list
+        for i in range(len(df_train)):
+            # Get one row for each label character w.r.t. image i, as: <category> <x> <y> <width> <height>
+            ann = np.array(df_train.loc[i, "labels"].split(" ")).reshape(-1, 5)
+
+            # Iterate over the unicodes of the current row
+            for unicode in ann[:, 0]:
+                # Update the frequency of class <unicode>
+                frequency = class_frequencies.setdefault(unicode, 0) + 1
+                class_frequencies[unicode] = frequency
+
+        # Sort the dictionary of frequencies
+        ord_class_frequencies = OrderedDict(sorted(class_frequencies.items()))
+
+        # Make a dict assigning an integer to each category
+        category_names = ord_class_frequencies.keys()
+        self.__dict_cat: Dict[str, int] = {list(category_names)[j]: j for j in range(len(category_names))}
+
+        # Set up a dictionary of frequencies as: <int class code> -> <frequency>
+        dict_frequencies = {self.__dict_cat[k]: ord_class_frequencies[k] for k in self.__dict_cat.keys()}
+
+        # Set up the dictionary of class weights as: <int class code> -> <relative frequency>
+        num_occurs = sum(dict_frequencies.values())
+        max_frequency = max(dict_frequencies.values()) * 100 / num_occurs
+        eps = 0.0005
+        self.__class_weights = {k: log(max_frequency / (v * 100 / num_occurs) + eps) for k, v in dict_frequencies.items()}
+
+        if show_frequency:
+            cat, frequency = zip(*dict_frequencies.items())
+            fig = plt.figure()
+            plt.plot(cat, frequency, color='red')
+            fig.suptitle('Class frequencies', fontsize=18)
+            plt.xlabel('Class int code', fontsize=14)
+            plt.ylabel('Frequency', fontsize=14)
+            plt.show()
+            plt.clf()
+            plt.close('all')
+
+            cat, rel_frequency = zip(*self.__class_weights.items())
+            fig = plt.figure()
+            plt.plot(cat, rel_frequency, color='blue')
+            fig.suptitle('Relative class frequencies', fontsize=16)
+            plt.xlabel('Class int code', fontsize=14)
+            plt.ylabel('Relative frequency', fontsize=14)
+            plt.show()
+
     def __parse_train_csv(self):
         """
         Read training csv and generate a list with char classes and bounding box in a convenient format.
         """
+
+        # Read the train list from csv
         df_train = pd.read_csv(self.__train_csv_path)
 
         # Remove any row with at least one nan value
         df_train = df_train.dropna(axis=0, how='any')
         df_train = df_train.reset_index(drop=True)
 
-        category_names = set()
-
-        for i in range(len(df_train)):
-            # Get one row for each label character for image i,
-            # as: <category> <x> <y> <width> <height>
-            ann = np.array(df_train.loc[i, "labels"].split(" ")).reshape(-1, 5)
-
-            # Get set of unique categories
-            category_names = category_names.union({i for i in ann[:, 0]})
-
-        category_names = sorted(category_names)
-
-        # Make a dict assigning an integer to each category
-        self.__dict_cat: Dict[str, int] = {list(category_names)[j]: j for j in
-                                           range(len(category_names))}
+        self.__set_class_encoding(df_train)
 
         for i in range(len(df_train)):
             # Get one row for each label character for image i, as: <category> <x> <y> <width> <height>
@@ -211,7 +253,7 @@ class PreprocessingDataset:
 
             # Compute the offsets
             top_offset = np.random.randint(0, pic_height - int(crop_ratio * pic_height)) / (
-                        pic_height - 1)
+                    pic_height - 1)
             left_offset = np.random.randint(0, pic_width - int(crop_ratio * pic_width)) / (pic_width - 1)
             bottom_offset = top_offset + int(crop_ratio * pic_height) / (pic_height - 1)
             right_offset = left_offset + int(crop_ratio * pic_width) / (pic_width - 1)

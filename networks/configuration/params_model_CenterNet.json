@@ -1,5 +1,5 @@
 {
-  "run_id": "test_centernet_new",
+  "run_id": "test_centernet",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "test_csv_path": "datasets/kaggle/sample_submission.csv",
@@ -18,13 +18,13 @@
     "output_height": 128
   },
   "detector": {
-    "train": true,
+    "train": false,
     "evaluate": false,
     "predict_on_test": false,
     "show_prediction_examples": false,
     "restore_weights": true,
-    "model": "tile",
-    "initial_epoch": 130,
+    "model": "standard",
+    "initial_epoch": 138,
     "epochs": 130,
     "batch_size": 32,
     "batch_size_predict": 32,
@@ -37,17 +37,17 @@
     "output_height": 128
   },
   "classifier": {
-    "train": false,
+    "train": true,
     "evaluate": false,
     "predict_on_test": false,
     "restore_weights": false,
     "regenerate_crops_train": false,
     "regenerate_crops_test": false,
-    "model": "tile",
-    "batch_size": 64,
+    "model": "standard",
+    "batch_size": 32,
     "batch_size_predict": 64,
-    "initial_epoch": 8,
-    "epochs": 60,
+    "initial_epoch": 0,
+    "epochs": 1,
     "learning_rate": 5e-4,
     "decay": "",
     "input_width": 40,

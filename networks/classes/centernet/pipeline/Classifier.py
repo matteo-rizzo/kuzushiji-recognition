@@ -14,9 +14,10 @@ from networks.classes.centernet.models.ModelGeneratorTile import ModelGeneratorT
 
 
 class Classifier:
-    def __init__(self, model_params, dataset_params, num_categories, weights_path, logs):
+    def __init__(self, model_params, dataset_params, class_weights, weights_path, logs):
         self.__logs = logs
         self.__weights_path = weights_path
+        self.__class_weights = class_weights
 
         self.__model_params = model_params
         self.__model_params.update(dataset_params)
@@ -24,7 +25,7 @@ class Classifier:
         self.__model_utils = ModelCenterNet(logs=self.__logs)
         self.__img_cropper = ImageCropper(log=self.__logs['execution'])
 
-        self.__model = self.__build_and_compile_model(num_categories)
+        self.__model = self.__build_and_compile_model(len(class_weights.keys()))
 
     def __write_test_list_to_csv(self, test_list: List, bbox_predictions: Dict):
 
@@ -150,6 +151,7 @@ class Classifier:
                                  epochs=self.__model_params['epochs'],
                                  batch_size=self.__model_params['batch_size'],
                                  callbacks=callbacks,
+                                 class_weights=self.__class_weights,
                                  augmentation=True)
 
     def __evaluate_model(self, dataset):

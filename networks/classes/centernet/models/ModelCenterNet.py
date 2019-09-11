@@ -8,7 +8,6 @@ from typing import Dict, List, Union, Tuple
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard, LearningRateScheduler
-from sklearn.utils import class_weight
 
 from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
 
@@ -116,6 +115,7 @@ class ModelCenterNet:
               epochs: int,
               batch_size: int,
               callbacks: List[tf.keras.callbacks.Callback],
+              class_weights=None,
               augmentation: bool = False):
         """
         Compiles and trains the model for the specified number of epochs.
@@ -140,11 +140,6 @@ class ModelCenterNet:
         if augmentation:
             x_train, y_train = dataset.get_xy_training()
             x_val, y_val = dataset.get_xy_validation()
-
-            # we = list(y_train)
-            # we.extend(y_val)
-            # class_weights = class_weight.compute_class_weight('balanced', np.unique(we), we)
-            # class_weights = dict(enumerate(class_weights))
 
             train_image_data_generator = ImageDataGenerator(brightness_range=[0.7, 1.0],
                                                             rotation_range=10,
@@ -177,7 +172,8 @@ class ModelCenterNet:
                                 validation_data=val_generator,
                                 validation_steps=validation_steps,
                                 callbacks=callbacks,
-                                initial_epoch=init_epoch)
+                                initial_epoch=init_epoch,
+                                class_weight=class_weights)
         else:
             model.fit(training_set,
                       epochs=epochs,
@@ -185,7 +181,8 @@ class ModelCenterNet:
                       validation_data=validation_set,
                       validation_steps=validation_steps,
                       callbacks=callbacks,
-                      initial_epoch=init_epoch)
+                      initial_epoch=init_epoch,
+                      class_weight=class_weights)
 
         self.__logs['training'].info('Training procedure performed successfully!\n')
 

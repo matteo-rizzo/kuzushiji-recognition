@@ -89,6 +89,7 @@ class CenterNetPipeline:
                              model_params: Dict,
                              train_list: List[List],
                              bbox_predictions: Union[Dict[str, np.ndarray], None],
+                             class_weights: Dict,
                              weights_path: str) -> Union[Generator, None]:
         """
         Classifies each character according to the available classes via a CNN
@@ -108,7 +109,7 @@ class CenterNetPipeline:
         classifier = Classifier(model_params=model_params,
                                 dataset_params=self.__dataset_params,
                                 weights_path=weights_path,
-                                num_categories=len(self.__dict_cat),
+                                class_weights=class_weights,
                                 logs=self.__logs)
 
         return classifier.classify(train_list=train_list,
@@ -178,6 +179,7 @@ class CenterNetPipeline:
             predictions = self.__run_classification(model_params=params.classifier,
                                                     train_list=train_list,
                                                     bbox_predictions=bbox_predictions,
+                                                    class_weights=preprocessed_dataset.get_class_weights(),
                                                     weights_path=os.path.join(experiment_path + '_3', 'weights'))
 
         # -- STEP 4:  Analysis and visualization of results ---
