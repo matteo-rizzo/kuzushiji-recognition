@@ -66,7 +66,7 @@ The classifier was trained using Adam optimizer and learning rate $5 \cdot 10^{-
 In the third competition, the Ratsprotokolle collection (ICFHR-2016), composed of handwritten minutes of council meetings held from 1470 to 1805, was considered, while the dataset of the fourth competition was a part of the Alfred Escher Letter Collection (AEC, ICDAR-2017) which is composed of letters handwritten mainly in German but it also has pages in French and Italian. Table \ref{tab:htr-benchmarks} summarizes the baselines achieved by \cite{Sanchez2019-pi} and the best results achieved prior the publication of their paper. Note that the Word Error Rate (WER) and the Character Error Rate (CER) metrics are used. WER is defined as the minimum number of words that need to be substituted, deleted, or inserted to match the recognition output with the corresponding reference ground truth, divided by the total number of words in the reference transcripts. CER is defined in the same way but at character level.
 
 \begin{table*}[h]
-	\begin{tabular}{ccccc}
+	\begin{tabular}{lcccc}
 		\rowcolor[HTML]{EFEFEF}
 		\cellcolor[HTML]{EFEFEF}                                     & \multicolumn{2}{l}{\cellcolor[HTML]{EFEFEF}\textbf{Best so far}} & \multicolumn{2}{l}{\cellcolor[HTML]{EFEFEF}\textbf{HTR benchmarks paper}} \\
 		\rowcolor[HTML]{EFEFEF}
@@ -77,7 +77,7 @@ In the third competition, the Ratsprotokolle collection (ICFHR-2016), composed o
 		ICDAR-2017 Traditional                                       & 7.0                             & 19.1                           & 5.8                                 & 17.6                                \\
 		ICDAR-2017 Advanced                                          & 6.4                             & 16.8                           & 6.3                                 & 18.5
 	\end{tabular}
-	\caption{\textcolor{red}{CAPTION}}
+	\caption{Benchmarks on handwritten text recognition from \cite{Sanchez2019-pi}.}
 	\label{tab:htr-benchmarks}
 \end{table*}
 
@@ -94,7 +94,7 @@ MNIST, a dataset with 70,000 labeled images of handwritten digits, has been one 
 		Kuzushiji-49     & 49 Hiragana characters & 270.912               & No                        & 28x28               \\
 		Kuzushiji-Kanji  & 3832 Kanji characters  & 140.426               & No                        & 64x64
 	\end{tabular}
-	\caption{\textcolor{red}{CAPTION}}
+	\caption{Description of the structure of the Kuzushiji-MNIST dataset from \cite{Clanuwat2018-vm}.}
 	\label{tab:kuzushiji-struct}
 \end{table*}
 
@@ -108,6 +108,6 @@ MNIST, a dataset with 70,000 labeled images of handwritten digits, has been one 
 		PreActResNet-18 + Input Mixup {[}26{]}    & 99.54\%                 & 98.41\%                  & 97.04\%               \\
 		PreActResNet-18 + Manifold Mixup {[}22{]} & 99.54\%                 & \textbf{98.83\%}         & \textbf{97.33\%}
 	\end{tabular}
-	\caption{\textcolor{red}{CAPTION}}
+	\caption{Benchmarks on the Kuzushiji-MNIST dataset from \cite{Clanuwat2018-vm}.}
 	\label{tab:kuzushiji-benchmarks}
 \end{table*}
