@@ -16,11 +16,12 @@
 \usepackage[utf8]{inputenc}             % codifica di input; anche 
 \usepackage[english]{babel}
 \usepackage{aas_macros}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{multirow}
 \usepackage{hyperref} 
 \hypersetup{colorlinks,citecolor=blue,linkcolor=blue,urlcolor=blue}
 \usepackage{graphicx}
 \graphicspath{{images/}}
-\usepackage[table,xcdraw]{xcolor}
 \bibliography{bibliography.bib}
 \hypersetup{draft}
 
@@ -59,7 +60,8 @@
 \input{sections/conclusion}
 
 % --- BIBLIOGRAPHY ---
+
 \newpage
-\input{sections/bibliography}
+\printbibliography
 
 \end{document}
