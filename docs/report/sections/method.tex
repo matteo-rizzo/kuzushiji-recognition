@@ -146,18 +146,21 @@ Then, out-of-picture boxes and the ones with an area too different from the aver
 \noindent Despite the non-maximum-suppression, we noted that some small characters were not detected by the network. This happens because the feature map is, in some cases, too small with respect to the original image, and may lose some information, leading to lower IoU score with the ground truth bounding boxes. 
 Our solution was to divide each image into a number $n$ of smaller images (that we call \textit{tiles}) and use the model to predict bounding boxes in each one of the smaller images. A 25\% overlap between the tiles is used to preserve the objects along the tile boundaries and prevent any miss due to image partitioning. An example of partitioned image is shown in figure \ref{fig:tiles4}.
 
+\iffalse
 \begin{figure}
 	\centering
 	\includegraphics[width=0.8\columnwidth]{detection/tiles_4.png}
 	\caption{An image divided in 4 tiles with 25\% overlapping}
 	\label{fig:tiles4}
 \end{figure}
+\fi
 
 This procedure resulted in more precise bounding box predictions and an higher IoU score on the test set. A comparison can be seen in figure \ref{fig:comparisontiling}. \\
 We empirically determined the optimal number of tiles by measuring the IoU score over the same first 100 examples of the test set. Results gave a 0.7731 score using a $2 \times 2$ grid and 0.7850 using a $3 \times 3$ grid. 
 Since the difference in the IoU score was negligible we chose to use a $2 \times 2$ grid, with the benefit of halving the time required to generate predictions for a single image.\\
 It's worth to say that the same model trained without the random crop described in §\ref{sssec:preprocessingdet} did not reach such scores, but rather got an average IoU score of 0.53. This probably means that the crop procedure enhances the ability of the model to detect small features, particularly useful when predicting portions of images.
 
+\iffalse
 \begin{figure*}[h!]
 	\centering
 	\begin{subfigure}{\columnwidth}
@@ -175,6 +178,7 @@ It's worth to say that the same model trained without the random crop described 
 	\caption{Comparison of predicion on the same page with or without tiling. Image (\ref{fig:tiledpred}) has a IoU score of 0.83, while (\ref{fig:standardpred}) scored 0.59.}
 	\label{fig:comparisontiling}
 \end{figure*}
+\fi
 
 \subsection{Classification of characters using a standard CNN}
 \label{ssec:classificationcnn}
