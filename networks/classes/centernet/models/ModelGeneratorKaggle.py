@@ -6,7 +6,7 @@ from tensorflow.python.keras.layers import UpSampling2D, Input, AveragePooling2D
     GlobalAveragePooling2D, Dense, Dropout, Activation
 
 
-class ModelGeneratorStandard:
+class ModelGeneratorKaggle:
 
     def __aggregation_block(self, x_shallow, x_deep, deep_ch, out_ch):
         x_deep = Conv2DTranspose(deep_ch,

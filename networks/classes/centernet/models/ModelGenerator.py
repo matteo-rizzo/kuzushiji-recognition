@@ -9,7 +9,15 @@ from tensorflow.python.keras.layers import Input, GlobalAveragePooling2D, Dense,
 from tensorflow.python.keras.applications.resnet50 import ResNet50
 
 
-class ModelGeneratorTile:
+class ModelGenerator:
+
+    def __init__(self, detector='resnet34'):
+        detectors = {
+            'resnet34': self.__generate_detection_resnet34,
+            'resnet50': self.__generate_detection_resnet50
+        }
+
+        self.__generate_detector_model = detectors[detector]
 
     @staticmethod
     def __cbr(x, filter_n, kernel, strides):
@@ -90,13 +98,15 @@ class ModelGeneratorTile:
 
     @staticmethod
     def __generate_pretrained_encoder(input_layer: Model):
-        resnet = ResNet50(include_top=False, weights='imagenet',
-                          input_tensor=input_layer, input_shape=(512, 512, 3),
+        resnet = ResNet50(include_top=False,
+                          weights='imagenet',
+                          input_tensor=input_layer,
+                          input_shape=(512, 512, 3),
                           pooling=None)
 
         return resnet
 
-    def __generate_detection_model_2(self, input_layer, n_category=None):
+    def __generate_detection_resnet50(self, input_layer, n_category=None):
         out_filters = n_category + 4
 
         resnet: Model = self.__generate_pretrained_encoder(input_layer)
@@ -134,19 +144,7 @@ class ModelGeneratorTile:
 
         return Model(input_layer, out)
 
-    def __generate_preprocessing_model(self, input_layer, n_category=None):
-        # input_layer_1, input_layer_2 = self.__resize_input_layers(input_layer)
-
-        _, _, _, x = self.__generate_encoder(input_layer)
-
-        x = GlobalAveragePooling2D()(x)
-        x = Dropout(0.2)(x)
-
-        out = Dense(1, activation="linear")(x)
-
-        return Model(input_layer, out)
-
-    def __generate_detection_model(self, input_layer, n_category=None):
+    def __generate_detection_resnet34(self, input_layer, n_category=None):
         out_filters = n_category + 4
 
         x_1, x_2, x_3, x = self.__generate_encoder(input_layer)
@@ -213,8 +211,7 @@ class ModelGeneratorTile:
         """
 
         modes = {
-            'preprocessing': self.__generate_preprocessing_model,
-            'detection': self.__generate_detection_model,
+            'detection': self.__generate_detector_model,
             'classification': self.__generate_classification_model
         }
 

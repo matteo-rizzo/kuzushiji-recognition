@@ -20,8 +20,11 @@
       <w>lrate</w>
       <w>ndarray</w>
       <w>noto</w>
+      <w>preactivated</w>
       <w>preinit</w>
       <w>preprocessing</w>
+      <w>pretrained</w>
+      <w>resnet</w>
       <w>selu</w>
       <w>softmax</w>
       <w>tensorboard</w>

@@ -24,15 +24,11 @@ def main():
 
     # --- PARAMETERS INITIALIZATION ---
 
-    # --- Paths ---
-
     # Set the path to the configuration folder
     config_path = os.path.join(os.getcwd(), 'networks', 'configuration')
 
     # Set the path to experiments folder
     base_experiments_path = os.path.join(os.getcwd(), 'networks', 'experiments')
-
-    # --- Parameters loading ---
 
     # Load the model parameters from json file
     centernet_params = Params(os.path.join(config_path, 'params_model_CenterNet.json'))

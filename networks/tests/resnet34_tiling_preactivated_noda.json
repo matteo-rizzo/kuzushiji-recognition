@@ -1,5 +1,5 @@
 {
-  "run_id": "test_centernet",
+  "run_id": "resnet34_tiling_preactivated_noda",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "test_csv_path": "datasets/kaggle/sample_submission.csv",
@@ -43,8 +43,8 @@
     "predict_on_test": true,
     "restore_weights": true,
     "regenerate_crops_train": false,
-    "regenerate_crops_test": false,
-    "augmentation": true,
+    "regenerate_crops_test": true,
+    "augmentation": false,
     "model": "preactivated",
     "batch_size": 32,
     "batch_size_predict": 300,

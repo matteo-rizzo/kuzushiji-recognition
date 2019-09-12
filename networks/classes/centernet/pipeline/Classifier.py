@@ -3,14 +3,15 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from typing import Dict, List, Union, Generator
+import natsort
 
 from tensorflow.python.keras.optimizers import Adam
 
 from networks.classes.centernet.datasets.ClassificationDataset import ClassificationDataset
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 from networks.classes.centernet.utils.ImageCropper import ImageCropper
-from networks.classes.centernet.models.ModelGeneratorStandard import ModelGeneratorStandard
-from networks.classes.centernet.models.ModelGeneratorTile import ModelGeneratorTile
+from networks.classes.centernet.models.ModelGeneratorKaggle import ModelGeneratorKaggle
+from networks.classes.centernet.models.ModelGenerator import ModelGenerator
 
 
 class Classifier:
@@ -104,8 +105,8 @@ class Classifier:
     def __build_and_compile_model(self, num_categories):
 
         model_generator = {
-            'tile': ModelGeneratorTile(),
-            'standard': ModelGeneratorStandard()
+            'preactivated': ModelGenerator(),
+            'kaggle': ModelGeneratorKaggle()
         }
 
         # Generate a model
@@ -152,7 +153,7 @@ class Classifier:
                                  batch_size=self.__model_params['batch_size'],
                                  callbacks=callbacks,
                                  class_weights=self.__class_weights,
-                                 augmentation=True)
+                                 augmentation=self.__model_params['augmentation'])
 
     def __evaluate_model(self, dataset):
 
@@ -234,7 +235,7 @@ class Classifier:
                                                      crop_char_path=os.path.join('datasets', 'char_cropped_test'),
                                                      regenerate=self.__model_params['regenerate_crops_test'],
                                                      mode='test')
-            flat_test_list: List[str] = [i for sublist in test_list for i in sublist]
+            flat_test_list: List[str] = natsort.natsorted([i for sublist in test_list for i in sublist])
             self.__write_test_list_to_csv(flat_test_list, bbox_predictions)
 
         dataset = ClassificationDataset(self.__model_params)

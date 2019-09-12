@@ -66,7 +66,7 @@ class SubmissionHandler:
     @staticmethod
     def __get_center_coords(bbox: List[str]):
         """
-        Gets the coordinates of the center of the bboxex
+        Gets the coordinates of the center of the bboxes
         :param bbox: a string representing the coordinates of the bbox
         :return:
         """
@@ -119,9 +119,7 @@ class SubmissionHandler:
                 coords: List[Tuple[str, str]] = self.__get_center_coords(bbox_batch)
 
                 # Append the labels of current batch to the list of the labels of the current image
-                batch_labels.extend(
-                    [' '.join([u, c[0], c[1]]) for u, c in zip(unicode, coords)]
-                )
+                batch_labels.extend([' '.join([u, c[0], c[1]]) for u, c in zip(unicode, coords)])
 
             # Gather the data for the submission of the current image
             submission_list.append({'image_id': img_data['original_image'],

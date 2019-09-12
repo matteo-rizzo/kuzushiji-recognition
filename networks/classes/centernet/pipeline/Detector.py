@@ -11,8 +11,8 @@ from networks.classes.centernet.datasets.DetectionDataset import DetectionDatase
 from networks.classes.centernet.models.ModelCenterNet import ModelCenterNet
 from networks.classes.centernet.utils.BBoxesHandler import BBoxesHandler
 from networks.classes.centernet.utils.Metrics import Metrics
-from networks.classes.centernet.models.ModelGeneratorStandard import ModelGeneratorStandard
-from networks.classes.centernet.models.ModelGeneratorTile import ModelGeneratorTile
+from networks.classes.centernet.models.ModelGeneratorKaggle import ModelGeneratorKaggle
+from networks.classes.centernet.models.ModelGenerator import ModelGenerator
 
 
 class Detector:
@@ -30,7 +30,7 @@ class Detector:
 
         self.__model = self.__build_and_compile_model()
 
-        test_list = pd.read_csv(dataset_params['test_csv_path'])['image_id'].to_list()
+        test_list = pd.read_csv(dataset_params['test_csv_path'])['image_id'].to_list()[:1]
         base_path = dataset_params['test_images_path']
         self.__test_list = natsort.natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
 
@@ -52,8 +52,9 @@ class Detector:
     def __build_and_compile_model(self):
 
         model_generator = {
-            'tile': ModelGeneratorTile(),
-            'standard': ModelGeneratorStandard()
+            'resnet34': ModelGenerator(),
+            'resnet50': ModelGenerator(detector='resnet50'),
+            'kaggle': ModelGeneratorKaggle()
         }
 
         # Generate a model
@@ -152,13 +153,12 @@ class Detector:
 
         # Show some examples of bounding boxes and heatmaps predictions
         if self.__model_params['show_prediction_examples']:
-            show_predictions = {
-                'tile': self.__show_tile_predictions,
-                'standard': self.__show_standard_predictions
-            }
-            show_predictions[self.__model_params['model']](xy_eval)
+            if self.__model_params['tiling']:
+                self.__show_tile_predictions(xy_eval)
+            else:
+                self.__show_standard_predictions(xy_eval)
 
-    def __generate_tile_predictions(self, test_set=None) -> Dict[str, np.array]:
+    def __generate_tile_predictions(self) -> Dict[str, np.array]:
 
         self.__logs['execution'].info('Converting test predictions into bounding boxes...')
         return self.__bb_handler.get_test_tiled_bboxes(self.__test_list,
@@ -181,12 +181,11 @@ class Detector:
 
         test_set, _ = dataset.get_test_set()
 
-        generate_predictions = {
-            'tile': self.__generate_tile_predictions,
-            'standard': self.__generate_standard_predictions
-        }
-        # mode = self.__model_params['mode']
-        predictions = generate_predictions['standard'](test_set)
+        if self.__model_params['tiling']:
+            predictions = self.__generate_tile_predictions()
+        else:
+            predictions = self.__generate_standard_predictions(test_set)
+
         self.__logs['execution'].info('Conversion completed.')
 
         return predictions
