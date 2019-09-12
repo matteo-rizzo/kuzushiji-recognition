@@ -77,6 +77,7 @@ def main():
 
     common_operations = {
         'test_bboxes': ['visualization'],
+        'test_submission': ['submission', 'test_submission'],
         'preprocess': ['preprocessing'],
         'detect': ['preprocessing', 'detection'],
         'classify': ['preprocessing', 'detection', 'classification'],
@@ -85,7 +86,7 @@ def main():
     }
 
     # Run the pipeline
-    pipeline.run_pipeline(operations=['submission'],
+    pipeline.run_pipeline(operations=common_operations['test_submission'],
                           params=centernet_params,
                           experiment_path=os.path.join(base_experiments_path, run_id))
 

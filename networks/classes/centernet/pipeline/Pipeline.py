@@ -124,8 +124,11 @@ class CenterNetPipeline:
         """
 
         sub_writer = SubmissionHandler(dict_cat=self.__dict_cat, log=self.__logs['execution'])
-        # sub_writer.write(predictions_gen)
-        sub_writer.test(max_visualizations=5)
+
+        if predictions_gen is not None:
+            sub_writer.write(predictions_gen)
+        else:
+            sub_writer.test(max_visualizations=5)
 
     def __visualize_final_results(self, max_visualizations: int = 5):
         """
@@ -184,7 +187,10 @@ class CenterNetPipeline:
 
         # -- STEP 4:  Analysis and visualization of results ---
         if 'submission' in operations:
-            self.__write_submission()
+            if 'test_submission' in operations:
+                self.__write_submission()
+            else:
+                self.__write_submission(predictions)
 
         if 'visualization' in operations:
             self.__visualize_final_results()
