@@ -1351,6 +1351,9 @@
 \usepackage{subcaption}
 \linespread{1.09}
 %%\usepackage{txfonts}
+
+\setlength\parindent{0pt}
+
 %%
 \endinput
 %

@@ -151,6 +151,8 @@ The previously described network predicts the location of the center of each cha
 \end{eqnarray*}
 Then, out-of-picture boxes and the ones with an area too different from the average area in the page (too big or too small) are removed. Finally overlap-based non maximum suppression is performed comparing the intersection area between the boxes. Each lower score bounding box sharing more than 40\% of the area of higher score boxes, or having more than 60\% of its area inside other higher score bounding boxes is removed.\\
 
+\subsubsection{Spitting the images}
+\label{sssec:tiling}
 \noindent Despite the non-maximum-suppression, we noticed that some small characters were not detected by the network. This happens because the feature map is, in some cases, too small with respect to the original image, and may lose some information \cite{Ozge-Unel2019-jl}, leading to lower IoU score with the ground truth bounding boxes.
 Our solution was to divide each image into a number $n$ of smaller images (that we call \textit{tiles}) and use the model to predict bounding boxes in each one of the smaller images. A 25\% overlap between the tiles is used to preserve the objects along the tile boundaries and prevent any miss due to image partitioning. An example of partitioned image is shown in figure \ref{fig:tiles4}.
 
@@ -164,9 +166,9 @@ Our solution was to divide each image into a number $n$ of smaller images (that 
 This procedure resulted in more precise bounding box predictions and an higher IoU score on the test set. A comparison can be seen in figure \ref{fig:comparisontiling}. \\
 We empirically determined the optimal number of tiles by measuring the IoU score over the same first 100 examples of the test set. Results gave a 0.7731 score using a $2 \times 2$ grid and 0.7850 using a $3 \times 3$ grid. 
 Since the difference in the IoU score was negligible we chose to use a $2 \times 2$ grid, with the benefit of halving the time required to generate predictions for a single image.\\
-It's worth to say that the same model trained without the random crop described in §\ref{sssec:preprocessingdet} did not reach such scores, but rather got an average IoU score of 0.53. This probably means that the crop procedure enhances the ability of the model to detect small features, particularly useful when predicting portions of images.
+It's worth to say that the same model trained without the random crop described in §\ref{sssec:preprocessingdet} did not reach such scores, but rather got an average IoU score of 0.53. This probably means that the crop procedure enhances the ability of the model to detect small features, particularly useful when predicting over portions of images.
 
-\begin{figure*}[h!]
+\begin{figure*}[!htb]
 	\centering
 	\begin{subfigure}{\columnwidth}
 		\centering
@@ -192,17 +194,24 @@ While the model described in the previous section was used to detect characters,
 \subsubsection{Implementation}
 \label{sssec:implementationclass}
 
+\begin{figure}[!hbt]
+	\caption{Architecture of the classifier.}
+	\centering
+	\includegraphics[width=0.35\textwidth]{architectures/classifier.png}
+	\label{fig:classifier}
+\end{figure}
+\begin{figure}[!hbt]
+	\caption{Preactivated residual block.}
+	\centering
+	\includegraphics[width=0.35\textwidth]{architectures/resblock_pre.png}
+	\label{fig:preactresblock}
+\end{figure}
+
 \subsubsubsection{Network architecture}
 \label{ssssec:networkarchitectureclass}
 
-The classifier is a small convolutional model based on the one proposed in the Kaggle implementation. The architecture diagram is shown in figure \ref{fig:classifier}. The three repeated blocks are followed by an average pooling layer with kernel size equal to the input dimension (named global pooling), which produce a single value for each feature map. This value is then fed to the final dense layer with softmax activation and number of units equal to the number of categories. We tested some simple variations using different types of residual blocks, and they worked equally well, so we didn not spend much time experimenting with other architectures.
-
-\begin{figure}[h]
-	\caption{Architecture of the classifier.}
-	\centering
-	\includegraphics[width=0.3\textwidth]{architectures/classifier.png}
-	\label{fig:classifier}
-\end{figure}
+The classifier is a small convolutional model based on the one proposed in the Kaggle implementation. The architecture diagram is shown in figure \ref{fig:classifier}. We use a variant of residual block that apply batch normalization and ReLu activation before the convolution. This block is called preactivated residual block and can be visualized in figure \ref{fig:preactresblock}. The three repeated blocks are followed by an average pooling layer with kernel size equal to the input dimension (named global pooling), which produce a single value for each feature map. This value is then fed into the final dense layer with softmax activation and number of units equal to the number of categories. The architecture diagram is shown in figure \ref{fig:classifier}.\\
+We tested some simple variations using different types of residual blocks, and they worked equally well, so we didn't not spend much time experimenting with other architectures.
 
 \subsubsubsection{Loss function}
 \label{ssssec:lossfunctionclass}
