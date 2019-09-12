@@ -191,7 +191,7 @@ class ModelCenterNet:
                  evaluation_set: Union[tf.data.Dataset, ClassificationDataset],
                  evaluation_steps: Union[int, None] = None,
                  batch_size: Union[int, None] = None,
-                 keras_mode: bool = False) -> Union[float, List[float], None]:
+                 augmentation: bool = False) -> Union[float, List[float], None]:
         """
         Evaluate the model on provided set.
         :return: the loss value if model has no other metrics, otw returns array with loss and metrics
@@ -200,7 +200,7 @@ class ModelCenterNet:
 
         self.__logs['training'].info('Evaluating the model...')
 
-        if keras_mode:
+        if augmentation:
             x_eval, y_eval = evaluation_set.get_xy_evaluation()
 
             data_generator = ImageDataGenerator()
@@ -226,14 +226,14 @@ class ModelCenterNet:
                 dataset: Union[tf.data.Dataset, List[str]],  # List is for submission
                 verbose: int = 1,
                 batch_size: Union[int, None] = None,
-                keras_mode: bool = False) -> Union[np.ndarray, List[np.ndarray]]:
+                augmentation: bool = False) -> Union[np.ndarray, List[np.ndarray]]:
         """
         Performs a prediction on a given dataset
         """
 
         self.__logs['test'].info("Predicting...")
 
-        if keras_mode:
+        if augmentation:
             data_generator = ImageDataGenerator()
 
             generator = data_generator.flow_from_dataframe(

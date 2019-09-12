@@ -49,7 +49,7 @@ gcloud compute ssh tensorflow-gpu-p4-vm
 ## Trasferire file da VM a locale
 
 ```bash
-gcloud compute scp instance_name:path_to_remote_file local_path_for_file
+gcloud compute scp tensorflow-gpu-p4-vm:path_to_remote_file local_path_for_file
 ```
 
 ## Montare e smontare gc storage in file system VM

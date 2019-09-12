@@ -165,7 +165,7 @@ class Classifier:
                                               evaluation_set=a,
                                               evaluation_steps=b,
                                               batch_size=self.__model_params['batch_size'],
-                                              keras_mode=False)
+                                              augmentation=self.__model_params['augmentation'])
 
         self.__logs['test'].info('Evaluation metrics:\n'
                                  'sparse_categorical_crossentropy : {}\n'
@@ -205,7 +205,7 @@ class Classifier:
                                                         dataset=batch,
                                                         verbose=0,
                                                         batch_size=batch_size,
-                                                        keras_mode=True)
+                                                        augmentation=self.__model_params['augmentation'])
                 yield prediction
 
             self.__logs['execution'].info('Prediction completed.')
