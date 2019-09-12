@@ -185,8 +185,8 @@ class Detector:
             'tile': self.__generate_tile_predictions,
             'standard': self.__generate_standard_predictions
         }
-
-        predictions = generate_predictions[self.__model_params['model']](test_set)
+        # mode = self.__model_params['mode']
+        predictions = generate_predictions['standard'](test_set)
         self.__logs['execution'].info('Conversion completed.')
 
         return predictions

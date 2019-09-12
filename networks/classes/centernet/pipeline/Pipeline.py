@@ -153,11 +153,11 @@ class CenterNetPipeline:
 
         self.__logs['execution'].info('Starting learning pipeline with operations: {}'.format(operations))
 
-        # --- STEP 1: Pre-processing (Check Object Size) ---
+        # --- STEP 1: Pre-processing ---
         if 'preprocessing' in operations:
             preprocessed_dataset = self.__run_preprocessing(model_params=params.preprocessor)
 
-        # --- STEP 2: Detection by CenterNet ---
+        # --- STEP 2: Detection using CenterNet ---
         if 'detection' in operations:
 
             if 'preprocessing' not in operations:

@@ -223,7 +223,7 @@ class ModelCenterNet:
 
     def predict(self,
                 model: tf.keras.Model,
-                dataset: tf.data.Dataset,
+                dataset: Union[tf.data.Dataset, List[str]],  # List is for submission
                 verbose: int = 1,
                 batch_size: Union[int, None] = None,
                 keras_mode: bool = False) -> Union[np.ndarray, List[np.ndarray]]:
@@ -240,12 +240,11 @@ class ModelCenterNet:
                 dataframe=pd.DataFrame({'image': dataset}),
                 directory='',
                 x_col='image',
-                y_col=None,
-                class_mode='other',
+                class_mode=None,
                 target_size=(self.__input_width, self.__input_height),
                 batch_size=batch_size)
 
-            steps = generator.n // batch_size + 1
+            steps = 1
 
             return model.predict_generator(generator, steps=steps, verbose=verbose)
         else:
