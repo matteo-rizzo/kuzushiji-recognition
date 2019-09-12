@@ -30,7 +30,7 @@ class Detector:
 
         self.__model = self.__build_and_compile_model()
 
-        test_list = pd.read_csv(dataset_params['test_csv_path'])['image_id'].to_list()[:1]
+        test_list = pd.read_csv(dataset_params['test_csv_path'])['image_id'].to_list()
         base_path = dataset_params['test_images_path']
         self.__test_list = natsort.natsorted([str(os.path.join(base_path, img_id + '.jpg')) for img_id in test_list])
 

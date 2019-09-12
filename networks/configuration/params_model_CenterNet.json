@@ -43,7 +43,7 @@
     "predict_on_test": true,
     "restore_weights": true,
     "regenerate_crops_train": false,
-    "regenerate_crops_test": false,
+    "regenerate_crops_test": true,
     "augmentation": true,
     "model": "preactivated",
     "batch_size": 32,
