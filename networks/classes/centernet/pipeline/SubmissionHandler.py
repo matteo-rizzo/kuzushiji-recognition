@@ -15,7 +15,7 @@ class SubmissionHandler:
 
     def __init__(self, dict_cat, log):
         self.__log = log
-        self.__dict_cat = {str(v): k for k, v in dict_cat.items()}
+        self.__dict_cat: [str, str] = {str(v): k for k, v in dict_cat.items()}
 
     def test(self, max_visualizations=5):
 
