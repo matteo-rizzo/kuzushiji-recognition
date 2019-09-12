@@ -1,7 +1,7 @@
 import os
 import gc
 from itertools import islice
-from typing import Generator, List
+from typing import Generator, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,8 @@ class SubmissionHandler:
                     .format(path_to_submission))
 
         # Initialize a bboxes visualizer object to print bboxes on images
-        bbox_visualizer = BBoxesVisualizer(path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
+        bbox_visualizer = BBoxesVisualizer(
+            path_to_images=os.path.join('datasets', 'kaggle', 'testing', 'images'))
 
         # i counts the number of images that can be visualized
         i = 0
@@ -43,7 +44,8 @@ class SubmissionHandler:
             if i == max_visualizations:
                 break
 
-            labels = [label.strip().split(' ') for label in re.findall(r"(?:\s?\S*\s){2}\S*", sub_data['labels'])]
+            labels = [label.strip().split(' ') for label in
+                      re.findall(r"(?:\s?\S*\s){2}\S*", sub_data['labels'])]
             labels = [[label[0], int(label[1]), int(label[2]), 5, 5] for label in labels]
 
             img_id = sub_data['image_id']
@@ -52,32 +54,35 @@ class SubmissionHandler:
 
             i += 1
 
-    def __get_class(self, prediction: List):
+    def __get_class(self, prediction: List[List]):
         """
-        Gets the unicode class from the predictions
+        Gets list of unicode classes from the predictions
         :param prediction: a list of class predictions
         :return:
         """
 
-        return self.__dict_cat[str(np.argmax(prediction))]
+        return [self.__dict_cat[str(k)] for k in np.argmax(prediction, axis=1)]
 
     @staticmethod
-    def __get_center_coords(bbox: str):
+    def __get_center_coords(bbox: List[str]):
         """
-        Gets the coordinates of the center of the bbox
+        Gets the coordinates of the center of the bboxex
         :param bbox: a string representing the coordinates of the bbox
         :return:
         """
 
         # Get the coordinates of the bbox
-        ymin, xmin, ymax, xmax = bbox.split(':')
+        # ymin, xmin, ymax, xmax = bbox.split(':')
+        coords = [(round(float(ymin)), round(float(xmin)), round(float(ymax)), round(float(xmax)))
+                  for ymin, xmin, ymax, xmax in (bb.split(':') for bb in bbox)]
 
-        ymin = round(float(ymin))
-        xmin = round(float(xmin))
-        ymax = round(float(ymax))
-        xmax = round(float(xmax))
+        # ymin = round(float(ymin))
+        # xmin = round(float(xmin))
+        # ymax = round(float(ymax))
+        # xmax = round(float(xmax))
 
-        return str(xmin + ((xmax - xmin) // 2)), str(ymin + ((ymax - ymin) // 2))
+        return [(str(xmin + ((xmax - xmin) // 2)), str(ymin + ((ymax - ymin) // 2)))
+                for ymin, xmin, ymax, xmax in coords]
 
     def __write_img_with_chars(self, images_data, predictions_gen, path_to_submission):
 
@@ -86,33 +91,41 @@ class SubmissionHandler:
         # Iterate over all the predicted original images
         for img_data in tqdm(images_data, total=len(images_data)):
 
-            labels = []
+            batch_labels: List[str] = []
             bboxes = list(img_data['bboxes'].split(' '))
 
             # Iterate over all the bboxes of the current image
-            for bbox in tqdm(bboxes, total=len(bboxes)):
-
+            i = 0
+            while i < len(bboxes):
                 # Get a class prediction from the generator
                 try:
                     prediction = next(predictions_gen)
                 except StopIteration:
                     break
 
-                # Get the unicode class from the predictions
-                unicode = self.__get_class(prediction)
+                batch_size = len(prediction)
+
+                # Get batch of bboxes with same length
+                bbox_batch = bboxes[i:i + batch_size]
+                i += batch_size
+
+                # Get the unicode classes from the predictions
+                unicode: List[str] = self.__get_class(prediction)
 
                 del prediction
                 gc.collect()
 
-                # Get the coordinates of the center of the bbox
-                x, y = self.__get_center_coords(bbox)
+                # Get the coordinates of the center of boxes in 'bbox_batch'
+                coords: List[Tuple[str, str]] = self.__get_center_coords(bbox_batch)
 
-                # Append the current label to the list of the labels of the current image
-                labels.append(' '.join([unicode, x, y]))
+                # Append the labels of current batch to the list of the labels of the current image
+                batch_labels.extend(
+                    [' '.join([u, c[0], c[1]]) for u, c in zip(unicode, coords)]
+                )
 
             # Gather the data for the submission of the current image
             submission_list.append({'image_id': img_data['original_image'],
-                                    'labels': ' '.join(labels)})
+                                    'labels': ' '.join(batch_labels)})
 
         # Write the submission to csv
         img_submission = pd.DataFrame(submission_list, columns=['image_id', 'labels'])

@@ -171,24 +171,43 @@ class Classifier:
                                  'sparse_categorical_accuracy     : {}'
                                  .format(metrics[0], metrics[1]))
 
-    def __generate_predictions(self, test_list) -> Generator:
+    def __generate_predictions(self, test_list: List[List[str]]) -> Generator:
 
         self.__logs['execution'].info(
             'Starting the predict procedure of char class (takes much time)...')
 
         input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
 
-        for img_path in test_list:
-            img_dataset = tf.data.Dataset.from_tensor_slices([img_path]) \
-                .map(lambda i: self.__resize_fn(i, input_h, input_w),
-                     num_parallel_calls=tf.data.experimental.AUTOTUNE) \
-                .batch(1)
+        # for img_path in test_list:
+        #     img_dataset = tf.data.Dataset.from_tensor_slices([img_path]) \
+        #         .map(lambda i: self.__resize_fn(i, input_h, input_w),
+        #              num_parallel_calls=tf.data.experimental.AUTOTUNE) \
+        #         .batch(1)
+        #
+        #     prediction = self.__model_utils.predict(model=self.__model, dataset=img_dataset, verbose=0)
 
-            prediction = self.__model_utils.predict(model=self.__model, dataset=img_dataset, verbose=0)
+        batch_size = self.__model_params['batch_size_predict']
+        for image_crops in test_list:
+            complete_batches: int = len(image_crops) // batch_size
+            for i in range(0, complete_batches + 1):
+                start = i * batch_size
+                end = batch_size * (i + 1)
 
-            yield prediction
+                if i == complete_batches:
+                    if len(image_crops) % batch_size == 0:
+                        break
+                    else:
+                        end = len(image_crops)
 
-        self.__logs['execution'].info('Prediction completed.')
+                batch: List[str] = image_crops[start:end]  # [start, end)
+                prediction = self.__model_utils.predict(model=self.__model,
+                                                        dataset=batch,
+                                                        verbose=0,
+                                                        batch_size=batch_size,
+                                                        keras_mode=True)
+                yield prediction
+
+            self.__logs['execution'].info('Prediction completed.')
 
     def classify(self,
                  train_list: List[List],
@@ -209,14 +228,14 @@ class Classifier:
                                                   mode='train')
 
         # Test mode cropping
-        test_list: Union[List[str], None] = None
+        test_list: Union[List[List[str]], None] = None
         if self.__model_params['predict_on_test']:
             test_list = self.__img_cropper.get_crops(img_data=bbox_predictions,
                                                      crop_char_path=os.path.join('datasets', 'char_cropped_test'),
                                                      regenerate=self.__model_params['regenerate_crops_test'],
                                                      mode='test')
-
-            self.__write_test_list_to_csv(test_list, bbox_predictions)
+            flat_test_list: List[str] = [i for sublist in test_list for i in sublist]
+            self.__write_test_list_to_csv(flat_test_list, bbox_predictions)
 
         dataset = ClassificationDataset(self.__model_params)
         _, _, xy_eval = dataset.generate_dataset(train_list)

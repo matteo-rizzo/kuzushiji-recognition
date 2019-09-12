@@ -25,7 +25,9 @@ The metrics shown in table \ref{tab:expdetector} suggests that, at least with th
 \subsection{Classifier}
 \label{ssec:classifierexp}
 
-The classifier was trained using Adam optimizer and learning rate $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noticed oscillations in the validation loss value. In table \ref{tab:classres} are reported two experiments. The first model used an alternative architecture using standard residual blocks as depicted in fig \ref{fig:resblock1} and was trained without data augmentation. The second one had the architecture described in \ref{fig:preactresblock} with preactivated residual blocks and was trained using data augmentation. The final submission has been done only using this last model.
+We did two experiments with the classifier, summarized in table \ref{tab:classres}. Both model were trained using Adam optimizer and batch size 1024. The first trained for 8 epochs with a learning rate of $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noticed oscillations in the validation loss value. The second model was trained for a total of 60 epochs with learning rate $1 \cdot 10^{-5}$ and $1 \cdot 10^{-6}$ after 30 epochs. This model was trained longer, since it showed some small improvements on validation loss.\\ From the results shown, it's clear how data augmentation positively impacted the model ability to generalize.
+The first one had the architecture described in figure \ref{fig:preactresblock} with preactivated residual blocks and was trained using data augmentation. The first model used an alternative architecture using standard residual blocks as already depicted in figure \ref{fig:resblock-id} and was trained without data augmentation.\\
+The final submission has been done only using the first model.
 
 \begin{table*}[h]
 	%\centering
@@ -37,7 +39,7 @@ The classifier was trained using Adam optimizer and learning rate $5 \cdot 10^{-
 		No augmentation& 0.4165 & 0.9214 &
 	\end{tabular}
 	\end{minipage}
-	\caption{Experiments with classifier with and without data augmentation. First model is trained with pre-activated residual block and data augmentation. The second one is trained with standard residual block and no augmentation.}
+	\caption{Experiments with classifier with and without data augmentation. First model is trained with preactivated residual block and data augmentation. The second one is trained with standard residual block and no augmentation.}
 	\label{tab:classres}
 \end{table*}
 

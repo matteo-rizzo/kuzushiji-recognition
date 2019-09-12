@@ -125,7 +125,7 @@ The decoder is composed of three identical blocks, each featuring the following 
 
 The last block is composed of a $1 \times 1$ convolution to reduce the number of features to 5 and a sigmoid activation. The final output is an array with 3 dimensions shaped as $(128, 128, 5)$. This output is the predicted heatmap $\widehat{Y}$. Each of the five layers in the outer dimension has the same meaning explained above, with the difference that the “ground truth map” is not predicted, since this information is provided inside the heatmap itself. This is the reason why the output has 5 instead of 6 layers for each image.
 
-\subsubsection{Pre-processing and training}
+\subsubsection{Pre-processing}
 \label{sssec:preprocessingdet}
 
 The input samples are firstly resized to $512 \times 512 \times 3$ and normalized, as well as random cropped for data augmentation. A maximum crop factor is determined considering the average character size in the page. This is determined separately for width and height as shown in equations \ref{eq:stretchw} and \ref{eq:stretchh}, where $w$ and $h$ are the dimensions of the original image and $char\_area$ is the average bounding box area within the page.
@@ -171,16 +171,16 @@ It's worth to say that the same model trained without the random crop described 
 	\begin{subfigure}{\columnwidth}
 		\centering
 		\includegraphics[width=0.7\columnwidth]{detection/tiled_prediction.png}
-		\caption{Predicion with $2\times2$ tiling}
+		\caption{Prediction with $2\times2$ tiling.}
 		\label{fig:tiledpred}
 	\end{subfigure}
 	\begin{subfigure}{\columnwidth}
 		\centering
 		\includegraphics[width=0.71\columnwidth]{detection/standard_prediction.png}
-		\caption{Predicion with no tiling}
+		\caption{Prediction with no tiling.}
 		\label{fig:standardpred}
 	\end{subfigure}
-	\caption{Comparison of predicion on the same page with or without tiling. Image (\ref{fig:tiledpred}) has a IoU score of 0.83, while (\ref{fig:standardpred}) scored 0.59.}
+	\caption{Comparison of prediction on the same page with or without tiling. Image (\ref{fig:tiledpred}) has a IoU score of 0.83, while (\ref{fig:standardpred}) scored 0.59.}
 	\label{fig:comparisontiling}
 \end{figure*}
 
@@ -209,8 +209,7 @@ The classifier is a small convolutional model based on the one proposed in the K
 
 Since the character classes are codified as integers, we used sparse categorical crossentropy to evaluate the error of the model. 
 
-\subsubsection{Pre-processing and training}
+\subsubsection{Pre-processing: data augmentation}
 \label{sssec:preprocessingclass}
 
-In order to deal with the main challenging features of cursive handwritten text, some data augmentation has been made on the $32 \times 32$ cropped and resized images of the detected characters. In particular, the objective was emulating the imprecision, variability and deformation inherent the writing of the characters. For this purpose, the dataset has been augmented with copies of the original images slightly altered with respect to brightness, rotation, width and height shifts, and zoom. The augmentation has been performed using the \textit{ImageDataGenerator} utility provided by Keras. 
-We trained the classification network with 'Adam' optimizer, configured with Keras default hyperparameters, with batch size 1024 and using a learning rate of $1 \cdot 10-5$.
+In order to deal with the main challenging features of cursive handwritten text, some data augmentation has been made on the $32 \times 32$ cropped and resized images of the detected characters. In particular, the objective was emulating the imprecision, variability and deformation inherent the writing of the characters. For this purpose, the dataset has been augmented with copies of the original images slightly altered with respect to brightness, rotation, width and height shifts, and zoom. The augmentation has been performed using the \textit{ImageDataGenerator} utility provided by Keras.

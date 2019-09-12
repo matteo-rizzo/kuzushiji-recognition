@@ -15,7 +15,17 @@ class ImageCropper:
     def __init__(self, log):
         self.__log = log
 
-    def get_crops(self, img_data: any, crop_char_path: str, mode='train', regenerate: bool = False):
+    def get_crops(self, img_data: any, crop_char_path: str, mode='train', regenerate: bool = False) \
+            -> Union[List[Tuple[str, int]], List[List[str]]]:
+        """
+
+        :param img_data:
+        :param crop_char_path:
+        :param mode:
+        :param regenerate:
+        :return: a list of tuple if in train mode, otw a list of list with crops for each individual
+        image
+        """
 
         regenerate_crops = {
             'train': self.__regenerate_crops_train,
@@ -27,7 +37,7 @@ class ImageCropper:
         else:
             return self.__load_crop_characters(crop_char_path, mode=mode)
 
-    def __regenerate_crops_train(self, train_list, crop_char_path_train):
+    def __regenerate_crops_train(self, train_list, crop_char_path_train) -> List[Tuple[str, int]]:
 
         self.__log.info('Starting procedure to regenerate cropped train character images')
 
@@ -41,7 +51,7 @@ class ImageCropper:
 
         return train_list
 
-    def __regenerate_crops_test(self, bbox_predictions, crop_char_path_test):
+    def __regenerate_crops_test(self, bbox_predictions, crop_char_path_test) -> List[List[str]]:
 
         self.__log.info('Starting procedure to regenerate cropped test character images')
 
@@ -49,7 +59,8 @@ class ImageCropper:
         nice_formatted_dict: Dict[str, np.array] = self.__predictions_to_bounding_boxes(bbox_predictions)
 
         self.__log.info('Cropping test images to characters...')
-        test_list = self.create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
+        test_list: List[List[str]] = \
+            self.create_crop_characters_test(nice_formatted_dict, crop_char_path_test)
         self.__log.info('Cropping done successfully!')
 
         return test_list
@@ -108,21 +119,25 @@ class ImageCropper:
 
     def create_crop_characters_test(self,
                                     images_to_split: Dict[str, np.array],
-                                    save_dir: str) -> List[str]:
+                                    save_dir: str) -> List[List[str]]:
         """
         Crop image into all its bounding boxes, saving a different image for each one in save_dir.
 
         :param images_to_split: dict of {image_path: ndarray([ymin, xmin, ymax, xmax])}
         :param save_dir: directory where to save cropped images
+        :return a list with crops for each image. Each image has a separate list
         """
 
         self.__user_check(save_dir)
 
         # ---- Cropping ----
 
-        cropped_list = []
+        # List of lists with crops of all images. Each one in a separate list
+        cropped_list: List[List[str]] = []
 
         for img_path, boxes in tqdm(images_to_split.items()):
+            # List of crops for single image
+            image_cropped_list: List[str] = []
 
             # Get image name without extension, e.g. dataset/img.jpg -> img
             img_name = img_path.split(str(os.sep))[-1].split('.')[0]
@@ -141,8 +156,10 @@ class ImageCropper:
 
                     filepath = img_name_path + '_' + str(box_n) + '.jpg'
                     img.crop((xmin, ymin, xmax, ymax)).save(filepath)
-                    cropped_list.append(filepath)
+                    image_cropped_list.append(filepath)
                     box_n += 1
+
+            cropped_list.append(image_cropped_list)
 
         return cropped_list
 
@@ -195,7 +212,8 @@ class ImageCropper:
         return cropped_list
 
     @staticmethod
-    def __load_crop_characters(save_dir: str, mode: str) -> Union[List[Tuple[str, int]], List[str]]:
+    def __load_crop_characters(save_dir: str, mode: str) \
+            -> Union[List[Tuple[str, int]], List[List[str]]]:
         """
         Loads the list of characters from file system. Useful to avoid regenerating cropped characters every time
 
@@ -231,6 +249,20 @@ class ImageCropper:
 
             # Add relative path to image name
             img = [str(os.path.join(save_dir, name)) for name in img]
+
+            # NEW FOR SUBMISSION IN BATCH
+            # Organize images in piles based on their original image id
+            # Not pretty, but it's quite fast.
+
+            img_ids = ['_'.join(i.split('_')[:-1]) for i in img]
+            unique_images = list(set(img_ids))
+            piles_of_images = {k: [] for k in unique_images}
+
+            for id, name in zip(img_ids, img):
+                piles_of_images[id].append(name)
+
+            img = [list(pile) for pile in piles_of_images.values()]
+            # END
 
             assert len(img) > 0, 'Error: provided save directory {} is empty'.format(save_dir)
 
