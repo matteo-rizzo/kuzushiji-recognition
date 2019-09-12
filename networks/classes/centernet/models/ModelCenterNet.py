@@ -242,7 +242,9 @@ class ModelCenterNet:
                 x_col='image',
                 class_mode=None,
                 target_size=(self.__input_width, self.__input_height),
-                batch_size=batch_size)
+                batch_size=batch_size,
+                shuffle=False
+            )
 
             steps = 1
 
