@@ -115,7 +115,7 @@ class CenterNetPipeline:
         return classifier.classify(train_list=train_list,
                                    bbox_predictions=bbox_predictions)
 
-    def __write_submission(self, predictions_gen: Generator):
+    def __write_submission(self, predictions_gen: Generator = None):
         """
         Writes a submission csv file in the format:
         - names of columns : image_id, labels
@@ -124,8 +124,8 @@ class CenterNetPipeline:
         """
 
         sub_writer = SubmissionHandler(dict_cat=self.__dict_cat, log=self.__logs['execution'])
-        sub_writer.write(predictions_gen)
-        # sub_writer.test(max_visualizations=5)
+        # sub_writer.write(predictions_gen)
+        sub_writer.test(max_visualizations=5)
 
     def __visualize_final_results(self, max_visualizations: int = 5):
         """
@@ -184,12 +184,7 @@ class CenterNetPipeline:
 
         # -- STEP 4:  Analysis and visualization of results ---
         if 'submission' in operations:
-
-            if 'classification' not in operations:
-                raise Exception('ERROR: Cannot write submission without classification!'
-                                'Please specify "classification" in the list of operations')
-
-            self.__write_submission(predictions)
+            self.__write_submission()
 
         if 'visualization' in operations:
             self.__visualize_final_results()

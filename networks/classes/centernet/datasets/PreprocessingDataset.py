@@ -39,7 +39,7 @@ class PreprocessingDataset:
         self.__parse_train_csv()
 
         # Compute the average bbox ratio w.r.t. the image area considering all the images
-        self.__annotate_char_area_ratio(show_plot=False)
+        self.__annotate_char_area_ratio()
 
         # Generate the tf.data.Dataset containing all the objects
         self.__compose_dataset_object()
@@ -75,26 +75,26 @@ class PreprocessingDataset:
         # Set up the dictionary of class weights as: <int class code> -> <relative frequency>
         num_occurs = sum(dict_frequencies.values())
         max_frequency = max(dict_frequencies.values()) * 100 / num_occurs
-        eps = 0.0005
+        eps = 0.00005
         self.__class_weights = {k: log(max_frequency / (v * 100 / num_occurs) + eps) for k, v in dict_frequencies.items()}
 
         if show_frequency:
             cat, frequency = zip(*dict_frequencies.items())
-            fig = plt.figure()
-            plt.plot(cat, frequency, color='red')
-            fig.suptitle('Class frequencies', fontsize=18)
-            plt.xlabel('Class int code', fontsize=14)
+            plt.hist(frequency, bins='auto', color='red')
+            plt.xlim(min(cat), max(cat))
+            print(24685)
+            plt.ylim(min(frequency), max(frequency))
+            plt.title('Class frequencies', fontsize=18)
+            plt.xlabel('Class', fontsize=14)
             plt.ylabel('Frequency', fontsize=14)
             plt.show()
             plt.clf()
-            plt.close('all')
 
             cat, rel_frequency = zip(*self.__class_weights.items())
-            fig = plt.figure()
-            plt.plot(cat, rel_frequency, color='blue')
-            fig.suptitle('Relative class frequencies', fontsize=16)
-            plt.xlabel('Class int code', fontsize=14)
-            plt.ylabel('Relative frequency', fontsize=14)
+            plt.bar(cat, rel_frequency, color='blue')
+            plt.title('Log relative class frequencies', fontsize=16)
+            plt.xlabel('Class', fontsize=14)
+            plt.ylabel('Log relative frequency', fontsize=14)
             plt.show()
 
     def __parse_train_csv(self):
