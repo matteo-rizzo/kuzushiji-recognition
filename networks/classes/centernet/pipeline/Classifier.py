@@ -163,7 +163,7 @@ class Classifier:
 
         metrics = self.__model_utils.evaluate(model=self.__model,
                                               evaluation_set=a,
-                                              evaluation_steps=b,
+                                              evaluation_steps=(b // self.__model_params['batch_size']),
                                               batch_size=self.__model_params['batch_size'],
                                               augmentation=self.__model_params['augmentation'])
 
