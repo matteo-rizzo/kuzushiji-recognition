@@ -1,11 +1,28 @@
 % !TeX spellcheck = en_US
 \section{EXPERIMENTS}
 \label{sec:experiments}
+
 In this section we present the results obtained with our networks. All the models were trained on a single Nvidia Tesla T4 GPU provided by Google Cloud Platform, on a virtual machine with Tensorflow 1.14.0. \\
 We made several experiments with the Yolo algorithm, but we don't provide a detailed list here, since it proved to be unsuitable to solve our task.\\
 For the sake of comparing the results of the experiments, we divided the Kaggle training set into a test and validation set (each one is 15\% of the whole dataset) leaving the remaining 70\% of the examples for training. We then split the dataset for the classifier, consisting of all the cropped "ground truth" characters, in the same way. The examples within the test set remain the same through each execution, and the loss and accuracy metrics reported further on are computed with respect to the test set.\\
 We list in table \ref{tab:finaltests} the score obtained uploading our submission file on Kaggle, using various model configurations.
 Submissions to the competition are evaluated on a modified version of the F1 score. To score a true positive, center point coordinates that are within the ground truth bounding box and a matching label must be provided. No other details on the metrics are provided.  In the submission table the term \textit{tiling} refers to the predictions done by dividing each image in 4 tiles, as explained in §\ref{sssec:tiling}.
+
+\begin{table*}[h]
+	\begin{tabular}{llccc}
+		\rowcolor[HTML]{EFEFEF} 
+		\textbf{Detector} & \textbf{Classifier} & \textbf{Tiling} & \textbf{Augmentation} & \textbf{Kaggle score} \\
+		ResNet34          & Preactivated        & Yes             & Yes                   & 0.780                 \\
+		ResNet34          & Preactivated        & No              & Yes                   & 0.606                 \\
+		ResNet34          & Preactivated        & Yes             & No                    &                       \\
+		ResNet50          & Preactivated        & Yes             & Yes                   &                       \\
+		ResNet50          & Preactivated        & No              & Yes                   & 0.491                 \\
+		Kaggle            & Kaggle              & Yes             & Yes                   &                       \\
+		Kaggle            & Kaggle              & No              & Yes                   &                      
+	\end{tabular}
+	\caption{Kaggle score achieved with various configurations.}
+	\label{tab:finaltests}
+\end{table*}
 
 \subsection{Detector}
 \label{ssec:detectorexp}
@@ -15,7 +32,7 @@ The same values were used for pre-trained ResNet50 network except for batch size
 The metrics shown in table \ref{tab:expdetector} suggests that, at least with the described configuration, the added complexity of the deeper architecture with pre-trained weights, resulted in worse generalization performances.
 
 \begin{table*}
-	\begin{tabular}{lllllll}
+	\begin{tabular}{lcccccc}
 		\rowcolor[HTML]{EFEFEF} 
 		\textbf{Experiment}   & \textbf{Loss} & \textbf{Heatmap loss} & \textbf{Offset loss} & \textbf{Size loss} & \textbf{IoU (no tiling)} & \textbf{IoU (tiling)} \\
 		ResNet34 encoder      & 1.2652        & 0.7887                & 0.3833               & 0.0932             & 0.5112                   & 0.7658                \\
@@ -29,39 +46,19 @@ The metrics shown in table \ref{tab:expdetector} suggests that, at least with th
 \label{ssec:classifierexp}
 
 We did two experiments with the classifier, summarized in table \ref{tab:classres}. Both model were trained using Adam optimizer and batch size 1024. The first trained for 8 epochs with a learning rate of $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noticed oscillations in the validation loss value. The second model was trained for a total of 60 epochs with learning rate $1 \cdot 10^{-5}$ and $1 \cdot 10^{-6}$ after 30 epochs. This model was trained longer, since it showed some small improvements on validation loss.\\ From the results shown, it's clear how data augmentation positively impacted the model ability to generalize.
-The first one had the architecture described in figure \ref{fig:preactresblock} with preactivated residual blocks and was trained using data augmentation. The last one used an alternative architecture using standard residual blocks as already depicted in figure \ref{fig:resblock-id} and was trained without data augmentation.\\
-%The final submission has been done only using the first model.
+The first one had the architecture described in figure \ref{fig:preactresblock} with preactivated residual blocks and was trained using data augmentation. The last one used an alternative architecture using standard residual blocks as already depicted in figure \ref{fig:resblock-id} and was trained without data augmentation.
 
-\begin{table*}
-	%\centering
-	\begin{minipage}{.5\linewidth}
-	\begin{tabular}{lll}
+\begin{table*}[h]
+	\begin{tabular}{llccc}
 		\rowcolor[HTML]{EFEFEF} 
-		\textbf{Experiment} & \textbf{Loss} & \textbf{Accuracy} \\
-		ResNet34 + augmentation & 0.2732 & 0.9413 \\
-		ResNet34 + no augmentation & ? & ? \\ 
-		ResNet34 + no augmentation & 0.4165 & 0.9214 \\
+		\textbf{Detector} & \textbf{Classifier} & \textbf{Augmentation} & \textbf{Loss} & \textbf{Accuracy} \\
+		ResNet34          & Preactivated        & Yes                   & 0.2732        & 0.9413            \\
+		ResNet34          & Preactivated        & No                    & 0.4165        & 0.9214            \\
+		ResNet34          & Non-preactivated    & Yes                   & ??            & ??               
 	\end{tabular}
 	\caption{Experiments with data augmentation on classifier.}
 	\label{tab:classres}
-	\end{minipage}
-	\quad
-	\begin{minipage}{.5\linewidth}
-	\begin{tabular}{ll}
-		\rowcolor[HTML]{EFEFEF} 
-		\textbf{Experiment} & \textbf{Kaggle score} \\
-		ResNet34 + tiling + augmentation & 0.780 \\
-		ResNet34 + augmentation & 0.606 \\
-		ResNet34 + tiling & - \\
-		ResNet50 + tiling + augmentation & - \\
-		ResNet50 + augmentation & 0.491 \\
-		Kaggle model + tiling & - \\
-	\end{tabular}
-	\caption{Kaggle score achieved with various configurations.}
-	\label{tab:finaltests}
-	\end{minipage}
 \end{table*}
-
 
 \section{\uppercase{Benchmarks and similar results}}
 \label{sec:stateofart}
