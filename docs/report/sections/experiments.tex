@@ -5,20 +5,20 @@
 In this section we present the results obtained with our networks. All the models were trained on a single Nvidia Tesla T4 GPU provided by Google Cloud Platform, on a virtual machine with Tensorflow 1.14.0. \\
 We made several experiments with the Yolo algorithm, but we don't provide a detailed list here, since it proved to be unsuitable to solve our task.\\
 For the sake of comparing the results of the experiments, we divided the Kaggle training set into a test and validation set (each one is 15\% of the whole dataset) leaving the remaining 70\% of the examples for training. We then split the dataset for the classifier, consisting of all the cropped "ground truth" characters, in the same way. The examples within the test set remain the same through each execution, and the loss and accuracy metrics reported further on are computed with respect to the test set.\\
-We list in table \ref{tab:finaltests} the score obtained uploading our submission file on Kaggle, using various model configurations.
-Submissions to the competition are evaluated on a modified version of the F1 score. To score a true positive, center point coordinates that are within the ground truth bounding box and a matching label must be provided. No other details on the metrics are provided.  In the submission table the term \textit{tiling} refers to the predictions done by dividing each image in 4 tiles, as explained in §\ref{sssec:tiling}.
+We list in table \ref{tab:finaltests} the score obtained uploading our submission file on Kaggle, using various model configurations. As a benchmark, we also added the score obtained using the same architecture implemented in the referenced Kaggle notebook. This model used a more complex and slightly deeper architecture for detection and a similar CNN for classification, using a different version of residual block. On the other hand, our detection model is more adherent to the one described in the CenterNet paper. In the table the \textit{preactivated} classifier is our version, with preactivated residual blocks, while with \textit{kaggle} we identify the version from the kaggle notebook. The same notation apply to the "Detector" column.\\
+Submissions to the competition are evaluated on a modified version of the F1 score. To score a true positive, center point coordinates that are within the ground truth bounding box and a matching label must be provided. No other details on the metrics are provided.\\ Note that the term \textit{tiling}, used in the table, refers to the predictions done by dividing each image in 4 tiles, as explained in §\ref{sssec:tiling}.
 
 \begin{table*}[h]
 	\begin{tabular}{llccc}
 		\rowcolor[HTML]{EFEFEF} 
 		\textbf{Detector} & \textbf{Classifier} & \textbf{Tiling} & \textbf{Augmentation} & \textbf{Kaggle score} \\
-		ResNet34          & Preactivated        & Yes             & Yes                   & 0.780                 \\
+		ResNet34          & Preactivated        & Yes             & Yes                   & \textbf{0.780}                 \\
 		ResNet34          & Preactivated        & No              & Yes                   & 0.606                 \\
 		ResNet34          & Preactivated        & Yes             & No                    &                       \\
 		ResNet50          & Preactivated        & Yes             & Yes                   &                       \\
 		ResNet50          & Preactivated        & No              & Yes                   & 0.491                 \\
-		Kaggle            & Kaggle              & Yes             & Yes                   &                       \\
-		Kaggle            & Kaggle              & No              & Yes                   &                      
+		Kaggle            & Kaggle              & Yes             & No                   &  0.772                     \\
+		Kaggle            & Kaggle              & No              & No                   & 0.553                     
 	\end{tabular}
 	\caption{Kaggle score achieved with various configurations.}
 	\label{tab:finaltests}
@@ -52,73 +52,9 @@ We did two experiments with the classifier, summarized in table \ref{tab:classre
 		\rowcolor[HTML]{EFEFEF} 
 		\textbf{Detector} & \textbf{Classifier} & \textbf{Augmentation} & \textbf{Loss} & \textbf{Accuracy} \\
 		ResNet34          & Preactivated        & Yes                   & 0.2732        & 0.9413            \\
-		ResNet34          & Preactivated        & No                    & 0.4165        & 0.9214            \\
-		ResNet34          & Non-preactivated    & Yes                   & ??            & ??               
+		ResNet34          & Preactivated        & No                    & ??        &  ??           \\
+		Kaggle          & Kaggle    & Yes                   & 0.4165           & 0.9214               
 	\end{tabular}
 	\caption{Experiments with data augmentation on classifier.}
 	\label{tab:classres}
-\end{table*}
-
-\section{\uppercase{Benchmarks and similar results}}
-\label{sec:stateofart}
-
-\subsection{Handwritten text recognition on historical documents}
-\label{ssec:historicaldocuments}
-
-\citeauthor{Sanchez2019-pi}\cite{Sanchez2019-pi} introduces four HTR (Handwritten Text Recognition) benchmarks aimed at HTR research for historical and legacy documents. These benchmarks are based on the datasets and rules previously adopted in well known open HTR competitions. The first two of these competitions (datasets ICFHR-2014, ICDAR-2015) were based on parts of the so called Bentham Papers, handwritten in English by several writers. The whole digitized collection encompasses 100000 page images of text authored by the renowned English philosopher and reformer Jeremy Bentham (1748–1832). It mainly contains legal forms and drafts in English, but also some pages are in French and Latin. Many images entail important pre-processing and layout analysis difficulties, like marginal notes, faint ink, stamps, skewed images, lines with large slope variation within the same page, slanted script, inter-line text, etc. An example of these documents is shown in figure \ref{fig:HTRbenchmark}.
-
-\begin{figure}[htb]
-	\caption{An example of image from the Bentham Papers.}
-	\centering
-	\includegraphics[width=0.45\textwidth]{various/HTR_benchmark.png}
-	\label{fig:HTRbenchmark}
-\end{figure}
-
-In the third competition, the Ratsprotokolle collection (ICFHR-2016), composed of handwritten minutes of council meetings held from 1470 to 1805, was considered, while the dataset of the fourth competition was a part of the Alfred Escher Letter Collection (AEC, ICDAR-2017) which is composed of letters handwritten mainly in German but it also has pages in French and Italian. Table \ref{tab:htr-benchmarks} summarizes the baselines achieved by \cite{Sanchez2019-pi} and the best results achieved prior the publication of their paper. Note that the Word Error Rate (WER) and the Character Error Rate (CER) metrics are used. WER is defined as the minimum number of words that need to be substituted, deleted, or inserted to match the recognition output with the corresponding reference ground truth, divided by the total number of words in the reference transcripts. CER is defined in the same way but at character level.
-
-\begin{table*}
-	\begin{tabular}{lcccc}
-		\rowcolor[HTML]{EFEFEF}
-		\cellcolor[HTML]{EFEFEF}                                     & \multicolumn{2}{l}{\cellcolor[HTML]{EFEFEF}\textbf{Best so far}} & \multicolumn{2}{l}{\cellcolor[HTML]{EFEFEF}\textbf{HTR benchmarks paper}} \\
-		\rowcolor[HTML]{EFEFEF}
-		\multirow{-2}{*}{\cellcolor[HTML]{EFEFEF}\textbf{Benchmark}} & CER(\%)                         & WER(\%)                        & CER(\%)                             & WER(\%)                             \\
-		ICFHR-2014 Restricted                                        & 5.0                             & 14.6                           & 5.0                                 & 9.7                                 \\
-		ICDAR-2015 Restricted                                        & 15.5                            & 30.2                           & 12.8                                & 30.0                                \\
-		ICFHR-2016 Restricted                                        & 4.8                             & 20.9                           & 4.5                                 & 17.5                                \\
-		ICDAR-2017 Traditional                                       & 7.0                             & 19.1                           & 5.8                                 & 17.6                                \\
-		ICDAR-2017 Advanced                                          & 6.4                             & 16.8                           & 6.3                                 & 18.5
-	\end{tabular}
-	\caption{Benchmarks on handwritten text recognition from \cite{Sanchez2019-pi}.}
-	\label{tab:htr-benchmarks}
-\end{table*}
-
-\subsection{Image classification on Kuzushiji-MNIST}
-\label{ssec:imagemnist}
-
-MNIST, a dataset with 70,000 labeled images of handwritten digits, has been one of the most popular datasets for image processing and classification for over twenty years. Despite its popularity, contemporary deep learning algorithms handle it easily, often surpassing an accuracy result of 99.5\%. Kuzushiji-MNIST \cite{Clanuwat2018-vm} is an alternative dataset to MNIST, more difficult than MNIST. The Kuzushiji dataset includes characters in both Kanji and Hiranaga, based on pre-processed images of characters from 35 books from the 18th century. It is constituted by three groups of data, as shown in table \ref{tab:kuzushiji-struct}. The creators of the Kuzushiji-MNIST dataset created a baseline by training a few classification algorithms and comparing them to MNIST. The best algorithm (PreActResNet-18) achieved 99.56\% on MNIST, but only 98.83\% and 97.33\% accuracy on Kuzushiji-MNIST and Kuzushiji-49 respectively, as can be seen in table \ref{tab:kuzushiji-benchmarks}.
-
-\begin{table*}
-	\begin{tabular}{llccc}
-		\rowcolor[HTML]{EFEFEF}
-		\textbf{Dataset} & \textbf{Classes}       & \textbf{Dataset Size} & \textbf{Balanced Classes} & \textbf{Image Size} \\
-		Kuzushiji-MNIST  & 10 Hiragana characters & 70.000                & Yes                       & 28x28               \\
-		Kuzushiji-49     & 49 Hiragana characters & 270.912               & No                        & 28x28               \\
-		Kuzushiji-Kanji  & 3832 Kanji characters  & 140.426               & No                        & 64x64
-	\end{tabular}
-	\caption{Description of the structure of the Kuzushiji-MNIST dataset from \cite{Clanuwat2018-vm}.}
-	\label{tab:kuzushiji-struct}
-\end{table*}
-
-\begin{table*}
-	\begin{tabular}{lccc}
-		\rowcolor[HTML]{EFEFEF}
-		\textbf{Model}                            & \textbf{MNIST {[}16{]}} & \textbf{Kuzushiji-MNIST} & \textbf{Kuzushiji-49} \\
-		4-Nearest Neighbour Baseline              & 97.14\%                 & 91.56\%                  & 86.01                 \\
-		Keras Simple CNN Benchmark {[}4{]}        & 99.06\%                 & 95.12\%                  & 89.25\%               \\
-		PreActResNet-18 {[}11{]}                  & \textbf{99.56\%}        & 97.82\%                  & 96.64\%               \\
-		PreActResNet-18 + Input Mixup {[}26{]}    & 99.54\%                 & 98.41\%                  & 97.04\%               \\
-		PreActResNet-18 + Manifold Mixup {[}22{]} & 99.54\%                 & \textbf{98.83\%}         & \textbf{97.33\%}
-	\end{tabular}
-	\caption{Benchmarks on the Kuzushiji-MNIST dataset from \cite{Clanuwat2018-vm}.}
-	\label{tab:kuzushiji-benchmarks}
 \end{table*}
