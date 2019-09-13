@@ -109,7 +109,7 @@ class ModelCenterNet:
         model.load_weights(restore_path)
 
     def train(self,
-              dataset: any,
+              dataset: Union[tf.data.Dataset, ClassificationDataset],
               model: tf.keras.Model,
               init_epoch: int,
               epochs: int,

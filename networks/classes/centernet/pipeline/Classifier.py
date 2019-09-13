@@ -152,7 +152,7 @@ class Classifier:
                                  epochs=self.__model_params['epochs'],
                                  batch_size=self.__model_params['batch_size'],
                                  callbacks=callbacks,
-                                 class_weights=self.__class_weights,
+                                 class_weights=None,
                                  augmentation=self.__model_params['augmentation'])
 
     def __evaluate_model(self, dataset):
@@ -179,15 +179,9 @@ class Classifier:
 
         input_h, input_w = self.__model_params['input_height'], self.__model_params['input_width']
 
-        # for img_path in test_list:
-        #     img_dataset = tf.data.Dataset.from_tensor_slices([img_path]) \
-        #         .map(lambda i: self.__resize_fn(i, input_h, input_w),
-        #              num_parallel_calls=tf.data.experimental.AUTOTUNE) \
-        #         .batch(1)
-        #
-        #     prediction = self.__model_utils.predict(model=self.__model, dataset=img_dataset, verbose=0)
-
+        augmentation = self.__model_params['augmentation']
         batch_size = self.__model_params['batch_size_predict']
+
         for image_crops in test_list:
             complete_batches: int = len(image_crops) // batch_size
             for i in range(0, complete_batches + 1):
@@ -201,14 +195,24 @@ class Classifier:
                         end = len(image_crops)
 
                 batch: List[str] = image_crops[start:end]  # [start, end)
+
+                if augmentation:
+                    dataset = batch
+                else:
+                    dataset = tf.data.Dataset.from_tensor_slices(batch) \
+                        .map(lambda i: self.__resize_fn(i, input_h, input_w),
+                             num_parallel_calls=tf.data.experimental.AUTOTUNE) \
+                        .batch(batch_size)
+
                 prediction = self.__model_utils.predict(model=self.__model,
-                                                        dataset=batch,
+                                                        dataset=dataset,
                                                         verbose=0,
                                                         batch_size=batch_size,
-                                                        augmentation=self.__model_params['augmentation'])
+                                                        augmentation=augmentation)
+
                 yield prediction
 
-            self.__logs['execution'].info('Prediction completed.')
+        self.__logs['execution'].info('Prediction completed.')
 
     def classify(self,
                  train_list: List[List],
