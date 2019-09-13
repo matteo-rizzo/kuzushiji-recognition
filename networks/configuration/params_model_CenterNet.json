@@ -47,7 +47,7 @@
     "regenerate_crops_test": false,
     "augmentation": false,
     "model": "preactivated",
-    "batch_size": 32,
+    "batch_size": 1024,
     "batch_size_predict": 300,
     "initial_epoch": 0,
     "epochs": 10,
