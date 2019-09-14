@@ -123,9 +123,6 @@ class Logger:
         config_log_path = os.path.join(experiment_path, 'configuration')
         os.makedirs(config_log_path, exist_ok=True)
 
-        # Log general parameters
-        copy(os.path.join(config_path, 'general_params.json'), config_log_path)
-
         # Log model parameters
         copy(os.path.join(config_path, 'params_model_' + model_name + '.json'), config_log_path)
 
