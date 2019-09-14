@@ -34,6 +34,7 @@
       <w>xmin</w>
       <w>ymax</w>
       <w>ymin</w>
+      <w>yolo</w>
     </words>
   </dictionary>
 </component>

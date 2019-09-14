@@ -561,3 +561,5 @@ TSWLatexianTemp*
 
 *.pdf
 
+/docs/yolo/
+/docs/GCP.md

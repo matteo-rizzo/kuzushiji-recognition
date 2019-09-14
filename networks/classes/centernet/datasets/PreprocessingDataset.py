@@ -47,7 +47,7 @@ class PreprocessingDataset:
     def __get_dataset_labels(self) -> List[float]:
         return [img_data[1] for img_data in self.__train_image_avg_char_area_ratios]
 
-    def __set_class_encoding(self, df_train, show_frequency=True):
+    def __set_class_encoding(self, df_train, show_frequency=False):
         # Initialize an empty dictionary of <unicode> -> <class frequency>
         class_frequencies = {}
 

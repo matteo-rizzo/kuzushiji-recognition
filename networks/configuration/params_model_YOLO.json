@@ -1,19 +1,17 @@
 {
-  "epochs": {},
-  "network": {
-    "config": "libs/darkflow/cfg",
-    "model": "libs/darkflow/cfg/yolo-4787c.cfg",
-    "load": "libs/darkflow/bin/yolo.weights",
-    "batch": 1,
-    "epoch": 75,
-    "lr": 1e-05,
-    "optimizer": "sgd",
-    "gpu": 0.01,
-    "train": true,
-    "save": 200,
-    "threshold": 0.0000001,
-    "labels": "datasets/kaggle/labels/labels.txt",
-    "annotation": "datasets/kaggle/training/annotations",
-    "dataset": "datasets/kaggle/training/images"
-  }
+  "run_id": "test_run",
+  "config": "libs/darkflow/cfg",
+  "model": "libs/darkflow/cfg/yolo-4787c.cfg",
+  "load": "libs/darkflow/bin/yolo.weights",
+  "batch": 1,
+  "epoch": 75,
+  "lr": 1e-05,
+  "optimizer": "sgd",
+  "gpu": 0.01,
+  "train": true,
+  "save": 200,
+  "threshold": 0.0000001,
+  "labels": "datasets/kaggle/labels/labels.txt",
+  "annotation": "datasets/kaggle/training/annotations",
+  "dataset": "datasets/kaggle/training/images"
 }

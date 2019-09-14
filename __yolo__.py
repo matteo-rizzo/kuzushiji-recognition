@@ -4,7 +4,6 @@ import os
 import absl.logging
 import tensorflow as tf
 
-from networks.classes.yolo.Dataset import Dataset
 from networks.classes.general_utilities.Logger import Logger
 from networks.classes.yolo.ModelYOLO import ModelYOLO
 from networks.classes.general_utilities.Params import Params
@@ -29,21 +28,11 @@ def main():
     # Set the path to the configuration folder
     config_path = os.path.join(os.getcwd(), 'networks', 'configuration')
 
-    # Load the general parameters from json file
-    general_params = Params(os.path.join(config_path, 'general_params.json'))
+    # Load the training parameters from json file
+    model_params = Params(os.path.join(config_path, 'params_model_YOLO.json'))
 
     # Get the info for the current run
-    run_info = general_params.run_info
-    run_id = run_info['id']
-    model_name = run_info['model']
-    train = run_info['train']
-    test = run_info['test']
-
-    # Get the paths to the datasets
-    dataset_paths = general_params.datasets
-
-    # Get the ratios of the training, validation and test set
-    ratios = general_params.ratios
+    run_id = model_params.run_id
 
     # --- LOGGER ---
 
@@ -57,69 +46,28 @@ def main():
     log.info('* Executing eagerly?  ' + eager_exec_status)
 
     log.info('General parameters:')
-    log.info('* Model:              ' + model_name)
-    log.info('* Training dataset:   ' + dataset_paths['training'])
-    log.info('* Test dataset:       ' + dataset_paths['test'] + '\n')
+    log.info('* Model:              YOLO')
+    log.info('* Training dataset:   ' + model_params.dataset + '\n')
 
     # Log general and training parameters
-    log_handler.log_configuration(run_id, model_name, implementation=False)
-
-    # --- DATASET ---
-
-    # Import the dataset for training
-    log.info('Importing the dataset for training...')
-    training_dataset = Dataset(dataset_paths['training'])
-    log.info('Training dataset size is: {}'.format(training_dataset.get_size()))
-
-    log.info('Shuffling the dataset...')
-    training_dataset.shuffle(3)
-
-    # Import the dataset for testing
-    log.info('Importing the dataset for testing...')
-    testing_dataset = Dataset(dataset_paths['test'])
-    log.info('Testing dataset size is: {}'.format(testing_dataset.get_size()))
-
-    log.info('Shuffling the dataset...')
-    testing_dataset.shuffle(3)
+    log_handler.log_configuration(run_id, 'YOLO', implementation=False)
 
     # --- MODEL ---
 
     log.info('Building the model...')
 
-    # Load the training parameters from json file
-    model_params = Params(os.path.join(config_path, 'params_model_' + model_name + '.json'))
-
-    # Set the model
-    models = {
-        'YOLO': ModelYOLO
-    }
-
     # Build the model
-    training_set, validation_set, test_set = training_dataset.split()
-    model = models[model_name](run_id,
-                               model_params,
-                               training_set,
-                               validation_set,
-                               test_set,
-                               log_handler)
+    model = ModelYOLO(run_id, model_params, log_handler)
 
     # --- TRAINING ---
 
     # Train the model
-    if train:
+    if model_params.train:
         log.info('Starting the training procedure...')
         model.train()
 
         log.info('Testing the model against an image in the training set...')
         model.predict()
-
-    # --- TEST ---
-
-    # Evaluate training against the given test set
-    if test:
-        log.info('Evaluating the model...')
-        metrics = model.evaluate()
-        log_handler.log_metrics(metrics, general_params)
 
 
 if __name__ == '__main__':
