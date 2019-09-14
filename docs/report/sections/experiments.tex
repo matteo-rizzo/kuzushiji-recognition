@@ -48,8 +48,8 @@ The metrics shown in table \ref{tab:expdetector} suggests that, at least with th
 	\begin{tabular}{llccccc}
 		\rowcolor[HTML]{EFEFEF} 
 		\textbf{Detector} & \textbf{Classifier} & \textbf{Augmentation} & \textbf{Loss} & \textbf{Accuracy} & \textbf{Macro avg $\mathbf{F_1}$} & \textbf{Weighted avg $\mathbf{F_1}$} \\
-		ResNet34          & Preactivated        & Yes                   & 0.2732        & 0.9413  & ?? & ??     \\
-		ResNet34          & Preactivated        & No                    & 0.2333        &  0.9492 & 0.6784    & 0.9512           \\
+		ResNet34          & Preactivated        & Yes                   & 0.2732        & 0.9413  & \textbf{0.8636} & 0.9396     \\
+		ResNet34          & Preactivated        & No                    & \textbf{0.2333}        &  \textbf{0.9492} & 0.6784    & \textbf{0.9512}           \\
 		Kaggle          & Kaggle    & No                   & 0.4165           & 0.9214     & 0.5030 & 0.9129         
 	\end{tabular}
 	\caption{Experiments with data augmentation on classifier.}
@@ -59,7 +59,7 @@ The metrics shown in table \ref{tab:expdetector} suggests that, at least with th
 \subsection{Classifier}
 \label{ssec:classifierexp}
 
-We did three experiments with the classifier, summarized in table \ref{tab:classres}. All models were trained using Adam optimizer and batch size 1024. The first trained for 8 epochs with a learning rate of $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noticed oscillations in the validation loss value. This model has the architecture described in figure \ref{fig:classifier} with preactivated residual blocks and was trained using data augmentation. \\
+We did three experiments with the classifier, summarized in table \ref{tab:classres}. All models were trained using Adam optimizer and batch size 1024. The first trained for 8 epochs, with a learning rate of $5 \cdot 10^{-4}$ for the first 4 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for the following ones. The value of the learning rate was decreased manually when we noticed oscillations in the validation loss value. This model has the architecture described in figure \ref{fig:classifier} with preactivated residual blocks and was trained using data augmentation. \\
 The second model was trained for 11 epochs with learning rate of $5 \cdot 10^{-4}$ for the first 8 epochs, $1 \cdot 10^{-4}$ for the next 2 epochs, and $5 \cdot 10^{-5}$ for last one. It uses the same architecture of the first one but was trained without data augmentation.
 The third model is the one from the Kaggle notebook and was trained for a total of 60 epochs with learning rate $1 \cdot 10^{-5}$ and $1 \cdot 10^{-6}$ after 30 epochs. This model was trained longer, since it showed some small improvements on validation loss. It uses an alternative architecture using standard residual blocks like the one depicted in figure \ref{fig:resblock-id} and was trained without data augmentation.\\
 In the table we also include the $F_1$ score. The macro-average $F_1$ score is computed by taking the unweighted average of all per-class $F_1$ scores. On the other hand, the weighted $F_1$ score computes the support-weighted average of this scores.\\

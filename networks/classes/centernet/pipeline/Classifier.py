@@ -161,6 +161,7 @@ class Classifier:
         self.__logs['execution'].info('Evaluating the classification model...')
 
         augmentation = self.__model_params['augmentation']
+        batch_size = self.__model_params['batch_size_predict']
 
         data_eval, size_eval = dataset.get_evaluation_set()
         x_eval, y_eval = dataset.get_xy_evaluation()
@@ -176,7 +177,7 @@ class Classifier:
         #                          'sparse_categorical_accuracy     : {}'
         #                          .format(metrics[0], metrics[1]))
 
-        steps = (size_eval // self.__model_params['batch_size']) + 1
+        steps = (size_eval // batch_size) + 1
 
         if augmentation:
             data_eval = x_eval
@@ -185,6 +186,7 @@ class Classifier:
                                                  dataset=data_eval,
                                                  verbose=1,
                                                  steps=steps,
+                                                 batch_size=batch_size,
                                                  augmentation=augmentation)
         predictions = predictions[:size_eval]
 
@@ -192,7 +194,7 @@ class Classifier:
 
         del predictions
 
-        sklearn_metrics = classification_report(list(y_eval), y_pred, output_dict=False, digits=4)
+        sklearn_metrics = classification_report(list(y_eval[:batch_size]), y_pred, output_dict=False, digits=4)
         self.__logs['execution'].info('Classification report:\n{}'.format(sklearn_metrics))
 
     def __generate_predictions(self, test_list: List[List[str]]) -> Generator:
