@@ -160,7 +160,6 @@ class ClassificationDataset:
                                                      random_crop=False),
                     output_types=(np.float32,
                                   np.float32))
-                    .repeat()
                     .prefetch(AUTOTUNE),
                 len(xy_eval))
 
