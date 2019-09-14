@@ -31,7 +31,7 @@ To implement the detection model we followed both the implementation described i
 \subsubsubsection{Description of the input samples}
 \label{ssssec:inputsamples}
 
-Firstly, each training image is randomly cropped and resized to the input dimension, which was set to $512 \times 512$. Then, the output of the training sample is generated using the annotations created during the preprocessing step. For each keypoint $p$, a downsampled point is computed as $\hat{p}=\left\lfloor \dfrac{p}{R} \right\rfloor$, which represents the point in the output space.\\
+Firstly, each training image is randomly cropped and resized to the input dimension, which was set to $512 \times 512$. Then, the output of the training sample is generated using the annotations created during the pre-processing step. For each keypoint $p$, a downsampled point is computed as $\hat{p}=\left\lfloor \dfrac{p}{R} \right\rfloor$, which represents the point in the output space.\\
 The heatmap is generated with a gaussian function applied to each pixel of the image as in equation \ref{eq:gaussian}.
 
 \begin{equation}\label{eq:gaussian}
@@ -74,6 +74,7 @@ L_o = \dfrac{1}{N}\sum_{k=1}^{2}\sum_{x,y}\left|Y_{x,y,k+1} - \widehat{Y}_{x,y,k
 \begin{equation}\label{eq:sizeloss}
 	L_s = \dfrac{1}{N}\sum_{k=3}^{4}\sum_{x,y}\left|Y_{x,y,k+1} - \widehat{Y}_{x,y,k}\right|
 \end{equation}
+In both equations, the first sum refers to the fact that both height and width offset and size values are considered in the computation.
 
 \noindent Hence, the final loss is obtained as:
 \begin{equation}
@@ -167,7 +168,7 @@ Our solution was to divide each image into a number $n$ of smaller images (that 
 
 \begin{figure}
 	\centering
-	\includegraphics[width=0.45\columnwidth]{detection/tiles_4.png}
+	\includegraphics[width=0.47\columnwidth]{detection/tiles_4.png}
 	\caption{An image divided in 4 tiles with 25\% overlap.}
 	\label{fig:tiles4}
 \end{figure}
@@ -181,13 +182,13 @@ It's worth to say that the same model trained without the random crop described 
 	\centering
 	\begin{subfigure}{\columnwidth}
 		\centering
-		\includegraphics[width=0.5\columnwidth]{detection/tiled_prediction.png}
+		\includegraphics[width=0.55\columnwidth]{detection/tiled_prediction.png}
 		\caption{Prediction with $2\times2$ tiling.}
 		\label{fig:tiledpred}
 	\end{subfigure}
 	\begin{subfigure}{\columnwidth}
 		\centering
-		\includegraphics[width=0.51\columnwidth]{detection/standard_prediction.png}
+		\includegraphics[width=0.56\columnwidth]{detection/standard_prediction.png}
 		\caption{Prediction with no tiling.}
 		\label{fig:standardpred}
 	\end{subfigure}
@@ -204,25 +205,24 @@ While the model described in the previous section was used to detect characters,
 \label{sssec:implementationclass}
 
 \begin{figure}[!hbt]
+	\caption{Preactivated residual block.}
+	\centering
+	\includegraphics[width=0.35\textwidth]{architectures/resblock_pre.png}
+	\label{fig:preactresblock}
+\end{figure}
+\begin{figure}[!hbt]
 	\caption{Architecture of the classifier.}
 	\centering
 	\includegraphics[width=0.35\textwidth]{architectures/classifier.png}
 	\label{fig:classifier}
 \end{figure}
 
-\begin{figure}[!hbt]
-	\caption{Preactivated residual block.}
-	\centering
-	\includegraphics[width=0.35\textwidth]{architectures/resblock_pre.png}
-	\label{fig:preactresblock}
-\end{figure}
-
 \subsubsubsection{Network architecture}
 \label{ssssec:networkarchitectureclass}
 
-The classifier is a small convolutional model based on the one proposed in the Kaggle implementation. The architecture diagram is shown in figure \ref{fig:classifier}. We use a variant of residual block that apply batch normalization and ReLu activation before the convolution. This block is called preactivated residual block and can be visualized in figure \ref{fig:preactresblock}. The three repeated blocks are followed by an average pooling layer with kernel size equal to the input dimension (named global pooling), which produce a single value for each feature map. This value is then fed into the final dense layer with softmax activation and number of units equal to the number of categories. The architecture diagram is shown in figure \ref{fig:classifier}.\\
-We tested some simple variations using different types of residual blocks, and they worked equally well, so we didn't not spend much time experimenting with other architectures. An example of accurate classification is shown in figure \ref{fig:classification-example}.
+The classifier is a small convolutional model based on the one proposed in the Kaggle implementation. The architecture diagram is shown in figure \ref{fig:classifier}. We use a variant of residual block that apply batch normalization and ReLu activation before the convolution. This block is called preactivated residual block and can be visualized in figure \ref{fig:preactresblock}. The three repeated blocks are followed by an average pooling layer with kernel size equal to the input dimension (called global pooling), which produce a single value for each feature map. This value is then fed into the final dense layer with softmax activation and number of units equal to the number of categories. The architecture diagram is shown in figure \ref{fig:classifier}.
 
+We tested some simple variations using different types of residual blocks, and they worked equally well, so we didn't not spend much time experimenting with other architectures. An example of accurate classification is shown in figure \ref{fig:classification-example}.
 \begin{figure}
 	\centering
 	\includegraphics[width=0.9\columnwidth]{classification/std.png}

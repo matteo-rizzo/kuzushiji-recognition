@@ -35,7 +35,6 @@
 \usepackage{graphicx}
 \graphicspath{{images/}}
 \bibliography{bibliography.bib}
-%\hypersetup{draft}
 
 
 \begin{document}
@@ -66,6 +65,7 @@
 
 % --- EXPERIMENTS ---
 
+%\clearpage
 \input{sections/experiments}
 
 % --- CONCLUSION ---
@@ -74,12 +74,14 @@
 
 % -- BENCHMARKS ---
 
+%\clearpage
 \appendix
 \input{sections/benchmarks}
 
 % --- BIBLIOGRAPHY ---
 
-\clearpage
-\printbibliography
+%\clearpage
+\newpage
+\printbibliography[title=REFERENCES]
 
 \end{document}
