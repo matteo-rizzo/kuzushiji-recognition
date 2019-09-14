@@ -381,7 +381,9 @@
     \vspace*{10pt}
     \hrule height.27pt width 41.5pc\par\vspace*{11.5pt} 
     {\titlefont{\@title\vphantom{pg}}\par}%
-    \vskip33.7pt%
+    \vskip17pt%
+    \flushright\normalsize{\today}
+    \vskip3pt%
     \hrule height.27pt width 41.5pc\par\vspace*{11.3pt} 
     {\@authors\par}\vskip6pt%
     \vskip12pt%

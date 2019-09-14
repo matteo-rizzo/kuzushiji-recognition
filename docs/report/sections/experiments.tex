@@ -28,7 +28,7 @@ Submissions to the competition are evaluated on a modified version of the $F_1$ 
 \subsection{Detector}
 \label{ssec:detectorexp}
 
-All models were trained using Adam optimizer with the default Keras hyper-parameters. For the ResNet34 network we used a batch size od $32$ and a learning rate of $1 \cdot 10^{-4}$ for the first 10 epochs, decreasing it to $5 \cdot 10^{-5}$ for the next 50 epochs and using $1 \cdot 10^{-5}$ for the last 70 epochs (130 epochs in total). \\
+All models were trained using Adam optimizer with the default Keras hyper-parameters. For the ResNet34 network we used a batch size of $32$ and a learning rate of $1 \cdot 10^{-4}$ for the first 10 epochs, decreasing it to $5 \cdot 10^{-5}$ for the next 50 epochs and using $1 \cdot 10^{-5}$ for the last 70 epochs (130 epochs in total). \\
 The same values were used for pre-trained ResNet50 network except for batch size, that we set to 16 because of the deeper architecture, and for learning rate that we further lowered to $5 \cdot 10^{-6}$ after 50 epochs, since the loss function was not converging. We trained it for 95 epochs. Subsequent experiments restarting the training with lower learning rates did not improve the results.\\
 We also trained the model from the Kaggle notebook for 138 epochs, but we don't include it in the table since we just used it as a benchmark for the final Kaggle score.\\
 The metrics shown in table \ref{tab:expdetector} suggests that, at least with the described configuration, the added complexity of the deeper architecture with pre-trained weights, resulted in worse generalization performances.
@@ -36,8 +36,8 @@ The metrics shown in table \ref{tab:expdetector} suggests that, at least with th
 \begin{table*}
 	\begin{tabular}{lcccccc}
 		\rowcolor[HTML]{EFEFEF} 
-		\textbf{Experiment}   & \textbf{Loss} & \textbf{Heatmap loss} & \textbf{Offset loss} & \textbf{Size loss} & \textbf{IoU (no tiling)} & \textbf{IoU (tiling)} \\
-		ResNet34 encoder      & 1.2652        & 0.7887                & 0.3833               & 0.0932             & 0.5112                   & 0.7658                \\
+		\textbf{Detector}   & \textbf{Loss} & \textbf{Heatmap loss} & \textbf{Offset loss} & \textbf{Size loss} & \textbf{IoU (no tiling)} & \textbf{IoU (tiling)} \\
+		ResNet34 encoder      & 1.2652        & 0.7887                & 0.3833               & 0.0932             & \textbf{0.5112}                   & \textbf{0.7658}                \\
 		ResNet50 encoder      & 1.3792        & 0.8417                & 0.4092               & 0.1284             & 0.4067                   & 0.6760
 	\end{tabular}
 	\caption{Experiments with two residual architecture for detection. The first one uses ResNet34 as an encoder, the second one uses the deeper ResNet50.}
