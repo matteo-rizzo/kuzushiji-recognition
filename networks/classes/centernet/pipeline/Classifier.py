@@ -165,16 +165,16 @@ class Classifier:
         data_eval, size_eval = dataset.get_evaluation_set()
         x_eval, y_eval = dataset.get_xy_evaluation()
 
-        metrics = self.__model_utils.evaluate(model=self.__model,
-                                              evaluation_set=data_eval,
-                                              evaluation_steps=(size_eval // self.__model_params['batch_size']),
-                                              batch_size=self.__model_params['batch_size'],
-                                              augmentation=augmentation)
-
-        self.__logs['test'].info('Evaluation metrics:\n'
-                                 'sparse_categorical_crossentropy : {}\n'
-                                 'sparse_categorical_accuracy     : {}'
-                                 .format(metrics[0], metrics[1]))
+        # metrics = self.__model_utils.evaluate(model=self.__model,
+        #                                       evaluation_set=data_eval,
+        #                                       evaluation_steps=(size_eval // self.__model_params['batch_size']),
+        #                                       batch_size=self.__model_params['batch_size'],
+        #                                       augmentation=augmentation)
+        #
+        # self.__logs['test'].info('Evaluation metrics:\n'
+        #                          'sparse_categorical_crossentropy : {}\n'
+        #                          'sparse_categorical_accuracy     : {}'
+        #                          .format(metrics[0], metrics[1]))
 
         steps = (size_eval // self.__model_params['batch_size']) + 1
 
@@ -192,7 +192,7 @@ class Classifier:
 
         del predictions
 
-        sklearn_metrics = classification_report(list(y_eval), y_pred, output_dict=False)
+        sklearn_metrics = classification_report(list(y_eval), y_pred, output_dict=False, digits=4)
         self.__logs['execution'].info('Classification report:\n{}'.format(sklearn_metrics))
 
     def __generate_predictions(self, test_list: List[List[str]]) -> Generator:
