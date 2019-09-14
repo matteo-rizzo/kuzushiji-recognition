@@ -225,6 +225,7 @@ class ModelCenterNet:
                 model: tf.keras.Model,
                 dataset: Union[tf.data.Dataset, List[str]],  # List is for submission
                 verbose: int = 1,
+                steps: Union[int, None] = None,
                 batch_size: Union[int, None] = None,
                 augmentation: bool = False) -> Union[np.ndarray, List[np.ndarray]]:
         """
@@ -250,4 +251,4 @@ class ModelCenterNet:
 
             return model.predict_generator(generator, steps=steps, verbose=verbose)
         else:
-            return model.predict(dataset, verbose=verbose)
+            return model.predict(dataset, verbose=verbose, steps=steps)
