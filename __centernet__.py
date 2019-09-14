@@ -72,12 +72,12 @@ def main():
                                  logs=logs)
 
     common_operations = {
-        'test_bboxes': ['visualization'],
-        'test_submission': ['submission', 'test_submission'],
         'preprocess': ['preprocessing'],
         'detect': ['preprocessing', 'detection'],
         'classify': ['preprocessing', 'detection', 'classification'],
         'write_submission': ['preprocessing', 'detection', 'classification', 'submission'],
+        'test_submission': ['submission', 'test_submission'],
+        'test_bboxes': ['visualization'],
         'all': ['preprocessing', 'detection', 'classification', 'submission', 'visualization']
     }
 

@@ -4,47 +4,49 @@ import pprint as pp
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
 from libs.darkflow.darkflow.net.build import TFNet
 
 from networks.classes.general_utilities.Logger import Logger
-from networks.classes.yolo.Model import Model
 
 
-class ModelYOLO(Model):
+class ModelYOLO:
     def __init__(self,
                  run_id: str,
                  model_params: {},
-                 training_set: tf.data.Dataset,
-                 validation_set: tf.data.Dataset,
-                 test_set: tf.data.Dataset,
                  log_handler: Logger):
         """
         Initializes a YOLO network v2.
         :param run_id: the identification name of the current run
         :param model_params: the parameters of the network
-        :param ratios: the ratio of elements to be used for training, validation and test
-        :param training_set: the training images
-        :param validation_set: the validation images
-        :param test_set: the test images
         :param log_handler: a logger
         """
 
-        # Construct the super class
-        super().__init__(run_id,
-                         model_params,
-                         training_set,
-                         validation_set,
-                         test_set,
-                         60,
-                         30,
-                         10,
-                         log_handler)
+        # Set the path to the current experiment
+        self._current_experiment_path = os.path.join(os.getcwd(), 'networks', 'experiments', run_id)
+
+        # Set up the parameters for the usage of the model
+        self._network_params = model_params.network
+
+        # Initialize an empty model
+        self._model = None
+
+        # Initialize the logs
+        self._train_log = log_handler.get_logger('training')
+        self._test_log = log_handler.get_logger('testing')
 
         # Build the YOLO model
-        self._build()
+        self.__build()
 
-    def _build(self):
+    def get_model(self) -> any:
+        return self._model
+
+    def display_summary(self):
+        """
+        Displays the architecture of the model
+        """
+        self._model.summary()
+
+    def __build(self):
         """
         Builds the YOLO network.
         """
