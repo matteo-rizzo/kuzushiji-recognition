@@ -47,7 +47,7 @@ class PreprocessingDataset:
     def __get_dataset_labels(self) -> List[float]:
         return [img_data[1] for img_data in self.__train_image_avg_char_area_ratios]
 
-    def __set_class_encoding(self, df_train, show_frequency=False):
+    def __set_class_encoding(self, df_train, show_frequency=True):
         # Initialize an empty dictionary of <unicode> -> <class frequency>
         class_frequencies = {}
 
@@ -80,13 +80,10 @@ class PreprocessingDataset:
 
         if show_frequency:
             cat, frequency = zip(*dict_frequencies.items())
-            plt.hist(frequency, bins='auto', color='red')
-            plt.xlim(min(cat), max(cat))
-            print(24685)
-            plt.ylim(min(frequency), max(frequency))
+            plt.plot(cat, frequency, color='red')
             plt.title('Class frequencies', fontsize=18)
-            plt.xlabel('Class', fontsize=14)
-            plt.ylabel('Frequency', fontsize=14)
+            plt.xlabel('Class (mapped to integer)', fontsize=14)
+            plt.ylabel('Absolute class frequency', fontsize=14)
             plt.show()
             plt.clf()
 

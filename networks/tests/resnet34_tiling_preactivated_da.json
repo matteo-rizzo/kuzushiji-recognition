@@ -1,5 +1,5 @@
 {
-  "run_id": "resnet34_tiling_preactivated_da",
+  "run_id": "resnet34_tiling12_preactivated_da",
   "dataset": {
     "train_csv_path": "datasets/kaggle/image_labels_map.csv",
     "test_csv_path": "datasets/kaggle/sample_submission.csv",
@@ -20,7 +20,7 @@
   "detector": {
     "train": false,
     "evaluate": false,
-    "predict_on_test": true,
+    "predict_on_test": false,
     "show_prediction_examples": false,
     "restore_weights": true,
     "tiling": true,
@@ -48,8 +48,8 @@
     "model": "preactivated",
     "batch_size": 32,
     "batch_size_predict": 300,
-    "initial_epoch": 8,
-    "epochs": 8,
+    "initial_epoch": 11,
+    "epochs": 11,
     "learning_rate": 5e-4,
     "decay": "",
     "input_width": 40,

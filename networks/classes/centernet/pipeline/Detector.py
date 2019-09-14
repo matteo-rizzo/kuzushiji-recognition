@@ -107,7 +107,7 @@ class Detector:
         self.__logs['execution'].info('Showing examples of tile predictions...')
         _, avg_iou = self.__bb_handler.get_train_tiled_bboxes(xy_eval,
                                                               model=self.__model,
-                                                              n_tiles=2,
+                                                              n_tiles=6,
                                                               show=False)
         self.__logs['execution'].info('The average IoU score using tile model is: {}'.format(avg_iou))
 
@@ -163,7 +163,7 @@ class Detector:
         self.__logs['execution'].info('Converting test predictions into bounding boxes...')
         return self.__bb_handler.get_test_tiled_bboxes(self.__test_list,
                                                        model=self.__model,
-                                                       n_tiles=2,
+                                                       n_tiles=6,
                                                        show=False)
 
     def __generate_standard_predictions(self, test_set) -> Dict[str, np.array]:
