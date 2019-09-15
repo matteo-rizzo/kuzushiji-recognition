@@ -103,8 +103,8 @@ The third block halves the image size using a residual block with projection sho
 Fourth and fifth blocks just repeat this steps with a different number of identity shortcut blocks. Note that each residual block double the number of channels in the image. For what concerns the decoder, the encoded input of size $(16, 16, 512)$ is passed to the decoder that uses three up-convolutional blocks to upsample it to the desired output dimension of $(128, 128, 5)$. Here, we made two major changes with respect to the standard CenterNet implementation of the decoder:
 
 \begin{enumerate}
-	\item We added cross connections in U-Net fashion, and
-	\item We replaced the deformable convolution layer with a simple convolution.
+	\item we added cross connections in U-Net fashion, and
+	\item we replaced the deformable convolution layer with a simple convolution.
 \end{enumerate}
 
 \begin{figure}
@@ -139,6 +139,7 @@ The last block is composed of a $1 \times 1$ convolution to reduce the number of
 \label{sssec:preprocessingdet}
 
 The input samples are firstly resized to $512 \times 512 \times 3$ and normalized, as well as random cropped for data augmentation. A maximum crop factor is determined considering the average character size in the page. This is determined separately for width and height as shown in equations \ref{eq:stretchw} and \ref{eq:stretchh}, where $w$ and $h$ are the dimensions of the original image and $char\_area$ is the average bounding box area within the page.
+
 \begin{equation}\label{eq:stretchw}
 	c_w=\sqrt{\frac{w \cdot h}{char\_area}}
 \end{equation}
@@ -146,7 +147,8 @@ The input samples are firstly resized to $512 \times 512 \times 3$ and normalize
 \label{eq:stretchh}
 	c_h=\frac{h}{w}\sqrt{\frac{w \cdot h}{char\_area}}
 \end{equation}
-This crop procedure allows to train the network on smaller fragment of pages with better recognition rate of small sharacters. In addition, this step ensures good recognition performances when paired with the post-processing passage described in the next section.\\
+
+This crop procedure allows to train the network on smaller fragment of pages with better recognition rate of small characters. In addition, this step ensures good recognition performances when paired with the post-processing passage described in the next section.\\
 \noindent Finally, all output classes, expressed as unicode characters, are mapped to integer values.
 
 \subsubsection{Post-processing: from centers to bounding boxes}
@@ -176,7 +178,7 @@ Our solution was to divide each image into a number $n$ of smaller images (that 
 This procedure resulted in more precise bounding box predictions and an higher IoU score on the test set. A comparison can be seen in figure \ref{fig:comparisontiling}. \\
 We empirically determined the optimal number of tiles by measuring the IoU score over the same first 100 examples of the test set. Results gave a 0.7731 score using a $2 \times 2$ grid and 0.7850 using a $3 \times 3$ grid. 
 Since the difference in the IoU score was negligible we chose to use a $2 \times 2$ grid, with the benefit of halving the time required to generate predictions for a single image.\\
-It's worth to say that the same model trained without the random crop described in §\ref{sssec:preprocessingdet} did not reach such scores, but rather got an average IoU score of 0.53. That's because the crop procedure enhances the ability of the model to detect small features, particularly useful when predicting over portions of images.
+It is worth to say that the same model trained without the random crop described in §\ref{sssec:preprocessingdet} did not reach such scores, but rather got an average IoU score of 0.53. That is because the crop procedure enhances the ability of the model to detect small features, particularly useful when predicting over portions of images.
 
 \begin{figure*}[!htb]
 	\centering
