@@ -224,7 +224,7 @@ While the model described in the previous section was used to detect characters,
 
 The classifier is a small convolutional model based on the one proposed in the Kaggle implementation. The architecture diagram is shown in figure \ref{fig:classifier}. We use a variant of residual block that apply batch normalization and ReLu activation before the convolution. This block is called preactivated residual block and can be visualized in figure \ref{fig:preactresblock}. The three repeated blocks are followed by an average pooling layer with kernel size equal to the input dimension (called global pooling), which produce a single value for each feature map. This value is then fed into the final dense layer with softmax activation and number of units equal to the number of categories. The architecture diagram is shown in figure \ref{fig:classifier}.
 
-We tested some simple variations using different types of residual blocks, and they worked equally well, so we didn't not spend much time experimenting with other architectures. An example of accurate classification is shown in figure \ref{fig:classification-example}.
+We tested some simple variations using different types of residual blocks, and they worked equally well, so we did not spend much time experimenting with other architectures. An example of accurate classification is shown in figure \ref{fig:classification-example}.
 \begin{figure}
 	\centering
 	\includegraphics[width=0.9\columnwidth]{classification/std.png}
