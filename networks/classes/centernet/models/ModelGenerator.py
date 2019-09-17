@@ -27,6 +27,14 @@ class ModelGenerator:
 
         return x
 
+    @staticmethod
+    def __brc(x, filter_n, kernel, strides):
+        x = BatchNormalization()(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = Conv2D(filter_n, kernel_size=kernel, strides=strides, padding='same')(x)
+
+        return x
+
     # Residual blocks
 
     def __preactivated_res_block(self, x_in, filter_n):
@@ -178,17 +186,17 @@ class ModelGenerator:
 
     def __generate_classification_model(self, input_layer, n_category):
         # (40, 40, 3) -> (40, 40, 64)
-        x = self.__cbr(input_layer, 64, 3, 1)
+        x = self.__brc(input_layer, 64, 3, 1)
         x = self.__preactivated_res_block(x, 64)
         x = self.__preactivated_res_block(x, 64)
 
         # (40, 40, 64) -> (20, 20, 128)
-        x = self.__cbr(x, 128, 3, 2)
+        x = self.__brc(x, 128, 3, 2)
         x = self.__preactivated_res_block(x, 128)
         x = self.__preactivated_res_block(x, 128)
 
         # (20, 20, 128) -> (10, 10, 256)
-        x = self.__cbr(x, 256, 3, 2)
+        x = self.__brc(x, 256, 3, 2)
         x = self.__preactivated_res_block(x, 256)
         x = self.__preactivated_res_block(x, 256)
 

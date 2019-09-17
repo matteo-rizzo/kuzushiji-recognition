@@ -66,19 +66,17 @@ class ModelCenterNet:
                                   batch_size=batch_size,
                                   update_freq=batch_size * 10)
 
-        # def lrs(epoch):
-        #     if epoch > 50:
-        #         return lr / 20
-        #     elif epoch > 20:
-        #         return lr / 10
-        #     elif epoch > 10:
-        #         return lr / 5
-        #     else:
-        #         return lr
+        def lrs(epoch):
+            if epoch > 10:
+                return lr / 10
+            elif epoch > 6:
+                return lr / 5
+            else:
+                return lr
 
-        # lr_schedule = LearningRateScheduler(lrs, verbose=1)
+        lr_schedule = LearningRateScheduler(lrs, verbose=1)
 
-        return [tensorboard, checkpointer]
+        return [tensorboard, checkpointer, lr_schedule]
 
     def restore_weights(self,
                         model: tf.keras.Model,
