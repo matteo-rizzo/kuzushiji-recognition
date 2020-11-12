@@ -1,6 +1,5 @@
-# CognitiveServices
-Didactic project of the Cognitive Services course of the Computer Science master's degree of University of Padua (Italy).
-
+# Kuzushiji-recognition
+The Kaggle page of the competition can be found here: https://www.kaggle.com/c/kuzushiji-recognition.
 
 ## Working environment
 
