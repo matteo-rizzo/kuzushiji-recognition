@@ -6,7 +6,7 @@ h5py
 Pillow
 matplotlib
 tensorflow
-numpy==1.16.2
+numpy==1.22.0
 tabulate
 tqdm
 regex
